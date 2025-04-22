@@ -1,0 +1,6 @@
+### Design Document
+This document details the system's architecture and technical decisions, ensuring a scalable and secure solution. It includes:
+- **System Architecture**: A client-server model with the frontend on Vercel, backend on Railway, and integration with FIRS APIs. The architecture diagram shows user interactions, database, and caching, reflecting the need for real-time operations as per FIRS requirements.
+- **Component Breakdown**: Frontend components include authentication, dashboard, and integration management, while backend services cover authentication, IRN generation, and validation, aligning with the best practices for SIs.
+- **Database Design**: Tables like organizations, users, clients, integrations, and logs are defined, with relationships ensuring multi-tenant support. For example, an organization has many clients, each with one integration, mirroring the FIRS system's need for per-client configurations.
+- **Technology Stack Decisions**: Justifies NextJS for SEO and performance, TypeScript for type safety, FastAPI for API efficiency, PostgreSQL for reliability, SQLAlchemy for ORM, Alembic for migrations, and Redis for caching, all chosen for their modern, scalable nature and alignment with the project's needs.
