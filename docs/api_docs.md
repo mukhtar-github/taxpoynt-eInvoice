@@ -355,3 +355,113 @@ The API implements rate limiting to protect against abuse:
 - Authentication endpoints: 10 requests per minute per IP
 - Standard endpoints: 60 requests per minute per user
 - Batch operations: 10 requests per minute per user
+
+## Odoo Integration
+
+This section describes how to integrate TaxPoynt eInvoice with Odoo ERP systems.
+
+### Overview
+
+TaxPoynt eInvoice provides seamless integration with Odoo through its XML-RPC API. This integration allows businesses using Odoo to automatically generate IRNs and validate invoices directly from their ERP system.
+
+### Authentication Methods
+
+Odoo integration supports two authentication methods:
+
+#### 1. Database Authentication
+```python
+import xmlrpc.client
+
+# Common endpoint for authentication
+common = xmlrpc.client.ServerProxy('{your_odoo_url}/xmlrpc/2/common')
+uid = common.authenticate(database, username, password, {})
+```
+
+#### 2. API Key Authentication (Recommended)
+```python
+import xmlrpc.client
+
+# Use API key for authentication
+api_key = 'YOUR_API_KEY'
+database = 'YOUR_DATABASE'
+models = xmlrpc.client.ServerProxy('{your_odoo_url}/xmlrpc/2/object')
+```
+
+### Integration Setup
+
+1. Configure TaxPoynt integration in Odoo:
+
+```json
+// Request
+POST /integrations/create
+{
+  "client_id": "client_id_here",
+  "secret": "client_secret_here",
+  "name": "Odoo Integration",
+  "type": "erp",
+  "erp_type": "odoo",
+  "connection_params": {
+    "url": "https://your-odoo-instance.com",
+    "database": "your_database",
+    "api_key": "your_odoo_api_key",
+    "company_id": 1
+  },
+  "mappings": {
+    "invoice_number_field": "name",
+    "customer_tin_field": "vat",
+    "amount_field": "amount_total",
+    "date_field": "invoice_date"
+  },
+  "schedule": "realtime"
+}
+```
+
+### Data Synchronization
+
+The integration performs the following operations:
+
+1. **Invoice Creation**: When an invoice is created in Odoo, TaxPoynt automatically:
+   - Generates an IRN
+   - Updates the invoice in Odoo with the IRN reference
+   - Validates the invoice with FIRS
+
+2. **Invoice Status Updates**: TaxPoynt synchronizes the validation status from FIRS back to Odoo.
+
+### Example: Generating IRN for Odoo Invoice
+
+```python
+import xmlrpc.client
+
+# Authenticate
+url = "https://your-odoo-instance.com"
+db = "your_database"
+api_key = "your_odoo_api_key"
+models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
+
+# Find invoice in Odoo
+invoice_id = 123  # Your invoice ID
+invoice = models.execute_kw(db, api_key, "password",
+    'account.move', 'read', [invoice_id], 
+    {'fields': ['name', 'amount_total', 'invoice_date', 'partner_id']})
+
+# Generate IRN via TaxPoynt
+# (This would typically be done through the TaxPoynt API client)
+irn_data = {
+    "integration_id": "your_taxpoynt_integration_id",
+    "invoice_number": invoice[0]['name'],
+    "timestamp": invoice[0]['invoice_date'].replace('-', '')
+}
+
+# Update invoice in Odoo with IRN
+# The actual implementation would include the API call to TaxPoynt
+# and then update the Odoo invoice with the returned IRN
+```
+
+### Webhook Notifications
+
+TaxPoynt can send webhook notifications to your Odoo instance when:
+- IRN is successfully generated
+- Invoice validation status changes
+- Errors occur during processing
+
+Configure webhook endpoints in your integration settings.

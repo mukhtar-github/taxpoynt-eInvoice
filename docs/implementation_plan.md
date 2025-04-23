@@ -54,6 +54,7 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
   - Add integration status monitoring
 
 - **Week 5-6**:
+  - Begin Odoo API integration for invoice data retrieval
   - Build integration wizard UI flow
   - Develop configuration export/import functionality
   - Add FIRS sandbox environment connection testing
@@ -61,6 +62,7 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
 
 #### MVP Phase (Month 4-6)
 - **Week 7-8**:
+  - Extend Odoo API integration with advanced error handling
   - Create advanced configuration options for edge cases
   - Implement integration cloning and versioning
   - Add configuration change history tracking
@@ -81,6 +83,7 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
   - Develop bulk IRN generation capability
   - Create IRN validation logic
   - Add IRN request logging
+  - Test IRN generation with Odoo invoice data
 
 - **Week 7-8**:
   - Implement IRN reservation system
@@ -110,6 +113,7 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
   - Implement business logic validations
   - Create validation error reporting
   - Add validation rule management system
+  - Test validation with real Odoo invoice data
 
 - **Week 7-8**:
   - Implement batch validation capabilities
@@ -168,6 +172,7 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
   - Implement real-time status updates
   - Create error rate monitoring
   - Add basic filtering and searching
+  - Display Odoo integration status and metrics
 
 - **Week 7-8**:
   - Implement date range selection
@@ -192,10 +197,20 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
   - Deploy to development environment
 
 ### Prototype Phase (Month 2-3)
+- **Week 6**:
+  - Begin integration with Odoo API for invoice data retrieval
+  - Test basic end-to-end flow with Odoo
+  - Validate invoice data format compatibility
+
 - **Week 8**:
   - Integrate all core components (auth, config, IRN, validation)
+  - Test Odoo invoice data processing and FIRS submission
   - Implement end-to-end testing suite
+
+- **Week 12**:
+  - Finalize Odoo integration for the lightweight MVP
   - Deploy to staging environment with FIRS sandbox connection
+  - Prepare demo for stakeholder presentation
 
 ### MVP Phase (Month 4-6)
 - **Week 12**:
@@ -203,3 +218,39 @@ This plan outlines the development phases, timeline, and deliverables, ensuring 
   - Perform load testing and optimization
   - Implement monitoring and alerting
   - Prepare for production deployment
+
+## Lightweight MVP Strategy
+
+To avoid over-engineering and deliver a compelling prototype to stakeholders by the end of Month 3, the implementation will focus on a lightweight MVP with these priorities:
+
+### Core Features for the Lightweight MVP
+1. **Secure Authentication and Authorization**:
+   - Basic user registration, login, and role-based access control
+   - Essential security measures without advanced features like 2FA
+
+2. **Odoo Integration**:
+   - Focus on retrieving invoice data from a single Odoo instance
+   - Implement essential API calls without multi-version support
+   - Utilize existing libraries like odoo-client to accelerate development
+
+3. **Invoice Processing**:
+   - Basic IRN generation and validation against FIRS requirements
+   - Implement critical field validations without advanced rules
+
+4. **FIRS Submission**:
+   - Implement core submission functionality to FIRS sandbox
+   - Focus on successful transmission without extensive error recovery
+
+5. **Monitoring**:
+   - Simple dashboard showing integration status and transaction counts
+   - Basic error tracking without advanced analytics
+
+### Features to Defer Until After Stakeholder Approval
+- Advanced security features (2FA, comprehensive audit logging)
+- Multi-Odoo version support
+- Advanced analytics and reporting
+- Machine learning capabilities
+- Automated configuration suggestions
+- Custom validation rule creation
+
+This approach ensures a functional end-to-end solution that demonstrates value to stakeholders while managing development time effectively.
