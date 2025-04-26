@@ -1,33 +1,100 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+"""
+Main FastAPI application module for FIRS e-Invoice system.
 
-from app.api.api import api_router
-from app.core.config import settings
+This module initializes the FastAPI application with:
+- TLS configuration
+- CORS middleware
+- All routers
+- Exception handlers
+"""
 
+import os
+from pathlib import Path
+from typing import List
+
+from fastapi import FastAPI, Request, HTTPException # type: ignore
+from fastapi.middleware.cors import CORSMiddleware # type: ignore
+from fastapi.responses import JSONResponse # type: ignore
+from fastapi.staticfiles import StaticFiles # type: ignore
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware # type: ignore
+
+from app.routers import crypto
+
+# Initialize FastAPI app
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    title="TaxPoynt eInvoice",
+    description="API for FIRS e-Invoice System Integration",
+    version="0.1.0",
 )
 
-# Set all CORS enabled origins
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+# Configure CORS
+origins = [
+    "http://localhost",
+    "http://localhost:3000",  # NextJS dev server
+    "https://localhost",
+    "https://localhost:3000",
+]
+
+# Add production origins in non-dev environments
+if os.getenv("ENVIRONMENT") != "development":
+    frontend_url = os.getenv("FRONTEND_URL")
+    if frontend_url:
+        origins.append(frontend_url)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Force HTTPS in production environments
+if os.getenv("ENVIRONMENT") == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
+
+# Include routers
+app.include_router(crypto.router)
+
+# Global exception handler
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
     )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+# Static files - for serving QR codes or other assets
+app.mount("/static", StaticFiles(directory=Path("static")), name="static")
 
-
-@app.get("/")
-def root():
-    return {"message": "Welcome to TaxPoynt eInvoice API"}
-
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn # type: ignore
     
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    # Get configuration from environment
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    
+    # In development, don't use HTTPS as it's handled by reverse proxy
+    if os.getenv("ENVIRONMENT") == "development":
+        uvicorn.run("app.main:app", host=host, port=port, reload=True)
+    else:
+        # For direct production deployment (not recommended - use a reverse proxy)
+        ssl_keyfile = os.getenv("SSL_KEYFILE")
+        ssl_certfile = os.getenv("SSL_CERTFILE")
+        
+        if ssl_keyfile and ssl_certfile:
+            uvicorn.run(
+                "app.main:app",
+                host=host,
+                port=port,
+                ssl_keyfile=ssl_keyfile,
+                ssl_certfile=ssl_certfile,
+            )
+        else:
+            # No SSL files, rely on reverse proxy for TLS
+            uvicorn.run("app.main:app", host=host, port=port)
