@@ -22,6 +22,7 @@ class Integration(Base):
     # Relationships
     client = relationship("Client", back_populates="integrations")
     history = relationship("IntegrationHistory", back_populates="integration")
+    irn_records = relationship("IRNRecord", back_populates="integration")
 
 
 class IntegrationHistory(Base):
