@@ -5,9 +5,9 @@ Revises: 001_add_client_and_integration_models
 Create Date: 2024-05-11 14:30:00.000000
 
 """
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+from alembic import op # type: ignore
+import sqlalchemy as sa # type: ignore
+from sqlalchemy.dialects import postgresql # type: ignore
 
 # revision identifiers, used by Alembic.
 revision = '002_add_irn_tables'

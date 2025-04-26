@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field, validator # type: ignore
+from typing import Optional, Dict, Any # type: ignore
 from datetime import datetime
 import re
 

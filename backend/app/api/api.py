@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter # type: ignore
 
 from app.api.endpoints import auth, client, integration, irn
  

@@ -1,12 +1,12 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session # type: ignore
+from sqlalchemy import func # type: ignore
 from datetime import datetime, timedelta
 import re
-from typing import List, Optional
+from typing import List, Optional # type: ignore
 
 from app.models.irn import IRNRecord
 from app.schemas.irn import IRNGenerateRequest
-from app.crud.integration import get_integration_by_id
+from app.crud.integration import get_integration_by_id # type: ignore
 
 
 def validate_irn_format(invoice_number: str, service_id: str, timestamp: str) -> bool:

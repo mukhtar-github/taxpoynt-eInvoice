@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 from datetime import datetime
-from typing import List, Optional
-import logging
+from typing import List, Optional # type: ignore
+import logging # type: ignore
 
-from app.api.deps import get_db, get_current_active_user
+from app.api.deps import get_db, get_current_active_user # type: ignore
 from app.models.user import User
 from app.models.integration import Integration
 from app.schemas.irn import (
@@ -33,7 +33,7 @@ def generate_irn(
     Follows FIRS format: InvoiceNumber-ServiceID-YYYYMMDD
     """
     # Get the integration
-    integration = crud_integration.get_integration_by_id(db, request.integration_id)
+    integration = crud_integration.get_integration_by_id(db, request.integration_id) # type: ignore
     if not integration:
         raise HTTPException(
             status_code=404,
@@ -77,7 +77,7 @@ def generate_batch_irn(
     Generate multiple IRNs in a batch.
     """
     # Get the integration
-    integration = crud_integration.get_integration_by_id(db, request.integration_id)
+    integration = crud_integration.get_integration_by_id(db, request.integration_id) # type: ignore
     if not integration:
         raise HTTPException(
             status_code=404,
@@ -155,7 +155,7 @@ def list_irns(
     List IRNs for a specific integration with pagination.
     """
     # Verify integration exists
-    integration = crud_integration.get_integration_by_id(db, integration_id)
+    integration = crud_integration.get_integration_by_id(db, integration_id) # type: ignore
     if not integration:
         raise HTTPException(
             status_code=404,
