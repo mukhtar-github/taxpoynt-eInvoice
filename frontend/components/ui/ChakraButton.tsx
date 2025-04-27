@@ -35,24 +35,69 @@ interface IconButtonProps {
   variant?: string;
   mr?: number;
   onClick?: () => void;
+  display?: any;
 }
 
 export const IconButton: React.FC<IconButtonProps> = ({ 
   icon, 
   'aria-label': ariaLabel, 
+  size = 'md',
+  colorScheme = 'gray',
+  variant = 'solid',
   ...props 
 }) => {
+  // Size mapping
+  const sizeMap = {
+    xs: { padding: '0.25rem', fontSize: '0.75rem' },
+    sm: { padding: '0.5rem', fontSize: '0.875rem' },
+    md: { padding: '0.75rem', fontSize: '1rem' },
+    lg: { padding: '1rem', fontSize: '1.25rem' },
+    xl: { padding: '1.25rem', fontSize: '1.5rem' }
+  };
+  
+  // Variant mapping
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'outline':
+        return {
+          border: '1px solid',
+          borderColor: `${colorScheme}.500`,
+          backgroundColor: 'transparent'
+        };
+      case 'ghost':
+        return {
+          backgroundColor: 'transparent'
+        };
+      default:
+        return {
+          backgroundColor: `${colorScheme}.500`,
+          color: 'white'
+        };
+    }
+  };
+  
+  const { padding, fontSize } = sizeMap[size];
+  
   return (
-    <ChakraButton 
+    <button 
       aria-label={ariaLabel} 
-      p={2} 
-      display="inline-flex" 
-      alignItems="center" 
-      justifyContent="center"
-      {...props as any}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding,
+        fontSize,
+        borderRadius: '0.375rem',
+        border: 'none',
+        cursor: 'pointer',
+        ...getVariantStyles(),
+        ...props.display && { display: props.display },
+        marginRight: props.mr ? `${props.mr * 0.25}rem` : undefined
+      }}
+      onClick={props.onClick}
     >
       {icon}
-    </ChakraButton>
+    </button>
   );
 };
 
