@@ -1,11 +1,11 @@
-from typing import Dict, Any, List, Optional
-from uuid import UUID
+from typing import Dict, Any, List, Optional # type: ignore
+from uuid import UUID # type: ignore
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session # type: ignore
 
 from app import crud
-from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration
-from app.utils.encryption import encrypt_sensitive_value, decrypt_sensitive_value, get_app_encryption_key
+from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration # type: ignore
+from app.utils.encryption import encrypt_sensitive_value, decrypt_sensitive_value, get_app_encryption_key # type: ignore
 
 
 # List of config fields that should be encrypted

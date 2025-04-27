@@ -1,12 +1,12 @@
 from typing import Any, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Body # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
-from app import crud, schemas
-from app.api.dependencies import get_db, get_current_active_user
-from app.services import integration_service
+from app import crud, schemas # type: ignore
+from app.api.dependencies import get_db, get_current_active_user # type: ignore
+from app.services import integration_service # type: ignore
 
 router = APIRouter()
 
