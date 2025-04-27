@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import crud, schemas
 from app.api.dependencies import get_db, get_current_active_user
+from app.services import integration_service
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ def read_integrations(
     Retrieve integrations.
     """
     # TODO: Filter by organization once organization model is implemented
-    integrations = crud.integration.get_multi(db, skip=skip, limit=limit)
+    integrations = integration_service.get_integrations(db, skip=skip, limit=limit)
     return integrations
 
 
@@ -36,7 +37,7 @@ def create_integration(
     Create new integration.
     """
     # TODO: Add validation to ensure client belongs to user's organization
-    integration = crud.integration.create(
+    integration = integration_service.create_integration(
         db=db, obj_in=integration_in, user_id=current_user.id
     )
     return integration
@@ -52,7 +53,7 @@ def read_integration(
     """
     Get integration by ID.
     """
-    integration = crud.integration.get(db=db, integration_id=integration_id)
+    integration = integration_service.get_integration(db=db, integration_id=integration_id)
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
     # TODO: Check if integration belongs to user's organization
@@ -74,7 +75,7 @@ def update_integration(
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
     # TODO: Check if integration belongs to user's organization
-    integration = crud.integration.update(
+    integration = integration_service.update_integration(
         db=db, db_obj=integration, obj_in=integration_in, user_id=current_user.id
     )
     return integration
@@ -99,19 +100,19 @@ def delete_integration(
 
 
 @router.get("/{integration_id}/history", response_model=List[schemas.IntegrationHistory])
-def read_integration_history(
+def get_integration_history(
     *,
     db: Session = Depends(get_db),
     integration_id: UUID,
     current_user: schemas.User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Get integration configuration history.
+    Get integration configuration change history.
     """
     integration = crud.integration.get(db=db, integration_id=integration_id)
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
-    # TODO: Check if integration belongs to user's organization
+    
     history = crud.integration.get_history(db=db, integration_id=integration_id)
     return history
 
@@ -126,15 +127,17 @@ def test_integration(
     """
     Test integration connection.
     """
-    integration = crud.integration.get(db=db, integration_id=integration_id)
+    integration = integration_service.get_integration(db=db, integration_id=integration_id)
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
-    # TODO: Check if integration belongs to user's organization
-
-    # Implement actual integration testing logic here
-    # For now, return a placeholder response
+    
+    # TODO: Implement actual integration testing logic
+    # For now, just return a mock success response
     return {
         "success": True,
-        "message": "Integration test successful",
-        "details": {"status": "connected", "latency_ms": 150}
+        "message": "Connection test successful",
+        "details": {
+            "status": "connected",
+            "latency_ms": 42
+        }
     } 
