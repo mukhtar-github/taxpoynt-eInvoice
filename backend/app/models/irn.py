@@ -3,7 +3,7 @@ from sqlalchemy.sql import func # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 from uuid import uuid4
 
-from app.db.base_class import Base # type: ignore
+from app.db.base import Base # type: ignore
 
 
 class IRNRecord(Base):
@@ -16,7 +16,7 @@ class IRNRecord(Base):
     timestamp = Column(String(8), nullable=False)
     generated_at = Column(DateTime, nullable=False, default=func.now())
     valid_until = Column(DateTime, nullable=False)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column(JSON, nullable=True)
     status = Column(String(20), nullable=False, default="unused")
     used_at = Column(DateTime, nullable=True)
     invoice_id = Column(String(50), nullable=True)
