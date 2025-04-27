@@ -1,10 +1,10 @@
 {
   "version": 2,
   "buildCommand": "npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "frontend/.next",
+  "outputDirectory": ".next",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/frontend/$1" }
+    { "source": "/(.*)", "destination": "/$1" }
   ]
 } 
