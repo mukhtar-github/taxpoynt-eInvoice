@@ -88,4 +88,11 @@ class IntegrationHistoryInDB(IntegrationHistoryInDBBase):
 class IntegrationTestResult(BaseModel):
     success: bool
     message: str
-    details: Optional[Dict[str, Any]] = None 
+    details: Optional[Dict[str, Any]] = None
+
+
+# Integration Template Create
+class IntegrationTemplateCreate(BaseModel):
+    template_id: str
+    client_id: UUID
+    config_values: Optional[Dict[str, Any]] = None 
