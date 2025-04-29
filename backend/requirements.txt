@@ -34,6 +34,10 @@ Pillow>=10.0.1
 redis>=5.0.1
 hiredis>=2.2.3
 
+# Integration & Validation
+jsonschema>=4.19.1
+requests>=2.31.0
+
 # Testing
 pytest>=7.4.2
 pytest-asyncio>=0.21.1

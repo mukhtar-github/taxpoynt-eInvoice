@@ -1,12 +1,12 @@
 from typing import Any, List, Dict
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Body # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
-from app import crud, schemas
-from app.api.dependencies import get_db, get_current_active_user
-from app.services import integration as integration_service
+from app import crud, schemas # type: ignore
+from app.api.dependencies import get_db, get_current_active_user # type: ignore
+from app.services import integration_service # type: ignore
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ def read_integrations(
     Retrieve integrations.
     """
     # TODO: Filter by organization once organization model is implemented
-    integrations = crud.integration.get_multi(db, skip=skip, limit=limit)
+    integrations = integration_service.get_integrations(db, skip=skip, limit=limit)
     return integrations
 
 
@@ -62,7 +62,7 @@ def read_integration(
     """
     Get integration by ID.
     """
-    integration = crud.integration.get(db=db, integration_id=integration_id)
+    integration = integration_service.get_integration(db=db, integration_id=integration_id)
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
     # TODO: Check if integration belongs to user's organization
@@ -70,7 +70,7 @@ def read_integration(
 
 
 @router.put("/{integration_id}", response_model=schemas.Integration)
-def update_integration(
+def update_integration_endpoint(
     *,
     db: Session = Depends(get_db),
     integration_id: UUID,
@@ -84,7 +84,7 @@ def update_integration(
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
     # TODO: Check if integration belongs to user's organization
-    integration = crud.integration.update(
+    integration = integration_service.update_integration(
         db=db, db_obj=integration, obj_in=integration_in, user_id=current_user.id
     )
     return integration
@@ -109,19 +109,19 @@ def delete_integration(
 
 
 @router.get("/{integration_id}/history", response_model=List[schemas.IntegrationHistory])
-def read_integration_history(
+def get_integration_history(
     *,
     db: Session = Depends(get_db),
     integration_id: UUID,
     current_user: schemas.User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Get integration configuration history.
+    Get integration configuration change history.
     """
     integration = crud.integration.get(db=db, integration_id=integration_id)
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
-    # TODO: Check if integration belongs to user's organization
+    
     history = crud.integration.get_history(db=db, integration_id=integration_id)
     return history
 
@@ -213,7 +213,7 @@ def create_from_template(
 @router.post("/validate", response_model=Dict[str, Any])
 def validate_integration(
     *,
-    config: Dict[str, Any],
+    config: Dict[str, Any] = Body(...),
     current_user: schemas.User = Depends(get_current_active_user),
 ) -> Any:
     """
@@ -323,4 +323,4 @@ def get_monitored_integrations(
     """
     Get a list of all integrations being monitored.
     """
-    return integration_service.get_all_monitored_integrations(db=db) 
+    return integration_service.get_all_monitored_integrations(db=db)
