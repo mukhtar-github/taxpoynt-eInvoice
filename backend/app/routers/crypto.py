@@ -8,15 +8,22 @@ This module provides API endpoints for:
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile # type: ignore
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import Response, JSONResponse # type: ignore
 from pydantic import BaseModel, Field # type: ignore
+from sqlalchemy.orm import Session
 
 from app.utils.encryption import encrypt_irn_data, extract_keys_from_file, load_public_key # type: ignore
 from app.utils.irn import generate_irn, validate_irn # type: ignore
 from app.utils.qr_code import generate_qr_code, generate_qr_code_for_irn, qr_code_as_base64 # type: ignore
+from app.db.deps import get_db # type: ignore
+from app.services.key_service import KeyManagementService, get_key_service
+from app.services.encryption_service import EncryptionService, get_encryption_service
+from app.core.security import get_current_active_user # type: ignore # type: ignore # type: ignore
+from app.models.user import User # type: ignore # type: ignore # type: ignore
+from app.schemas.key import KeyMetadata, KeyRotateResponse # type: ignore # type: ignore # type: ignore
 
 router = APIRouter(
     prefix="/crypto",
@@ -51,59 +58,115 @@ class GenerateIRNRequest(BaseModel):
     timestamp: Optional[str] = Field(None, description="Date in YYYYMMDD format")
 
 
-@router.get("/keys")
-async def get_crypto_keys() -> CryptoKeysResponse:
+@router.get("/keys", response_model=List[KeyMetadata])
+async def list_keys(
+    current_user: User = Depends(get_current_active_user),
+    key_service: KeyManagementService = Depends(get_key_service)
+):
     """
-    Download cryptographic keys for IRN signing.
+    List all encryption keys (metadata only, no actual key material).
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view encryption keys"
+        )
     
-    In a production environment, this would retrieve actual keys from FIRS.
-    For development, it returns placeholder data.
+    return key_service.list_keys()
+
+
+@router.post("/keys/rotate", response_model=KeyRotateResponse)
+async def rotate_key(
+    current_user: User = Depends(get_current_active_user),
+    key_service: KeyManagementService = Depends(get_key_service)
+):
     """
-    # In production, this would retrieve actual FIRS keys
-    # For development, return placeholder data
-    return CryptoKeysResponse(
-        message="Development keys downloaded successfully",
-        public_key="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvFfM12y9\n-----END PUBLIC KEY-----"
-    )
+    Rotate the encryption key, generating a new active key.
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to rotate encryption keys"
+        )
+    
+    new_key_id = key_service.rotate_key()
+    return {"key_id": new_key_id, "message": "Key rotation successful"}
 
 
 @router.post("/upload-keys")
-async def upload_crypto_keys(file: UploadFile = File(...)) -> Dict[str, str]:
+async def upload_crypto_keys(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
     """
-    Upload a crypto_keys.txt file and extract the keys.
-    
-    This is used to process the FIRS-provided key file.
+    Upload FIRS crypto keys file.
     """
-    if file.filename != "crypto_keys.txt":
+    if not current_user.is_superuser:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid file: must be named crypto_keys.txt"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to upload crypto keys"
         )
     
-    # Save the uploaded file
-    temp_file_path = f"/tmp/{file.filename}"
-    with open(temp_file_path, "wb") as buffer:
-        buffer.write(await file.read())
-    
     try:
-        # Extract keys
-        public_key_pem, certificate = extract_keys_from_file(temp_file_path)
+        # Save uploaded file to temporary location
+        file_location = f"/tmp/{file.filename}"
+        with open(file_location, "wb+") as file_object:
+            file_object.write(file.file.read())
         
-        # Clean up temporary file
-        os.remove(temp_file_path)
+        # Extract keys from file
+        public_key_bytes, certificate_bytes = extract_keys_from_file(file_location)
         
+        # TODO: Store these keys in database for the organization
+        
+        return {"filename": file.filename, "message": "FIRS crypto keys uploaded successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process crypto keys: {str(e)}"
+        )
+
+
+@router.post("/integration-config/encrypt")
+async def encrypt_integration_config(
+    config: Dict[str, Any],
+    current_user: User = Depends(get_current_active_user),
+    encryption_service: EncryptionService = Depends(get_encryption_service)
+):
+    """
+    Encrypt sensitive fields in an integration configuration.
+    """
+    try:
+        encrypted_config = encryption_service.encrypt_integration_config(config)
         return {
-            "message": "Keys extracted successfully",
-            "public_key_length": str(len(public_key_pem)),
-            "certificate_length": str(len(certificate))
+            "encrypted_config": encrypted_config,
+            "config_encrypted": True
         }
     except Exception as e:
-        # Clean up temporary file
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process key file: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to encrypt configuration: {str(e)}"
+        )
+
+
+@router.post("/integration-config/decrypt")
+async def decrypt_integration_config(
+    encrypted_config: Dict[str, Any],
+    current_user: User = Depends(get_current_active_user),
+    encryption_service: EncryptionService = Depends(get_encryption_service)
+):
+    """
+    Decrypt an encrypted integration configuration.
+    """
+    try:
+        decrypted_config = encryption_service.decrypt_integration_config(encrypted_config)
+        return {
+            "decrypted_config": decrypted_config
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to decrypt configuration: {str(e)}"
         )
 
 
