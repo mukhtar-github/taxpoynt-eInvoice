@@ -13,9 +13,10 @@ import threading
 from datetime import datetime, timedelta
 
 from app import crud
-from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration, IntegrationTestResult # type: ignore
+from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration, IntegrationTestResult, OdooIntegrationCreate, OdooConnectionTestRequest # type: ignore
 from app.utils.encryption import encrypt_sensitive_value, decrypt_sensitive_value, get_app_encryption_key # type: ignore
-
+from app.models.integration import IntegrationType  # type: ignore
+from app.services.odoo_service import test_odoo_connection, fetch_odoo_invoices
 
 # List of config fields that should be encrypted
 SENSITIVE_CONFIG_FIELDS = [
@@ -186,7 +187,9 @@ def get_integration(
 def get_integrations(
     db: Session,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    client_id: Optional[UUID] = None,
+    integration_type: Optional[IntegrationType] = None
 ) -> List[Integration]:
     """
     Get multiple integrations with decrypted configs.
@@ -195,12 +198,33 @@ def get_integrations(
         db: Database session
         skip: Number of records to skip
         limit: Maximum number of records to return
+        client_id: Optional client ID to filter by
+        integration_type: Optional integration type to filter by
         
     Returns:
         List of integration objects with decrypted sensitive config fields
     """
-    integrations = crud.integration.get_multi(db=db, skip=skip, limit=limit)
-    return [decrypt_integration_config(integration) for integration in integrations]
+    # Build query
+    query = db.query(crud.integration.model)
+    
+    # Apply filters
+    if client_id:
+        query = query.filter(crud.integration.model.client_id == client_id)
+    
+    if integration_type:
+        query = query.filter(crud.integration.model.integration_type == integration_type)
+    
+    # Apply pagination
+    query = query.offset(skip).limit(limit)
+    
+    # Execute query
+    integrations = query.all()
+    
+    # Decrypt sensitive fields in configs
+    for integration in integrations:
+        decrypt_integration_config(integration)
+        
+    return integrations
 
 
 def decrypt_integration_config(integration: Any) -> Any:
@@ -271,12 +295,15 @@ def test_integration_connection(
         return _test_file_system_connection(integration)
     elif integration_type == "erp":
         return _test_erp_connection(integration)
+    elif integration_type == "odoo":
+        return test_odoo_connection(integration)
     else:
         return IntegrationTestResult(
             success=False,
             message=f"Unsupported integration type: {integration_type}",
             details={"error": "unsupported_type"}
         )
+
 
 def _test_rest_api_connection(integration: Integration) -> IntegrationTestResult:
     """Test connection to a REST API endpoint."""
@@ -373,6 +400,7 @@ def _test_rest_api_connection(integration: Integration) -> IntegrationTestResult
             details={"error": "unexpected_error"}
         )
 
+
 def _test_soap_connection(integration: Integration) -> IntegrationTestResult:
     """Test connection to a SOAP service."""
     # Placeholder for SOAP connection test
@@ -382,6 +410,7 @@ def _test_soap_connection(integration: Integration) -> IntegrationTestResult:
         message="SOAP connection test successful (simulated)",
         details={"status": "connected", "latency_ms": 50}
     )
+
 
 def _test_database_connection(integration: Integration) -> IntegrationTestResult:
     """Test connection to a database."""
@@ -393,6 +422,7 @@ def _test_database_connection(integration: Integration) -> IntegrationTestResult
         details={"status": "connected", "latency_ms": 30}
     )
 
+
 def _test_file_system_connection(integration: Integration) -> IntegrationTestResult:
     """Test connection to a file system."""
     # Placeholder for file system connection test
@@ -402,6 +432,7 @@ def _test_file_system_connection(integration: Integration) -> IntegrationTestRes
         details={"status": "connected", "latency_ms": 15}
     )
 
+
 def _test_erp_connection(integration: Integration) -> IntegrationTestResult:
     """Test connection to an ERP system."""
     # Placeholder for ERP system connection test
@@ -410,6 +441,47 @@ def _test_erp_connection(integration: Integration) -> IntegrationTestResult:
         message="ERP connection test successful (simulated)",
         details={"status": "connected", "latency_ms": 75}
     )
+
+
+def test_odoo_connection(integration: Integration) -> IntegrationTestResult:
+    """
+    Test connection to an Odoo server.
+    
+    Args:
+        integration: Integration object with Odoo configuration
+        
+    Returns:
+        Test result with success status, message, and details
+    """
+    config = integration.config
+    
+    # Get required parameters
+    url = config.get("url")
+    database = config.get("database")
+    username = config.get("username")
+    auth_method = config.get("auth_method")
+    api_key = config.get("api_key")
+    password = config.get("password")
+    
+    # Prepare connection parameters
+    connection_params = OdooConnectionTestRequest(
+        url=url,
+        database=database,
+        username=username,
+        auth_method=auth_method,
+        api_key=api_key,
+        password=password
+    )
+    
+    # Test connection
+    result = test_odoo_connection(connection_params)
+    
+    return IntegrationTestResult(
+        success=result.get("success", False),
+        message=result.get("message", ""),
+        details=result.get("details", {})
+    )
+
 
 # Integration templates for common systems
 INTEGRATION_TEMPLATES = {
@@ -567,23 +639,32 @@ INTEGRATION_TEMPLATES = {
     },
     "odoo": {
         "name": "Odoo",
-        "description": "Integration with Odoo ERP",
+        "description": "Integration with Odoo ERP for invoice and customer data using JSON-RPC",
         "config": {
-            "type": "rest_api",
-            "api_url": "https://{database}.odoo.com/api",
-            "test_endpoint": "/version",
-            "test_method": "GET",
-            "auth_type": "basic",
-            "headers": {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
+            "type": "odoo",
+            "url": "https://example.odoo.com",
+            "database": "your_odoo_database",
+            "username": "your_odoo_username",
+            "auth_method": "api_key",
+            "api_key": "",
+            "password": "",
+            "version": "16.0",
+            "rpc_path": "/jsonrpc",
             "timeout": 30,
-            "required_fields": ["database", "api_key", "username"],
-            "endpoints": {
-                "invoices": "/account.invoice",
-                "partners": "/res.partner",
-                "products": "/product.product"
+            "sync_frequency": "hourly",
+            "invoice_filters": {
+                "include_draft": False,
+                "include_posted": True,
+                "from_days_ago": 30,
+                "batch_size": 100
+            },
+            "field_mappings": {
+                "invoice_number": "name",
+                "invoice_date": "invoice_date",
+                "partner_name": "partner_id.name",
+                "partner_vat": "partner_id.vat",
+                "total_amount": "amount_total",
+                "tax_amount": "amount_tax"
             }
         }
     },
@@ -611,6 +692,7 @@ INTEGRATION_TEMPLATES = {
     }
 }
 
+
 def get_integration_templates() -> Dict[str, Any]:
     """
     Get all available integration templates.
@@ -619,6 +701,7 @@ def get_integration_templates() -> Dict[str, Any]:
         Dictionary of integration templates
     """
     return INTEGRATION_TEMPLATES
+
 
 def get_integration_template(template_id: str) -> Optional[Dict[str, Any]]:
     """
@@ -631,6 +714,7 @@ def get_integration_template(template_id: str) -> Optional[Dict[str, Any]]:
         Template configuration or None if not found
     """
     return INTEGRATION_TEMPLATES.get(template_id)
+
 
 def create_integration_from_template(
     db: Session, 
@@ -675,6 +759,7 @@ def create_integration_from_template(
     
     return create_integration(db, integration_in, user_id)
 
+
 def validate_integration_config(
     config: Dict[str, Any], 
     integration_type: Optional[str] = None
@@ -704,7 +789,7 @@ def validate_integration_config(
         "type": "object",
         "required": ["type"],
         "properties": {
-            "type": {"type": "string", "enum": ["rest_api", "soap", "database", "file_system", "erp"]},
+            "type": {"type": "string", "enum": ["rest_api", "soap", "database", "file_system", "erp", "odoo"]},
             "timeout": {"type": "number", "minimum": 1, "maximum": 300}
         }
     }
@@ -726,6 +811,8 @@ def validate_integration_config(
         errors.extend(_validate_file_system_config(config))
     elif integration_type == "erp":
         errors.extend(_validate_erp_config(config))
+    elif integration_type == "odoo":
+        errors.extend(_validate_odoo_config(config))
     
     # Check for required fields based on config
     required_fields = config.get("required_fields", [])
@@ -741,7 +828,9 @@ def validate_integration_config(
         "client_id", "client_secret", "access_token", "refresh_token",
         "tenant_id", "organization_id", "account_id", "realm_id",
         "test_data", "api_key_name", "consumer_key", "consumer_secret",
-        "token", "token_secret", "company_id", "company_db"
+        "token", "token_secret", "company_id", "company_db",
+        "url", "auth_method", "version", "rpc_path", "sync_frequency",
+        "invoice_filters", "field_mappings"
     ]
     
     for field in config:
@@ -749,6 +838,7 @@ def validate_integration_config(
             errors.append(f"Unknown configuration field: '{field}'")
     
     return len(errors) == 0, errors
+
 
 def _validate_rest_api_config(config: Dict[str, Any]) -> List[str]:
     """Validate REST API configuration."""
@@ -803,6 +893,7 @@ def _validate_rest_api_config(config: Dict[str, Any]) -> List[str]:
     
     return errors
 
+
 def _validate_soap_config(config: Dict[str, Any]) -> List[str]:
     """Validate SOAP configuration."""
     errors = []
@@ -830,6 +921,7 @@ def _validate_soap_config(config: Dict[str, Any]) -> List[str]:
     
     return errors
 
+
 def _validate_database_config(config: Dict[str, Any]) -> List[str]:
     """Validate database configuration."""
     errors = []
@@ -845,6 +937,7 @@ def _validate_database_config(config: Dict[str, Any]) -> List[str]:
     
     return errors
 
+
 def _validate_file_system_config(config: Dict[str, Any]) -> List[str]:
     """Validate file system configuration."""
     errors = []
@@ -854,6 +947,7 @@ def _validate_file_system_config(config: Dict[str, Any]) -> List[str]:
         errors.append("File system connection requires 'server'")
     
     return errors
+
 
 def _validate_erp_config(config: Dict[str, Any]) -> List[str]:
     """Validate ERP configuration."""
@@ -865,6 +959,23 @@ def _validate_erp_config(config: Dict[str, Any]) -> List[str]:
             errors.append(f"ERP connection requires '{field}'")
     
     return errors
+
+
+def _validate_odoo_config(config: Dict[str, Any]) -> List[str]:
+    """Validate Odoo configuration."""
+    errors = []
+    
+    # Required fields for Odoo connection
+    for field in ["url", "database", "username", "auth_method"]:
+        if field not in config or not config[field]:
+            errors.append(f"Odoo connection requires '{field}'")
+    
+    # Must have either api_key or password
+    if ("api_key" not in config or not config["api_key"]) and ("password" not in config or not config["password"]):
+        errors.append("Odoo connection requires either 'api_key' or 'password'")
+    
+    return errors
+
 
 def validate_and_create_integration(
     db: Session, 
@@ -892,127 +1003,124 @@ def validate_and_create_integration(
     integration = create_integration(db, obj_in, user_id)
     return True, [], integration 
 
-# Global dictionary to track integration status monitoring
-_monitoring_threads = {}
-_status_cache = {}
 
-def get_integration_status(
+def create_odoo_integration(
     db: Session, 
-    integration_id: UUID
-) -> Dict[str, Any]:
+    integration_in: OdooIntegrationCreate, 
+    created_by: UUID
+) -> Integration:
     """
-    Get the current status of an integration.
+    Create a new Odoo integration.
     
     Args:
         db: Database session
-        integration_id: ID of the integration
+        integration_in: Odoo integration creation schema
+        created_by: ID of the user creating the integration
         
     Returns:
-        Dictionary with status information
+        Created integration object
     """
-    integration = get_integration(db=db, integration_id=integration_id)
-    if not integration:
-        return {
-            "status": "unknown",
-            "last_checked": None,
-            "message": "Integration not found"
-        }
+    # Convert OdooIntegrationCreate to IntegrationCreate
+    integration_data = {
+        "client_id": integration_in.client_id,
+        "name": integration_in.name,
+        "description": integration_in.description,
+        "integration_type": IntegrationType.ODOO,
+        "config": integration_in.odoo_config.dict(),
+        "sync_frequency": integration_in.sync_frequency
+    }
     
-    # Get status from cache if available
-    status_info = _status_cache.get(str(integration_id))
-    
-    if not status_info:
-        # If not in cache, create basic status info
-        status_info = {
-            "status": integration.status,
-            "last_checked": integration.last_tested,
-            "message": "Status has not been checked yet",
-            "details": {}
-        }
-        _status_cache[str(integration_id)] = status_info
-    
-    return status_info
+    # Create integration
+    integration_create = IntegrationCreate(**integration_data)
+    return create_integration(db, integration_create, created_by)
 
-def start_integration_monitoring(
+
+def sync_odoo_invoices(
     db: Session,
     integration_id: UUID,
-    interval_minutes: int = 30
-) -> bool:
+    from_days_ago: int = 30,
+    limit: int = 100
+) -> Dict[str, Any]:
     """
-    Start background monitoring for an integration.
+    Synchronize invoices from an Odoo integration.
     
     Args:
         db: Database session
-        integration_id: ID of the integration to monitor
-        interval_minutes: Interval between checks in minutes
+        integration_id: ID of the Odoo integration
+        from_days_ago: Number of days ago to fetch invoices from
+        limit: Maximum number of invoices to fetch
         
     Returns:
-        True if monitoring started, False otherwise
+        Dictionary with sync results
     """
-    integration = get_integration(db=db, integration_id=integration_id)
+    # Get integration
+    integration = get_integration(db, integration_id)
     if not integration:
-        return False
+        return {
+            "success": False,
+            "message": "Integration not found",
+            "details": {"integration_id": str(integration_id)}
+        }
     
-    # Don't start a new thread if already monitoring
-    str_id = str(integration_id)
-    if str_id in _monitoring_threads and _monitoring_threads[str_id].is_alive():
-        return True
+    # Check if integration is Odoo type
+    if integration.integration_type != IntegrationType.ODOO:
+        return {
+            "success": False,
+            "message": "Not an Odoo integration",
+            "details": {"integration_type": integration.integration_type}
+        }
     
-    # Create and start monitoring thread
-    monitor_thread = threading.Thread(
-        target=_monitor_integration,
-        args=(db, integration_id, interval_minutes),
-        daemon=True
-    )
-    monitor_thread.start()
-    
-    _monitoring_threads[str_id] = monitor_thread
-    
-    # Update integration status
-    update_integration(
-        db=db,
-        db_obj=integration,
-        obj_in=IntegrationUpdate(status="monitoring"),
-        user_id=None
-    )
-    
-    return True
-
-def stop_integration_monitoring(
-    db: Session,
-    integration_id: UUID
-) -> bool:
-    """
-    Stop background monitoring for an integration.
-    
-    Args:
-        db: Database session
-        integration_id: ID of the integration to stop monitoring
+    try:
+        # Prepare date filter
+        from_date = datetime.now() - timedelta(days=from_days_ago)
         
-    Returns:
-        True if monitoring stopped, False otherwise
-    """
-    str_id = str(integration_id)
-    
-    # Check if monitoring thread exists
-    if str_id not in _monitoring_threads:
-        return False
-    
-    # Thread will terminate on its own (daemon)
-    _monitoring_threads.pop(str_id, None)
-    
-    # Get the integration
-    integration = get_integration(db=db, integration_id=integration_id)
-    if integration:
-        # Update status to paused
-        update_integration(
-            db=db,
-            db_obj=integration,
-            obj_in=IntegrationUpdate(status="paused"),
-            user_id=None
+        # Fetch invoices
+        invoices = fetch_odoo_invoices(
+            config=integration.config,
+            from_date=from_date,
+            limit=limit
         )
-    
-    return True
+        
+        # Update last_sync and next_sync
+        db_integration = db.query(crud.integration.model).filter(
+            crud.integration.model.id == integration.id
+        ).first()
+        
+        if db_integration:
+            db_integration.last_sync = datetime.now()
+            
+            # Calculate next sync based on frequency
+            if integration.sync_frequency == "hourly":
+                db_integration.next_sync = datetime.now() + timedelta(hours=1)
+            elif integration.sync_frequency == "daily":
+                db_integration.next_sync = datetime.now() + timedelta(days=1)
+            elif integration.sync_frequency == "weekly":
+                db_integration.next_sync = datetime.now() + timedelta(weeks=1)
+            else:  # realtime or unknown
+                db_integration.next_sync = datetime.now() + timedelta(minutes=15)
+            
+            db.commit()
+            db.refresh(db_integration)
+        
+        return {
+            "success": True,
+            "message": f"Successfully fetched {len(invoices)} invoices from Odoo",
+            "details": {
+                "invoice_count": len(invoices),
+                "first_invoice": invoices[0] if invoices else None,
+                "last_sync": db_integration.last_sync.isoformat() if db_integration else None,
+                "next_sync": db_integration.next_sync.isoformat() if db_integration else None
+            }
+        }
+        
+    except Exception as e:
+        logging.exception(f"Error syncing Odoo invoices: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error syncing Odoo invoices: {str(e)}",
+            "details": {"error": str(e), "error_type": type(e).__name__}
+        }
+
 
 def get_all_monitored_integrations(db: Session) -> List[Dict[str, Any]]:
     """
@@ -1044,6 +1152,7 @@ def get_all_monitored_integrations(db: Session) -> List[Dict[str, Any]]:
                 })
     
     return result
+
 
 def _monitor_integration(db_session, integration_id: UUID, interval_minutes: int):
     """
@@ -1103,3 +1212,129 @@ def _monitor_integration(db_session, integration_id: UUID, interval_minutes: int
             
             # Sleep before retry
             time.sleep(300)  # 5 minutes 
+
+
+# Global dictionary to track integration status monitoring
+_monitoring_threads = {}
+_status_cache = {}
+
+
+def get_integration_status(
+    db: Session, 
+    integration_id: UUID
+) -> Dict[str, Any]:
+    """
+    Get the current status of an integration.
+    
+    Args:
+        db: Database session
+        integration_id: ID of the integration
+        
+    Returns:
+        Dictionary with status information
+    """
+    integration = get_integration(db=db, integration_id=integration_id)
+    if not integration:
+        return {
+            "status": "unknown",
+            "last_checked": None,
+            "message": "Integration not found"
+        }
+    
+    # Get status from cache if available
+    status_info = _status_cache.get(str(integration_id))
+    
+    if not status_info:
+        # If not in cache, create basic status info
+        status_info = {
+            "status": integration.status,
+            "last_checked": integration.last_tested,
+            "message": "Status has not been checked yet",
+            "details": {}
+        }
+        _status_cache[str(integration_id)] = status_info
+    
+    return status_info
+
+
+def start_integration_monitoring(
+    db: Session,
+    integration_id: UUID,
+    interval_minutes: int = 30
+) -> bool:
+    """
+    Start background monitoring for an integration.
+    
+    Args:
+        db: Database session
+        integration_id: ID of the integration to monitor
+        interval_minutes: Interval between checks in minutes
+        
+    Returns:
+        True if monitoring started, False otherwise
+    """
+    integration = get_integration(db=db, integration_id=integration_id)
+    if not integration:
+        return False
+    
+    # Don't start a new thread if already monitoring
+    str_id = str(integration_id)
+    if str_id in _monitoring_threads and _monitoring_threads[str_id].is_alive():
+        return True
+    
+    # Create and start monitoring thread
+    monitor_thread = threading.Thread(
+        target=_monitor_integration,
+        args=(db, integration_id, interval_minutes),
+        daemon=True
+    )
+    monitor_thread.start()
+    
+    _monitoring_threads[str_id] = monitor_thread
+    
+    # Update integration status
+    update_integration(
+        db=db,
+        db_obj=integration,
+        obj_in=IntegrationUpdate(status="monitoring"),
+        user_id=None
+    )
+    
+    return True
+
+
+def stop_integration_monitoring(
+    db: Session,
+    integration_id: UUID
+) -> bool:
+    """
+    Stop background monitoring for an integration.
+    
+    Args:
+        db: Database session
+        integration_id: ID of the integration to stop monitoring
+        
+    Returns:
+        True if monitoring stopped, False otherwise
+    """
+    str_id = str(integration_id)
+    
+    # Check if monitoring thread exists
+    if str_id not in _monitoring_threads:
+        return False
+    
+    # Thread will terminate on its own (daemon)
+    _monitoring_threads.pop(str_id, None)
+    
+    # Get the integration
+    integration = get_integration(db=db, integration_id=integration_id)
+    if integration:
+        # Update status to paused
+        update_integration(
+            db=db,
+            db_obj=integration,
+            obj_in=IntegrationUpdate(status="paused"),
+            user_id=None
+        )
+    
+    return True

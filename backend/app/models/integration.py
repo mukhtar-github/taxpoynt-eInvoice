@@ -1,8 +1,15 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey, DateTime, Text, func, Boolean # type: ignore
+import enum
+from sqlalchemy import Column, String, ForeignKey, DateTime, Text, func, Boolean, Enum # type: ignore
 from sqlalchemy.dialects.postgresql import UUID, JSONB # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 from app.db.base import Base # type: ignore
+
+
+class IntegrationType(str, enum.Enum):
+    ODOO = "odoo"
+    CUSTOM = "custom"
+    # More integration types can be added here as needed
 
 
 class Integration(Base):
@@ -12,6 +19,7 @@ class Integration(Base):
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
     name = Column(String(100), nullable=False)
     description = Column(Text)
+    integration_type = Column(Enum(IntegrationType), nullable=False, default=IntegrationType.CUSTOM)
     config = Column(JSONB, nullable=False)
     config_encrypted = Column(Boolean, nullable=False, default=False)  # Flag to indicate if config is encrypted
     encryption_key_id = Column(String(100), ForeignKey("encryption_keys.id"))  # Reference to the key used for encryption
@@ -20,6 +28,9 @@ class Integration(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     last_tested = Column(DateTime)
     status = Column(String(20), nullable=False, default="configured")
+    sync_frequency = Column(String(20), default="hourly")  # hourly, daily, realtime
+    last_sync = Column(DateTime)
+    next_sync = Column(DateTime)
 
     # Relationships
     client = relationship("Client", back_populates="integrations")
@@ -44,4 +55,4 @@ class IntegrationHistory(Base):
 
     # Relationships
     integration = relationship("Integration", back_populates="history")
-    encryption_key = relationship("EncryptionKey") 
+    encryption_key = relationship("EncryptionKey")

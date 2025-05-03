@@ -1,14 +1,61 @@
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, constr, validator # type: ignore
+from typing import Optional, Dict, Any, List, Literal
+from pydantic import BaseModel, constr, validator, HttpUrl, Field # type: ignore
+from enum import Enum
+
+# Integration types
+class IntegrationType(str, Enum):
+    ODOO = "odoo"
+    CUSTOM = "custom"
+
+
+# Odoo Authentication Methods
+class OdooAuthMethod(str, Enum):
+    PASSWORD = "password"
+    API_KEY = "api_key"
+
+
+# Odoo-specific configuration schema
+class OdooConfig(BaseModel):
+    url: HttpUrl = Field(..., description="Odoo server URL (e.g., https://example.odoo.com)")
+    database: str = Field(..., description="Odoo database name")
+    username: str = Field(..., description="Odoo username (email)")
+    auth_method: OdooAuthMethod = Field(default=OdooAuthMethod.API_KEY, description="Authentication method")
+    password: Optional[str] = Field(None, description="Password (if auth_method is 'password')")
+    api_key: Optional[str] = Field(None, description="API key (if auth_method is 'api_key')")
+    version: str = Field(default="16.0", description="Odoo version")
+    rpc_path: str = Field(default="/jsonrpc", description="RPC endpoint path")
+    timeout: int = Field(default=30, description="Connection timeout in seconds")
+    
+    @validator('api_key')
+    def validate_api_key(cls, v, values):
+        if values.get('auth_method') == OdooAuthMethod.API_KEY and not v:
+            raise ValueError('API key is required when auth_method is api_key')
+        return v
+    
+    @validator('password')
+    def validate_password(cls, v, values):
+        if values.get('auth_method') == OdooAuthMethod.PASSWORD and not v:
+            raise ValueError('Password is required when auth_method is password')
+        return v
+
+
+# Sync frequency options
+class SyncFrequency(str, Enum):
+    REALTIME = "realtime"
+    HOURLY = "hourly"
+    DAILY = "daily"
+    WEEKLY = "weekly"
 
 
 # Shared properties
 class IntegrationBase(BaseModel):
     name: constr(min_length=1, max_length=100) # type: ignore
     description: Optional[str] = None
+    integration_type: IntegrationType = IntegrationType.CUSTOM
     config: Dict[str, Any]
+    sync_frequency: SyncFrequency = SyncFrequency.HOURLY
 
 
 # Properties to receive on integration creation
@@ -20,8 +67,10 @@ class IntegrationCreate(IntegrationBase):
 class IntegrationUpdate(BaseModel):
     name: Optional[constr(min_length=1, max_length=100)] = None # type: ignore
     description: Optional[str] = None
+    integration_type: Optional[IntegrationType] = None
     config: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
+    sync_frequency: Optional[SyncFrequency] = None
 
     @validator('status')
     def validate_status(cls, v):
@@ -29,6 +78,15 @@ class IntegrationUpdate(BaseModel):
         if v not in allowed_statuses:
             raise ValueError(f'Status must be one of {allowed_statuses}')
         return v
+
+
+# Odoo Integration Create
+class OdooIntegrationCreate(BaseModel):
+    client_id: UUID
+    name: constr(min_length=1, max_length=100) # type: ignore
+    description: Optional[str] = None
+    odoo_config: OdooConfig
+    sync_frequency: SyncFrequency = SyncFrequency.HOURLY
 
 
 # Properties shared by models in DB
@@ -39,6 +97,8 @@ class IntegrationInDBBase(IntegrationBase):
     updated_at: datetime
     created_by: Optional[UUID] = None
     last_tested: Optional[datetime] = None
+    last_sync: Optional[datetime] = None
+    next_sync: Optional[datetime] = None
     status: str
 
     class Config:
@@ -95,4 +155,14 @@ class IntegrationTestResult(BaseModel):
 class IntegrationTemplateCreate(BaseModel):
     template_id: str
     client_id: UUID
-    config_values: Optional[Dict[str, Any]] = None 
+    config_values: Optional[Dict[str, Any]] = None
+
+
+# Odoo Connection Test Request
+class OdooConnectionTestRequest(BaseModel):
+    url: HttpUrl
+    database: str
+    username: str
+    auth_method: OdooAuthMethod
+    password: Optional[str] = None
+    api_key: Optional[str] = None

@@ -1,192 +1,138 @@
-import React from 'react';
+import React, { HTMLAttributes, forwardRef } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
-  variant?: 'default' | 'outlined' | 'elevated';
-  padding?: 'none' | 'small' | 'medium' | 'large';
-  onClick?: () => void;
-  style?: React.CSSProperties;
-}
-
-export const Card: React.FC<CardProps> = ({
-  children,
-  className = '',
-  variant = 'default',
-  padding = 'medium',
-  onClick,
-  style = {},
-}) => {
-  // Base styles
-  const baseStyles = {
-    borderRadius: 'var(--border-radius-lg)',
-    backgroundColor: 'var(--color-white)',
-    transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-  };
-
-  // Variant-specific styles
-  const variantStyles = {
-    default: {
-      border: '1px solid var(--color-border)',
+// Define card variants using class-variance-authority
+const cardVariants = cva(
+  "rounded-lg border border-border bg-white shadow-sm",
+  {
+    variants: {
+      variant: {
+        default: "p-4",
+        compact: "p-3",
+        spacious: "p-6",
+        elevated: "p-4 shadow-md border-none",
+      },
     },
-    outlined: {
-      border: '1px solid var(--color-border)',
-      boxShadow: 'none',
+    defaultVariants: {
+      variant: "default",
     },
-    elevated: {
-      border: 'none',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    },
-  };
+  }
+);
 
-  // Padding styles
-  const paddingStyles = {
-    none: {
-      padding: '0',
-    },
-    small: {
-      padding: 'var(--spacing-2)',
-    },
-    medium: {
-      padding: 'var(--spacing-4)',
-    },
-    large: {
-      padding: 'var(--spacing-6)',
-    },
-  };
+export interface CardProps 
+  extends HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
 
-  // Interactive styles
-  const hoverStyles = onClick ? {
-    cursor: 'pointer',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-    },
-  } : {};
+const Card = forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant, ...props }, ref) => {
+    return (
+      <div
+        className={cardVariants({ variant, className })}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
+Card.displayName = "Card";
 
-  return (
-    <div
-      className={`card ${className}`}
-      style={{
-        ...baseStyles,
-        ...variantStyles[variant],
-        ...paddingStyles[padding],
-        ...style
-      }}
-      onClick={onClick}
-    >
-      {children}
-    </div>
-  );
-};
+// Card Header component
+const CardHeader = forwardRef<
+  HTMLDivElement, 
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`flex flex-col space-y-1.5 pb-4 ${className || ''}`}
+    {...props}
+  />
+));
+CardHeader.displayName = "CardHeader";
 
-interface CardHeaderProps {
-  children?: React.ReactNode;
-  className?: string;
-  title?: string;
-  subtitle?: string;
-  action?: React.ReactNode;
-}
+// Card Title component
+const CardTitle = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={`font-semibold text-xl text-text-primary ${className || ''}`}
+    {...props}
+  />
+));
+CardTitle.displayName = "CardTitle";
 
-export const CardHeader: React.FC<CardHeaderProps> = ({
-  children,
-  className = '',
-  title,
-  subtitle,
-  action,
-}) => {
-  return (
-    <div
-      className={`card-header ${className}`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 'var(--spacing-4)',
-      }}
-    >
-      <div>
-        {title && (
-          <h3
-            style={{
-              fontSize: 'var(--font-size-lg)',
-              fontWeight: 'var(--font-weight-semibold)',
-              margin: 0,
-              marginBottom: subtitle ? 'var(--spacing-1)' : 0,
-            }}
-          >
-            {title}
-          </h3>
-        )}
-        {subtitle && (
-          <p
-            style={{
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-text-secondary)',
-              margin: 0,
-            }}
-          >
-            {subtitle}
-          </p>
-        )}
-        {children}
-      </div>
-      {action && <div className="card-action">{action}</div>}
-    </div>
-  );
-};
+// Card Description component
+const CardDescription = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={`text-sm text-text-secondary ${className || ''}`}
+    {...props}
+  />
+));
+CardDescription.displayName = "CardDescription";
 
-interface CardContentProps {
-  children: React.ReactNode;
-  className?: string;
-}
+// Card Content component
+const CardContent = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={`py-2 ${className || ''}`} {...props} />
+));
+CardContent.displayName = "CardContent";
 
-export const CardContent: React.FC<CardContentProps> = ({
-  children,
-  className = '',
-}) => {
-  return (
-    <div
-      className={`card-content ${className}`}
-    >
-      {children}
-    </div>
-  );
-};
+// Card Footer component
+const CardFooter = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`flex items-center pt-4 ${className || ''}`}
+    {...props}
+  />
+));
+CardFooter.displayName = "CardFooter";
 
-interface CardFooterProps {
-  children: React.ReactNode;
-  className?: string;
-  align?: 'left' | 'center' | 'right' | 'space-between';
-}
-
-export const CardFooter: React.FC<CardFooterProps> = ({
-  children,
-  className = '',
-  align = 'left',
-}) => {
-  const alignStyles = {
-    left: 'flex-start',
-    center: 'center',
-    right: 'flex-end',
-    'space-between': 'space-between',
+// Helper component to organize multiple cards with 24px gap
+export const CardGrid = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & {
+    columns?: { base?: number; sm?: number; md?: number; lg?: number; xl?: number }
+  }
+>(({ className, columns = { base: 1, md: 2, lg: 3 }, ...props }, ref) => {
+  const getGridCols = () => {
+    return `grid-cols-${columns.base || 1} ${
+      columns.sm ? `sm:grid-cols-${columns.sm}` : ''
+    } ${
+      columns.md ? `md:grid-cols-${columns.md}` : ''
+    } ${
+      columns.lg ? `lg:grid-cols-${columns.lg}` : ''
+    } ${
+      columns.xl ? `xl:grid-cols-${columns.xl}` : ''
+    }`;
   };
 
   return (
-    <div
-      className={`card-footer ${className}`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: alignStyles[align],
-        marginTop: 'var(--spacing-4)',
-        paddingTop: 'var(--spacing-4)',
-        borderTop: '1px solid var(--color-border)',
-      }}
-    >
-      {children}
-    </div>
+    <div 
+      ref={ref}
+      className={`grid ${getGridCols()} gap-6 w-full ${className || ''}`}
+      {...props}
+    />
   );
+});
+CardGrid.displayName = "CardGrid";
+
+export { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription, 
+  CardContent, 
+  CardFooter 
 };
 
 // Metric Card - specialized card for dashboard metrics
@@ -228,7 +174,6 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     <Card 
       className={className} 
       variant="elevated" 
-      padding="medium"
       onClick={onClick}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
