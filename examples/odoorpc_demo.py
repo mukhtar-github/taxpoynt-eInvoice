@@ -92,37 +92,70 @@ def fetch_invoices(odoo, limit=5, from_days_ago=30):
         # Build search domain
         domain = [
             ('move_type', '=', 'out_invoice'),  # Only customer invoices
-            ('state', '=', 'posted'),           # Only posted invoices
             ('invoice_date', '>=', from_date)   # Only recent invoices
         ]
         
-        # Search for invoices
+        # First use search to get IDs
         invoice_ids = Invoice.search(domain, limit=limit)
         logger.info(f"Found {len(invoice_ids)} invoices")
         
         if not invoice_ids:
             return []
         
-        # Prepare results
+        # Use search_read instead of browse to avoid frozendict issues
+        invoice_data = Invoice.search_read(
+            [('id', 'in', invoice_ids)], 
+            [
+                'name', 'ref', 'invoice_date', 'amount_total', 
+                'partner_id', 'invoice_line_ids', 'state', 'currency_id'
+            ]
+        )
+        
+        # Prepare results with native Python types
         invoices = []
         
-        # Browse invoice records
-        for invoice in Invoice.browse(invoice_ids):
-            # Get partner (customer) data
-            partner = invoice.partner_id
+        for invoice in invoice_data:
+            # Safely handle partner data
+            partner_id = False
+            partner_name = "Unknown"
             
-            # Format invoice data
+            if invoice.get('partner_id'):
+                try:
+                    partner_id = int(invoice['partner_id'][0])
+                    partner_name = str(invoice['partner_id'][1])
+                except (IndexError, TypeError):
+                    pass
+            
+            # Get currency symbol
+            currency_symbol = "₦"  # Default to Naira
+            if invoice.get('currency_id'):
+                try:
+                    if invoice['currency_id'][1] == "USD":
+                        currency_symbol = "$"
+                    elif invoice['currency_id'][1] == "EUR":
+                        currency_symbol = "€"
+                except (IndexError, TypeError):
+                    pass
+            
+            # Count invoice lines
+            line_count = 0
+            if invoice.get('invoice_line_ids'):
+                line_count = len(invoice['invoice_line_ids'])
+            
+            # Format invoice data with primitive types only
             invoice_data = {
-                "id": invoice.id,
-                "name": invoice.name,
-                "reference": getattr(invoice, 'ref', '') or '',
-                "invoice_date": invoice.invoice_date,
-                "amount_total": invoice.amount_total,
+                "id": int(invoice['id']),
+                "name": str(invoice.get('name', '')),
+                "reference": str(invoice.get('ref', '') or ''),
+                "invoice_date": invoice.get('invoice_date'),
+                "amount_total": float(invoice.get('amount_total', 0.0)),
+                "currency_symbol": currency_symbol,
                 "partner": {
-                    "id": partner.id,
-                    "name": partner.name,
+                    "id": partner_id,
+                    "name": partner_name,
                 },
-                "line_count": len(invoice.invoice_line_ids),
+                "line_count": line_count,
+                "state": str(invoice.get('state', 'draft')),
             }
             
             invoices.append(invoice_data)
@@ -189,7 +222,13 @@ def main():
         if invoices:
             for i, invoice in enumerate(invoices, 1):
                 print(f"Invoice {i}:")
-                pprint(invoice)
+                print(f"  ID: {invoice['id']}")
+                print(f"  Name: {invoice['name']}")
+                print(f"  Date: {invoice['invoice_date']}")
+                print(f"  Customer: {invoice['partner']['name']}")
+                print(f"  Amount: {invoice['currency_symbol']}{invoice['amount_total']:.2f}")
+                print(f"  Status: {invoice['state']}")
+                print(f"  Line Items: {invoice['line_count']}")
                 print("-"*40)
         else:
             print("No invoices found in the specified date range.")
