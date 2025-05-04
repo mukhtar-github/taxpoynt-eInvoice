@@ -25,43 +25,39 @@ except ImportError:
     logger.error("Failed to import odoorpc. Please install with: pip install odoorpc")
     sys.exit(1)
 
-def connect_to_odoo(url, database, username, password_or_api_key, use_api_key=True):
+def connect_to_odoo(config):
     """
     Connect to an Odoo instance using OdooRPC.
     
     Args:
-        url: Odoo server URL
-        database: Database name
-        username: Username (email)
-        password_or_api_key: Password or API key
-        use_api_key: Whether to use API key authentication
+        config: Dictionary with Odoo connection parameters
+            - host: Odoo server hostname
+            - port: Port number (default: 443 for SSL, 8069 for non-SSL)
+            - protocol: Protocol to use (jsonrpc, jsonrpc+ssl, xmlrpc, xmlrpc+ssl)
+            - database: Database name
+            - username: Username (email)
+            - password: Password or API key
+            - use_api_key: Whether to use API key authentication
         
     Returns:
         OdooRPC connection object
     """
-    logger.info(f"Connecting to Odoo at {url}")
-    
-    # Parse URL to get host, protocol, and port
-    parsed_url = urlparse(url)
-    host = parsed_url.netloc.split(':')[0]
-    protocol = parsed_url.scheme or 'jsonrpc'
-    
-    # Determine port (default is 8069 unless specified)
-    port = 443 if protocol == 'jsonrpc+ssl' else 8069
-    if ':' in parsed_url.netloc:
-        try:
-            port = int(parsed_url.netloc.split(':')[1])
-        except (IndexError, ValueError):
-            pass
-    
-    logger.info(f"Using protocol: {protocol}, host: {host}, port: {port}")
+    logger.info(f"Connecting to Odoo at {config['host']} using {config['protocol']}")
     
     try:
         # Initialize OdooRPC connection
-        odoo = odoorpc.ODOO(host, protocol=protocol, port=port)
+        odoo = odoorpc.ODOO(
+            config["host"], 
+            protocol=config["protocol"], 
+            port=config["port"]
+        )
         
         # Login to Odoo
-        odoo.login(database, username, password_or_api_key)
+        odoo.login(
+            config["database"], 
+            config["username"], 
+            config["password"]
+        )
         
         # Get user info
         user = odoo.env['res.users'].browse(odoo.env.uid)
@@ -142,12 +138,29 @@ def main():
     
     # Demo configuration (replace with real values)
     demo_config = {
-        "url": "https://demo.odoo.com",         # Demo URL
-        "database": "demo",                      # Demo database
-        "username": "admin",                     # Demo username
-        "password": "admin",                     # Demo password
-        "use_api_key": False                     # Using password instead of API key for demo
+        "host": "demo.odoo.com",           # Odoo server hostname
+        "port": 443,                        # Default HTTPS port
+        "protocol": "jsonrpc+ssl",          # Use SSL for security
+        "database": "demo",                 # Demo database
+        "username": "admin",                # Demo username
+        "password": "admin",                # Demo password/API key
+        "use_api_key": False                # Using password instead of API key for demo
     }
+    
+    # Try to import test credentials if available
+    try:
+        import sys
+        import os
+        # Add project root to path to support importing from backend directory
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+        
+        from backend.test_credentials import test_config
+        print("Using test credentials from test_credentials.py")
+        config = test_config
+    except ImportError as e:
+        print(f"Unable to import test credentials: {e}")
+        print("Using demo configuration (likely to fail without real credentials)")
+        config = demo_config
     
     print("\n" + "="*80)
     print("TaxPoynt eInvoice - OdooRPC Integration Demo")
@@ -163,13 +176,7 @@ def main():
     try:
         # Connect to Odoo
         print("\nAttempting to connect to Odoo...")
-        odoo = connect_to_odoo(
-            demo_config["url"],
-            demo_config["database"],
-            demo_config["username"],
-            demo_config["password"],
-            demo_config["use_api_key"]
-        )
+        odoo = connect_to_odoo(config)
         
         # Fetch invoices
         print("\nFetching invoices...")

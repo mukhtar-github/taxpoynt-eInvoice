@@ -19,7 +19,11 @@ The integration is primarily implemented in:
 ```python
 def test_odoo_connection(connection_params):
     # Using OdooRPC for connection testing
-    odoo = odoorpc.ODOO(host, protocol=protocol, port=port)
+    odoo = odoorpc.ODOO(
+        connection_params["host"], 
+        protocol=connection_params["protocol"], 
+        port=connection_params["port"]
+    )
     # ...
 ```
 
@@ -28,10 +32,38 @@ def test_odoo_connection(connection_params):
 ```python
 def fetch_odoo_invoices(config, from_date=None, limit=100, offset=0):
     # Using OdooRPC for fetching invoices with ORM-like access
+    odoo = odoorpc.ODOO(
+        config["host"], 
+        protocol=config["protocol"], 
+        port=config["port"]
+    )
+    # ...
     Invoice = odoo.env['account.move']
     invoices = Invoice.browse(invoice_ids)
     # ...
 ```
+
+## Connection Configuration
+
+The OdooRPC integration expects the following configuration structure:
+
+```python
+odoo_config = {
+    "host": "your-instance.odoo.com",  # Odoo server hostname
+    "port": 443,                        # Default HTTPS port
+    "protocol": "jsonrpc+ssl",          # Use SSL for security
+    "database": "your_database_name",   # Database name
+    "username": "your_email@example.com", # Username/email
+    "password": "your_password_or_api_key", # Password or API key
+    "use_api_key": True                 # True if using API key
+}
+```
+
+**Important Notes:**
+1. Do not include `/odoo` in the host parameter, as this would cause the RPC calls to fail
+2. Always use SSL protocols (`jsonrpc+ssl` or `xmlrpc+ssl`) for production environments
+3. For enhanced security, use API keys instead of passwords
+4. The version of OdooRPC we're using (0.10.1) doesn't support the `base_url` parameter directly in the constructor
 
 ## Frontend Implementation
 
@@ -46,6 +78,16 @@ import axios, { AxiosError } from 'axios';
 interface ApiErrorResponse {
   detail: string;
   status_code: number;
+}
+
+interface OdooConnectionParams {
+  host: string;
+  port: number;
+  protocol: string;
+  database: string;
+  username: string;
+  password: string;
+  use_api_key: boolean;
 }
 
 async function testOdooConnection(connectionParams: OdooConnectionParams) {
@@ -101,7 +143,9 @@ import React, { useState } from 'react';
 import axios, { AxiosError } from 'axios';
 
 interface OdooConnectionParams {
-  url: string;
+  host: string;
+  port: number;
+  protocol: string;
   database: string;
   username: string;
   password: string;
@@ -115,7 +159,9 @@ interface ApiErrorResponse {
 
 const OdooIntegrationForm: React.FC = () => {
   const [connectionParams, setConnectionParams] = useState<OdooConnectionParams>({
-    url: '',
+    host: '',
+    port: 443,
+    protocol: 'jsonrpc+ssl',
     database: '',
     username: '',
     password: '',
@@ -125,11 +171,16 @@ const OdooIntegrationForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    // Handle checkbox vs other input types
+    const inputValue = (type === 'checkbox') 
+      ? (e.target as HTMLInputElement).checked
+      : (name === 'port' ? parseInt(value, 10) : value);
+    
     setConnectionParams({
       ...connectionParams,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: inputValue
     });
   };
 
@@ -155,15 +206,44 @@ const OdooIntegrationForm: React.FC = () => {
       <h2>Odoo Integration</h2>
       
       <div className="form-group">
-        <label htmlFor="url">Odoo URL</label>
+        <label htmlFor="host">Odoo Host</label>
         <input
           type="text"
-          id="url"
-          name="url"
-          value={connectionParams.url}
+          id="host"
+          name="host"
+          value={connectionParams.host}
           onChange={handleChange}
-          placeholder="https://example.odoo.com"
+          placeholder="your-instance.odoo.com"
         />
+        <small>Do not include http:// or path components</small>
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor="protocol">Protocol</label>
+        <select
+          id="protocol"
+          name="protocol"
+          value={connectionParams.protocol}
+          onChange={handleChange}
+        >
+          <option value="jsonrpc+ssl">JSON-RPC (SSL/HTTPS)</option>
+          <option value="jsonrpc">JSON-RPC (HTTP)</option>
+          <option value="xmlrpc+ssl">XML-RPC (SSL/HTTPS)</option>
+          <option value="xmlrpc">XML-RPC (HTTP)</option>
+        </select>
+      </div>
+      
+      <div className="form-group">
+        <label htmlFor="port">Port</label>
+        <input
+          type="number"
+          id="port"
+          name="port"
+          value={connectionParams.port}
+          onChange={handleChange}
+          placeholder="443"
+        />
+        <small>Usually 443 for HTTPS or 8069 for HTTP</small>
       </div>
       
       <div className="form-group">

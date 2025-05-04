@@ -24,6 +24,7 @@ var/
 htmlcov/
 .venv/
 venv/
+test_credentials.py
 
 # Node.js
 node_modules/
