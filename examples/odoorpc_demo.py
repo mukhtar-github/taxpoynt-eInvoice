@@ -1,0 +1,200 @@
+"""
+Demo script for OdooRPC integration in TaxPoynt eInvoice.
+
+This script demonstrates how to use OdooRPC to connect to an Odoo instance
+and fetch invoices. It does not require the full application context.
+"""
+
+import sys
+import os
+from pathlib import Path
+import logging
+from datetime import datetime, timedelta
+from pprint import pprint
+from urllib.parse import urlparse
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+try:
+    import odoorpc
+    logger.info("OdooRPC library successfully imported")
+except ImportError:
+    logger.error("Failed to import odoorpc. Please install with: pip install odoorpc")
+    sys.exit(1)
+
+def connect_to_odoo(url, database, username, password_or_api_key, use_api_key=True):
+    """
+    Connect to an Odoo instance using OdooRPC.
+    
+    Args:
+        url: Odoo server URL
+        database: Database name
+        username: Username (email)
+        password_or_api_key: Password or API key
+        use_api_key: Whether to use API key authentication
+        
+    Returns:
+        OdooRPC connection object
+    """
+    logger.info(f"Connecting to Odoo at {url}")
+    
+    # Parse URL to get host, protocol, and port
+    parsed_url = urlparse(url)
+    host = parsed_url.netloc.split(':')[0]
+    protocol = parsed_url.scheme or 'jsonrpc'
+    
+    # Determine port (default is 8069 unless specified)
+    port = 443 if protocol == 'jsonrpc+ssl' else 8069
+    if ':' in parsed_url.netloc:
+        try:
+            port = int(parsed_url.netloc.split(':')[1])
+        except (IndexError, ValueError):
+            pass
+    
+    logger.info(f"Using protocol: {protocol}, host: {host}, port: {port}")
+    
+    try:
+        # Initialize OdooRPC connection
+        odoo = odoorpc.ODOO(host, protocol=protocol, port=port)
+        
+        # Login to Odoo
+        odoo.login(database, username, password_or_api_key)
+        
+        # Get user info
+        user = odoo.env['res.users'].browse(odoo.env.uid)
+        logger.info(f"Connected as user: {user.name} (ID: {odoo.env.uid})")
+        
+        return odoo
+    except Exception as e:
+        logger.error(f"Failed to connect to Odoo: {str(e)}")
+        raise
+
+def fetch_invoices(odoo, limit=5, from_days_ago=30):
+    """
+    Fetch invoices from Odoo.
+    
+    Args:
+        odoo: OdooRPC connection
+        limit: Maximum number of invoices to fetch
+        from_days_ago: Fetch invoices from this many days ago
+        
+    Returns:
+        List of invoice dictionaries
+    """
+    logger.info(f"Fetching up to {limit} invoices from the past {from_days_ago} days")
+    
+    # Calculate from_date
+    from_date = (datetime.now() - timedelta(days=from_days_ago)).strftime('%Y-%m-%d')
+    
+    try:
+        # Get the invoice model (account.move in Odoo 13+)
+        Invoice = odoo.env['account.move']
+        
+        # Build search domain
+        domain = [
+            ('move_type', '=', 'out_invoice'),  # Only customer invoices
+            ('state', '=', 'posted'),           # Only posted invoices
+            ('invoice_date', '>=', from_date)   # Only recent invoices
+        ]
+        
+        # Search for invoices
+        invoice_ids = Invoice.search(domain, limit=limit)
+        logger.info(f"Found {len(invoice_ids)} invoices")
+        
+        if not invoice_ids:
+            return []
+        
+        # Prepare results
+        invoices = []
+        
+        # Browse invoice records
+        for invoice in Invoice.browse(invoice_ids):
+            # Get partner (customer) data
+            partner = invoice.partner_id
+            
+            # Format invoice data
+            invoice_data = {
+                "id": invoice.id,
+                "name": invoice.name,
+                "reference": getattr(invoice, 'ref', '') or '',
+                "invoice_date": invoice.invoice_date,
+                "amount_total": invoice.amount_total,
+                "partner": {
+                    "id": partner.id,
+                    "name": partner.name,
+                },
+                "line_count": len(invoice.invoice_line_ids),
+            }
+            
+            invoices.append(invoice_data)
+        
+        return invoices
+        
+    except Exception as e:
+        logger.error(f"Error fetching invoices: {str(e)}")
+        raise
+
+def main():
+    """Main function for the demo script."""
+    
+    # Demo configuration (replace with real values)
+    demo_config = {
+        "url": "https://demo.odoo.com",         # Demo URL
+        "database": "demo",                      # Demo database
+        "username": "admin",                     # Demo username
+        "password": "admin",                     # Demo password
+        "use_api_key": False                     # Using password instead of API key for demo
+    }
+    
+    print("\n" + "="*80)
+    print("TaxPoynt eInvoice - OdooRPC Integration Demo")
+    print("="*80)
+    
+    print("\nThis script demonstrates how to use OdooRPC to connect to an Odoo instance")
+    print("and fetch invoice data. To use with a real Odoo instance, update the")
+    print("configuration values in the script with your actual connection details.")
+    print("\nNote: The demo is configured to use demo.odoo.com which may not allow")
+    print("connections without proper credentials. You will need to provide valid")
+    print("credentials to successfully run this demo.")
+    
+    try:
+        # Connect to Odoo
+        print("\nAttempting to connect to Odoo...")
+        odoo = connect_to_odoo(
+            demo_config["url"],
+            demo_config["database"],
+            demo_config["username"],
+            demo_config["password"],
+            demo_config["use_api_key"]
+        )
+        
+        # Fetch invoices
+        print("\nFetching invoices...")
+        invoices = fetch_invoices(odoo, limit=5, from_days_ago=30)
+        
+        # Display results
+        print("\nFetched Invoices:")
+        print("-"*40)
+        
+        if invoices:
+            for i, invoice in enumerate(invoices, 1):
+                print(f"Invoice {i}:")
+                pprint(invoice)
+                print("-"*40)
+        else:
+            print("No invoices found in the specified date range.")
+        
+        print("\nDemo completed successfully!")
+        
+    except Exception as e:
+        print(f"\nDemo failed: {str(e)}")
+        print("\nTo successfully run this demo, you need to:")
+        print("1. Install odoorpc: pip install odoorpc")
+        print("2. Update the configuration with valid Odoo connection details")
+        print("3. Ensure network access to the Odoo server")
+
+if __name__ == "__main__":
+    main()

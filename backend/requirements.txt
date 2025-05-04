@@ -39,6 +39,7 @@ hiredis>=2.2.3
 # Integration & Validation
 jsonschema>=4.19.1
 requests>=2.31.0
+odoorpc>=0.9.0  # Added for Odoo integration
 
 # Testing
 pytest>=7.4.2
@@ -51,4 +52,3 @@ pydantic-settings>=2.0.3
 email-validator>=2.0.0
 tenacity>=8.2.3
 uuid>=1.30
-
