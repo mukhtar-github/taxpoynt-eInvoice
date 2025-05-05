@@ -252,3 +252,67 @@ class IRNMetricsResponse(BaseModel):
         None, 
         description="Recently generated IRNs (limited to 10)"
     )
+
+
+class OdooIRNGenerateRequest(BaseModel):
+    """
+    Schema for generating an IRN for an Odoo invoice
+    
+    Takes an Odoo invoice ID and generates an IRN for it. The invoice data is
+    fetched from the Odoo instance via OdooRPC and stored with the IRN.
+    """
+    integration_id: UUID = Field(
+        ..., 
+        description="ID of the Odoo integration"
+    )
+    odoo_invoice_id: int = Field(
+        ..., 
+        description="ID of the Odoo invoice",
+        gt=0,
+        example=42
+    )
+
+    @validator('odoo_invoice_id')
+    def validate_odoo_invoice_id(cls, v):
+        if v <= 0:
+            raise ValueError('Odoo invoice ID must be a positive integer')
+        return v
+
+
+class IRNValidationResponse(BaseModel):
+    """
+    Schema for IRN validation response
+    
+    Contains the validation result and associated invoice data if available.
+    """
+    success: bool = Field(
+        ..., 
+        description="Whether the IRN is valid"
+    )
+    message: str = Field(
+        ..., 
+        description="Validation message"
+    )
+    details: Dict[str, Any] = Field(
+        {}, 
+        description="Additional details about the validation result"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "success": True,
+                "message": "IRN is valid",
+                "details": {
+                    "status": "active",
+                    "invoice_number": "INV001",
+                    "valid_until": "2023-07-31T23:59:59",
+                    "invoice_data": {
+                        "customer_name": "Acme Corp",
+                        "invoice_date": "2023-07-01T00:00:00",
+                        "total_amount": 1500.0,
+                        "currency_code": "NGN"
+                    }
+                }
+            }
+        }
