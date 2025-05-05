@@ -17,6 +17,18 @@ depends_on = None
 
 
 def upgrade():
+    # Make SQLite compatible by replacing JSONB with JSON when using SQLite
+    import re
+    from sqlalchemy import text
+    from sqlalchemy.engine import reflection
+    
+    conn = op.get_bind()
+    inspector = reflection.Inspector.from_engine(conn)
+    dialect_name = conn.dialect.name
+    
+    # For SQLite, we'll use the JSON type instead of JSONB
+    config_type = "JSON" if dialect_name == "sqlite" else "JSONB"
+
     # Create clients table
     op.create_table(
         'clients',
@@ -41,7 +53,7 @@ def upgrade():
         sa.Column('client_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('description', sa.Text()),
-        sa.Column('config', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('config', getattr(postgresql, config_type)(astext_type=sa.Text()), nullable=False),
         sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
         sa.Column('created_by', postgresql.UUID(as_uuid=True)),
@@ -57,8 +69,8 @@ def upgrade():
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column('integration_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('changed_by', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('previous_config', postgresql.JSONB(astext_type=sa.Text())),
-        sa.Column('new_config', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('previous_config', getattr(postgresql, config_type)(astext_type=sa.Text())),
+        sa.Column('new_config', getattr(postgresql, config_type)(astext_type=sa.Text()), nullable=False),
         sa.Column('changed_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
         sa.Column('change_reason', sa.String(255)),
         sa.ForeignKeyConstraint(['integration_id'], ['integrations.id'], ),

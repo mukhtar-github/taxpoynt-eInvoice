@@ -12,7 +12,7 @@ import json
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.deps import get_db # type: ignore
+from app.db.session import get_db # type: ignore
 from app.utils.encryption import (
     encrypt_field,
     decrypt_field,

@@ -18,10 +18,10 @@ from sqlalchemy.orm import Session
 from app.utils.encryption import encrypt_irn_data, extract_keys_from_file, load_public_key # type: ignore
 from app.utils.irn import generate_irn, validate_irn # type: ignore
 from app.utils.qr_code import generate_qr_code, generate_qr_code_for_irn, qr_code_as_base64 # type: ignore
-from app.db.deps import get_db # type: ignore
+from app.db.session import get_db # type: ignore
 from app.services.key_service import KeyManagementService, get_key_service
 from app.services.encryption_service import EncryptionService, get_encryption_service
-from app.core.security import get_current_active_user # type: ignore # type: ignore # type: ignore
+from app.api.dependencies import get_current_active_user # type: ignore
 from app.models.user import User # type: ignore # type: ignore # type: ignore
 from app.schemas.key import KeyMetadata, KeyRotateResponse # type: ignore # type: ignore # type: ignore
 

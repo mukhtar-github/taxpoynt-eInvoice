@@ -20,7 +20,7 @@ class EncryptionKey(Base):
     rotation_date = Column(DateTime)  # Scheduled rotation date
     last_used = Column(DateTime)
     active = Column(Boolean, nullable=False, default=True)
-    metadata = Column(JSONB)  # Additional metadata (e.g., key type, purpose)
+    key_metadata = Column(JSONB)  # Additional metadata (e.g., key type, purpose)
 
     # Relationships
     organization = relationship("Organization", back_populates="encryption_keys")

@@ -44,7 +44,8 @@ class Settings(BaseSettings):
             host=info.data.get("POSTGRES_SERVER"),
             path=f"{info.data.get('POSTGRES_DB') or ''}",
         )
-        return postgres_dsn
+        # Convert PostgresDsn to string to avoid validation errors
+        return str(postgres_dsn)
 
     @field_validator("REDIS_URL", mode="before")
     def assemble_redis_connection(cls, v: Optional[str], info: Dict[str, Any]) -> Any:
@@ -105,6 +106,23 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     VERIFY_EMAIL_URL: str = "{FRONTEND_URL}/auth/verify-email"
     RESET_PASSWORD_URL: str = "{FRONTEND_URL}/auth/reset-password"
+    
+    # Odoo Integration Settings
+    ODOO_HOST: Optional[str] = os.getenv("ODOO_HOST")
+    ODOO_PORT: Optional[int] = int(os.getenv("ODOO_PORT", "443"))
+    ODOO_PROTOCOL: str = os.getenv("ODOO_PROTOCOL", "jsonrpc+ssl")
+    ODOO_DATABASE: Optional[str] = os.getenv("ODOO_DATABASE")
+    ODOO_USERNAME: Optional[str] = os.getenv("ODOO_USERNAME")
+    ODOO_PASSWORD: Optional[str] = os.getenv("ODOO_PASSWORD")
+    ODOO_API_KEY: Optional[str] = os.getenv("ODOO_API_KEY")
+    ODOO_AUTH_METHOD: str = os.getenv("ODOO_AUTH_METHOD", "password")
+    
+    # IRN Service Configuration
+    FIRS_SERVICE_ID: str = os.getenv("FIRS_SERVICE_ID", "94ND90NR")
+    IRN_EXPIRY_DAYS: int = int(os.getenv("IRN_EXPIRY_DAYS", "30"))
+    
+    # Logging Configuration
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     class Config:
         case_sensitive = True

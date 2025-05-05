@@ -74,6 +74,11 @@ class User(UserInDBBase):
     pass
 
 
+class UserResponse(UserInDBBase):
+    """Response model for user data, excluding sensitive information"""
+    pass
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str

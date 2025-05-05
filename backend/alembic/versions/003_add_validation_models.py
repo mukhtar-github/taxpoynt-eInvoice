@@ -1,7 +1,7 @@
 """Add validation models
 
-Revision ID: 002
-Revises: 001
+Revision ID: 003_add_validation_models
+Revises: 002_add_irn_tables
 Create Date: 2024-07-13 10:00:00.000000
 
 """
@@ -10,13 +10,25 @@ import sqlalchemy as sa # type: ignore
 from sqlalchemy.dialects import postgresql # type: ignore
 
 # revision identifiers, used by Alembic.
-revision = '002'
-down_revision = '001'
+revision = '003_add_validation_models'
+down_revision = '002_add_irn_tables'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
+    # Make SQLite compatible by replacing JSONB with JSON when using SQLite
+    import re
+    from sqlalchemy import text
+    from sqlalchemy.engine import reflection
+    
+    conn = op.get_bind()
+    inspector = reflection.Inspector.from_engine(conn)
+    dialect_name = conn.dialect.name
+    
+    # For SQLite, we'll use the JSON type instead of JSONB
+    json_type = "JSON" if dialect_name == "sqlite" else "JSONB"
+
     # Create validation_rules table
     op.create_table(
         'validation_rules',
@@ -25,7 +37,7 @@ def upgrade():
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('rule_type', sa.String(50), nullable=False),
         sa.Column('field_path', sa.String(255), nullable=True),
-        sa.Column('validation_logic', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('validation_logic', getattr(postgresql, json_type)(astext_type=sa.Text()), nullable=False),
         sa.Column('error_message', sa.Text(), nullable=False),
         sa.Column('severity', sa.String(20), nullable=False, server_default='error'),
         sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('now()'), nullable=False),
@@ -40,10 +52,10 @@ def upgrade():
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column('integration_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('irn', sa.String(50), nullable=True),
-        sa.Column('invoice_data', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('invoice_data', getattr(postgresql, json_type)(astext_type=sa.Text()), nullable=False),
         sa.Column('is_valid', sa.Boolean(), nullable=False),
         sa.Column('validation_time', sa.TIMESTAMP(), server_default=sa.text('now()'), nullable=False),
-        sa.Column('issues', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('issues', getattr(postgresql, json_type)(astext_type=sa.Text()), nullable=True),
         sa.Column('external_id', sa.String(100), nullable=True),
         sa.ForeignKeyConstraint(['integration_id'], ['integrations.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['irn'], ['irn_records.irn'], ondelete='SET NULL'),

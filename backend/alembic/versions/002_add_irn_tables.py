@@ -1,7 +1,7 @@
 """Add IRN tables
 
 Revision ID: 002_add_irn_tables
-Revises: 001_add_client_and_integration_models
+Revises: 001_add_client_int
 Create Date: 2024-05-11 14:30:00.000000
 
 """
@@ -11,12 +11,24 @@ from sqlalchemy.dialects import postgresql # type: ignore
 
 # revision identifiers, used by Alembic.
 revision = '002_add_irn_tables'
-down_revision = '001_add_client_and_integration_models'
+down_revision = '001_add_client_int'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
+    # Make SQLite compatible by replacing JSONB with JSON when using SQLite
+    import re
+    from sqlalchemy import text
+    from sqlalchemy.engine import reflection
+    
+    conn = op.get_bind()
+    inspector = reflection.Inspector.from_engine(conn)
+    dialect_name = conn.dialect.name
+    
+    # For SQLite, we'll use the JSON type instead of JSONB
+    json_type = "JSON" if dialect_name == "sqlite" else "JSONB"
+
     # Create irn_records table
     op.create_table(
         'irn_records',
@@ -27,7 +39,7 @@ def upgrade():
         sa.Column('timestamp', sa.String(8), nullable=False),
         sa.Column('generated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('valid_until', sa.DateTime(), nullable=False),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('metadata', getattr(postgresql, json_type)(astext_type=sa.Text()), nullable=True),
         sa.Column('status', sa.String(20), nullable=False, server_default='unused'),
         sa.Column('used_at', sa.DateTime(), nullable=True),
         sa.Column('invoice_id', sa.String(50), nullable=True),

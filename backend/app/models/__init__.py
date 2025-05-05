@@ -1,4 +1,4 @@
-from app.models.user import User
+from app.models.user import User, Organization, OrganizationUser, UserRole
 from app.models.client import Client
 from app.models.integration import Integration, IntegrationHistory
 from app.models.irn import IRNRecord, InvoiceData, IRNValidationRecord, IRNStatus

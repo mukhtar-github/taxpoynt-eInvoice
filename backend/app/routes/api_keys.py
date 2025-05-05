@@ -97,7 +97,7 @@ async def list_api_keys(
     }
 
 
-@router.delete("/{api_key_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{api_key_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
 async def delete_api_key(
     api_key_id: UUID,
     db: Session = Depends(get_db),
@@ -125,5 +125,3 @@ async def delete_api_key(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"API key with id {api_key_id} not found"
         )
-    
-    return None 

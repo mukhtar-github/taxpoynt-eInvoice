@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.deps import get_db # type: ignore
+from app.db.session import get_db # type: ignore
 from app.utils.encryption import (
     generate_secret_key, 
     get_app_encryption_key, 
