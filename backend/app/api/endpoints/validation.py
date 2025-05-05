@@ -5,27 +5,26 @@ from fastapi import APIRouter, Depends, HTTPException, status # type: ignore
 from sqlalchemy.orm import Session # type: ignore
 
 from app.db.session import get_db # type: ignore
-from app.services.validation_service import validation_service
-from app.schemas.validation import (
-    Invoice,
+from app.services.invoice_validation_service import validate_invoice
+from app.schemas.invoice_validation import (
     InvoiceValidationRequest,
     InvoiceValidationResponse,
     BatchValidationRequest,
     BatchValidationResponse,
-    ValidationIssue,
+    ValidationError as ValidationIssue,
     ValidationRule,
+    InvoiceValidationRequest as Invoice,  # Map the Invoice class to our new schema
 )
 from app.crud.crud_validation import validation_rule, validation_record
-
 
 router = APIRouter()
 
 
-@router.post("/validate/invoice", response_model=InvoiceValidationResponse, status_code=status.HTTP_200_OK)
-def validate_invoice(
+@router.post("/invoice", response_model=InvoiceValidationResponse)
+async def validate_invoice_endpoint(
     request: InvoiceValidationRequest,
     db: Session = Depends(get_db),
-) -> InvoiceValidationResponse:
+):
     """
     Validate a single invoice against FIRS requirements.
     
@@ -36,7 +35,7 @@ def validate_invoice(
     
     Returns validation result with any issues found.
     """
-    result = validation_service.validate_invoice(request.invoice)
+    result = validate_invoice(request.invoice)
 
     # Record validation result for tracking
     if request.invoice.irn:
@@ -44,25 +43,23 @@ def validate_invoice(
         validation_record.create(
             db=db,
             obj_in={
-                "integration_id": integration_id or UUID("00000000-0000-0000-0000-000000000000"),  # Placeholder
                 "irn": request.invoice.irn,
-                "invoice_data": request.invoice.dict(),
+                "integration_id": integration_id,
                 "is_valid": result.is_valid,
-                "issues": [issue.dict() for issue in result.issues] if result.issues else None,
-            },
+                "issue_count": len(result.issues),
+                "error_count": len([i for i in result.issues if i.severity == "ERROR"]),
+                "warning_count": len([i for i in result.issues if i.severity == "WARNING"])
+            }
         )
-
-    return InvoiceValidationResponse(
-        is_valid=result.is_valid,
-        validation_issues=result.issues,
-    )
+    
+    return result
 
 
-@router.post("/validate/invoices", response_model=BatchValidationResponse, status_code=status.HTTP_200_OK)
-def validate_invoices(
+@router.post("/invoices/batch", response_model=BatchValidationResponse)
+async def validate_invoices(
     request: BatchValidationRequest,
     db: Session = Depends(get_db),
-) -> BatchValidationResponse:
+):
     """
     Validate multiple invoices in a batch.
     
@@ -71,39 +68,51 @@ def validate_invoices(
     
     Returns validation results for all invoices and overall validation status.
     """
-    results = []
-    overall_valid = True
     
-    for invoice in request.invoices:
-        result = validation_service.validate_invoice(invoice)
-        
-        # Record validation result
-        if invoice.irn:
-            integration_id = None  # In a real app, this would come from auth/context
-            validation_record.create(
-                db=db,
-                obj_in={
-                    "integration_id": integration_id or UUID("00000000-0000-0000-0000-000000000000"),  # Placeholder
-                    "irn": invoice.irn,
-                    "invoice_data": invoice.dict(),
-                    "is_valid": result.is_valid,
-                    "issues": [issue.dict() for issue in result.issues] if result.issues else None,
-                },
+    results = []
+    for i, invoice in enumerate(request.invoices):
+        try:
+            result = validate_invoice(invoice)
+            results.append(result)
+            
+            # Record validation result if we have IRN
+            if invoice.irn:
+                integration_id = None  # In a real app, this would come from auth/context
+                validation_record.create(
+                    db=db,
+                    obj_in={
+                        "irn": invoice.irn,
+                        "integration_id": integration_id,
+                        "is_valid": result.is_valid,
+                        "issue_count": len(result.issues),
+                        "error_count": len([i for i in result.issues if i.severity == "ERROR"]),
+                        "warning_count": len([i for i in result.issues if i.severity == "WARNING"])
+                    }
+                )
+        except Exception as e:
+            # Handle parsing errors for individual invoices
+            results.append(
+                InvoiceValidationResponse(
+                    is_valid=False,
+                    issues=[
+                        ValidationIssue(
+                            severity="ERROR",
+                            field=f"invoices[{i}]",
+                            message=f"Failed to validate invoice: {str(e)}",
+                            code="VALIDATION_ERROR"
+                        )
+                    ]
+                )
             )
-        
-        results.append(
-            InvoiceValidationResponse(
-                is_valid=result.is_valid,
-                validation_issues=result.issues,
-            )
-        )
-        
-        if not result.is_valid:
-            overall_valid = False
+    
+    # Calculate overall batch status
+    is_valid = all(r.is_valid for r in results)
+    total_issues = sum(len(r.issues) for r in results)
     
     return BatchValidationResponse(
-        results=results,
-        overall_valid=overall_valid,
+        is_valid=is_valid,
+        total_issues=total_issues,
+        results=results
     )
 
 
@@ -124,19 +133,15 @@ def get_validation_rules(
     return rules
 
 
-@router.post("/validation/test", response_model=InvoiceValidationResponse)
-def test_validation(
-    invoice: Invoice,
+@router.post("/test-validation", response_model=InvoiceValidationResponse)
+async def test_validation(
+    invoice: Invoice,  # Changed InvoiceValidationRequest to Invoice
     db: Session = Depends(get_db),
-) -> InvoiceValidationResponse:
+):
     """
     Test validation for an invoice without recording the result.
     
     This is useful for testing invoice data before creating a real invoice.
     """
-    result = validation_service.validate_invoice(invoice)
-    
-    return InvoiceValidationResponse(
-        is_valid=result.is_valid,
-        validation_issues=result.issues,
-    ) 
+    result = validate_invoice(invoice)
+    return result

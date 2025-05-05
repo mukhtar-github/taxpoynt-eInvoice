@@ -10,20 +10,26 @@ from pathlib import Path
 # Add the parent directory to the path so we can import from app
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from app.schemas.validation import (
-    Invoice,
+from app.schemas.invoice_validation import (
+    InvoiceValidationRequest as Invoice,
     InvoiceValidationResponse,
-    ValidationIssue,
-    ValidationSeverity,
-    InvoiceDeliveryPeriod,
-    DocumentReference,
-    PaymentMeans,
+    ValidationError as ValidationIssue,
+    PaymentTerms,
     AllowanceCharge,
-    TaxCategory,
-    TaxSubtotal,
+    LegalMonetaryTotal,
     TaxTotal,
+    TaxSubtotal,
+    TaxCategory,
+    InvoiceLine,
+    Address,
+    Party,
+    PartyIdentification,
+    PartyLegalEntity,
+    CurrencyCode,
+    InvoiceType,
+    UnitCode
 )
-from app.services.validation_service import validation_service
+from app.services.invoice_validation_service import validate_invoice
 
 
 # Sample valid invoice data with complete fields
@@ -290,7 +296,7 @@ def validate_and_print_results(invoice_data, title):
         invoice = Invoice(**invoice_data)
         
         # Validate invoice
-        result = validation_service.validate_invoice(invoice)
+        result = validate_invoice(invoice)
         
         # Print results
         print(f"Valid: {result.is_valid}")

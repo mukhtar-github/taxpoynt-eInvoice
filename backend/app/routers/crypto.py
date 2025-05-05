@@ -5,6 +5,7 @@ This module provides API endpoints for:
 - Downloading crypto keys
 - Signing IRNs
 - Generating QR codes
+- CSID (Cryptographic Stamp ID) operations
 """
 
 import os
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.utils.encryption import encrypt_irn_data, extract_keys_from_file, load_public_key # type: ignore
 from app.utils.irn import generate_irn, validate_irn # type: ignore
 from app.utils.qr_code import generate_qr_code, generate_qr_code_for_irn, qr_code_as_base64 # type: ignore
+from app.utils.crypto_signing import sign_invoice, verify_csid, csid_generator
 from app.db.session import get_db # type: ignore
 from app.services.key_service import KeyManagementService, get_key_service
 from app.services.encryption_service import EncryptionService, get_encryption_service
@@ -56,6 +58,29 @@ class GenerateIRNRequest(BaseModel):
     invoice_number: str = Field(..., description="Invoice number from accounting system")
     service_id: str = Field(..., description="FIRS-assigned Service ID")
     timestamp: Optional[str] = Field(None, description="Date in YYYYMMDD format")
+
+
+class CSIDRequest(BaseModel):
+    """Request model for generating a Cryptographic Stamp ID."""
+    invoice_data: Dict[str, Any] = Field(..., description="Invoice data to stamp")
+
+
+class CSIDResponse(BaseModel):
+    """Response model for CSID operations."""
+    cryptographic_stamp: Dict[str, Any] = Field(..., description="CSID data including timestamp and algorithm")
+    is_signed: bool = Field(..., description="Whether the invoice has been successfully signed")
+
+
+class VerifyCSIDRequest(BaseModel):
+    """Request model for verifying a Cryptographic Stamp ID."""
+    invoice_data: Dict[str, Any] = Field(..., description="Invoice data to verify")
+    csid: str = Field(..., description="CSID to verify")
+
+
+class VerifyCSIDResponse(BaseModel):
+    """Response model for CSID verification."""
+    is_valid: bool = Field(..., description="Whether the CSID is valid")
+    details: Optional[Dict[str, Any]] = Field(None, description="Additional verification details")
 
 
 @router.get("/keys", response_model=List[KeyMetadata])
@@ -258,3 +283,68 @@ async def get_qr_code(irn: str):
         content=qr_code_bytes,
         media_type="image/png"
     ) 
+
+
+@router.post("/csid/generate", response_model=CSIDResponse)
+async def generate_csid(
+    request: CSIDRequest,
+    current_user: User = Depends(get_current_active_user),
+) -> CSIDResponse:
+    """
+    Generate a Cryptographic Stamp ID (CSID) for an invoice.
+    
+    The CSID provides tamper-proof evidence of invoice authenticity
+    and is required for compliance with FIRS digital signing requirements.
+    """
+    try:
+        # Sign the invoice with CSID
+        signed_invoice = sign_invoice(request.invoice_data)
+        
+        return CSIDResponse(
+            cryptographic_stamp=signed_invoice["cryptographic_stamp"],
+            is_signed=True
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to generate CSID: {str(e)}"
+        )
+
+
+@router.post("/csid/verify", response_model=VerifyCSIDResponse)
+async def verify_csid_endpoint(
+    request: VerifyCSIDRequest,
+    current_user: User = Depends(get_current_active_user),
+) -> VerifyCSIDResponse:
+    """
+    Verify a Cryptographic Stamp ID (CSID) on an invoice.
+    
+    This checks that the invoice has not been tampered with since it was signed.
+    """
+    try:
+        # Extract CSID from invoice data if not explicitly provided
+        csid = request.csid
+        if not csid and "cryptographic_stamp" in request.invoice_data:
+            if "csid" in request.invoice_data["cryptographic_stamp"]:
+                csid = request.invoice_data["cryptographic_stamp"]["csid"]
+        
+        if not csid:
+            return VerifyCSIDResponse(
+                is_valid=False,
+                details={"error": "No CSID found in request or invoice data"}
+            )
+            
+        # Verify the CSID
+        is_valid = verify_csid(request.invoice_data, csid)
+        
+        return VerifyCSIDResponse(
+            is_valid=is_valid,
+            details={
+                "message": "CSID verification successful" if is_valid else "CSID verification failed"
+            }
+        )
+    except Exception as e:
+        return VerifyCSIDResponse(
+            is_valid=False,
+            details={"error": f"Verification error: {str(e)}"}
+        )

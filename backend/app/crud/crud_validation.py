@@ -1,10 +1,11 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
+from datetime import datetime
 
 from sqlalchemy.orm import Session # type: ignore
 
 from app.models.validation import ValidationRule, ValidationRecord
-from app.schemas.validation import ValidationRule as ValidationRuleSchema
+from app.schemas.invoice_validation import ValidationRule as ValidationRuleSchema
 
 
 class CRUDValidationRule:

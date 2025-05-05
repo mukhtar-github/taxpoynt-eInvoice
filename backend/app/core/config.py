@@ -7,9 +7,11 @@ import secrets
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "TaxPoynt eInvoice API"
+    VERSION: str = "0.1.0"
     
     # Environment
     APP_ENV: str = os.getenv("APP_ENV", "development")
+    ENVIRONMENT: str = APP_ENV  # Alias for consistent naming
     
     # SECURITY
     SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
@@ -17,6 +19,20 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
     ALGORITHM: str = "HS256"
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "development_encryption_key_please_change_in_production")
+    
+    # FIRS Encryption and Cryptographic Signing
+    CRYPTO_KEYS_PATH: str = os.getenv("CRYPTO_KEYS_PATH", "")
+    SIGNING_PRIVATE_KEY_PATH: str = os.getenv("SIGNING_PRIVATE_KEY_PATH", "")
+    SIGNING_KEY_PASSWORD: str = os.getenv("SIGNING_KEY_PASSWORD", "")
+    VERIFICATION_PUBLIC_KEY_PATH: str = os.getenv("VERIFICATION_PUBLIC_KEY_PATH", "")
+    FIRS_PUBLIC_KEY_PATH: str = os.getenv("FIRS_PUBLIC_KEY_PATH", "")
+    FIRS_CERTIFICATE_PATH: str = os.getenv("FIRS_CERTIFICATE_PATH", "")
+    
+    # TLS Configuration
+    CLIENT_CERT_PATH: str = os.getenv("CLIENT_CERT_PATH", "")
+    CLIENT_KEY_PATH: str = os.getenv("CLIENT_KEY_PATH", "")
+    ENFORCE_HTTPS: bool = os.getenv("ENFORCE_HTTPS", "True").lower() in ("true", "1", "t")
+    MIN_TLS_VERSION: str = os.getenv("MIN_TLS_VERSION", "1.2")
     
     # Database
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")

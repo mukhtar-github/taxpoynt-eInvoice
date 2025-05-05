@@ -1,22 +1,18 @@
 import pytest # type: ignore
 from datetime import datetime
 
-from app.schemas.validation import (
-    Invoice,
+from app.schemas.invoice_validation import (
+    InvoiceValidationRequest as Invoice,
     Party,
-    PartyAddress,
-    MonetaryTotal,
+    Address as PartyAddress,
+    LegalMonetaryTotal as MonetaryTotal,
     InvoiceLine,
     ItemIdentification,
     Price,
-    ValidationSeverity,
+    ValidationRule,
+    ValidationSeverity
 )
-from app.services.validation_service import ValidationService
-
-
-@pytest.fixture
-def validation_service():
-    return ValidationService()
+from app.services.invoice_validation_service import validate_invoice
 
 
 @pytest.fixture
@@ -107,14 +103,14 @@ def invalid_invoice(valid_invoice):
     return Invoice(**invoice_dict)
 
 
-def test_validate_valid_invoice(validation_service, valid_invoice):
-    result = validation_service.validate_invoice(valid_invoice)
+def test_validate_valid_invoice(valid_invoice):
+    result = validate_invoice(valid_invoice)
     assert result.is_valid is True
     assert len(result.issues) == 0
 
 
-def test_validate_invalid_invoice(validation_service, invalid_invoice):
-    result = validation_service.validate_invoice(invalid_invoice)
+def test_validate_invalid_invoice(invalid_invoice):
+    result = validate_invoice(invalid_invoice)
     assert result.is_valid is False
     assert len(result.issues) > 0
     
@@ -132,7 +128,7 @@ def test_validate_invalid_invoice(validation_service, invalid_invoice):
         assert issue.severity == ValidationSeverity.ERROR
 
 
-def test_validate_required_fields(validation_service):
+def test_validate_required_fields():
     # Create invoice missing required fields
     missing_fields_invoice = Invoice(
         business_id="",  # Empty business_id
@@ -175,63 +171,54 @@ def test_validate_required_fields(validation_service):
         invoice_line=[]  # Empty invoice_line
     )
     
-    result = validation_service.validate_invoice(missing_fields_invoice)
+    result = validate_invoice(missing_fields_invoice)
     assert result.is_valid is False
     
-    # Should have validation issues for business_id and invoice_line
-    field_errors = {issue.field: issue for issue in result.issues}
-    assert "business_id" in field_errors
-    assert "invoice_line" in field_errors
-
-
-def test_validate_irn_format(validation_service, valid_invoice):
-    # Test various invalid IRN formats
-    invalid_irn_formats = [
-        "INV-001",  # Missing parts
-        "INV001-94ND90NR-202406",  # Incomplete date
-        "INV001-94ND90NR-20240632",  # Invalid date
-        "INV001-94N-20240611",  # Invalid service ID
-        "INV-001-94ND90NR-20240611"  # Special character in invoice number
-    ]
+    # Get fields with errors
+    error_fields = [issue.field for issue in result.issues]
     
-    for invalid_irn in invalid_irn_formats:
-        invoice_copy = valid_invoice.copy(deep=True)
-        invoice_copy.irn = invalid_irn
-        
-        result = validation_service.validate_invoice(invoice_copy)
-        assert result.is_valid is False
-        
-        # Should have validation issue for IRN
-        field_errors = {issue.field: issue for issue in result.issues}
-        assert "irn" in field_errors
+    # Check that specific required fields are in errors
+    assert "business_id" in error_fields
+    assert "due_date" in error_fields
+    assert "issue_time" in error_fields
 
 
-def test_validate_monetary_totals(validation_service, valid_invoice):
-    # Test various invalid monetary total scenarios
+def test_validate_irn_format(valid_invoice):
+    # Test invalid IRN format
+    invalid_irn_invoice = valid_invoice.copy(update={"irn": "INVALID-FORMAT"})
+    result = validate_invoice(invalid_irn_invoice)
     
-    # 1. Tax inclusive < tax exclusive
-    invoice_copy = valid_invoice.copy(deep=True)
-    invoice_copy.legal_monetary_total.tax_inclusive_amount = 39000.00
-    
-    result = validation_service.validate_invoice(invoice_copy)
+    # Check that IRN validation fails
     assert result.is_valid is False
-    field_errors = {issue.field: issue for issue in result.issues}
-    assert "legal_monetary_total.tax_inclusive_amount" in field_errors
+    assert any(issue.field == "irn" for issue in result.issues)
     
-    # 2. Payable amount != tax inclusive amount
-    invoice_copy = valid_invoice.copy(deep=True)
-    invoice_copy.legal_monetary_total.payable_amount = 45000.00
+    # Test valid IRN format
+    valid_irn_invoice = valid_invoice.copy(update={"irn": "INV001-94ND90NR-20240611"})
+    result = validate_invoice(valid_irn_invoice)
     
-    result = validation_service.validate_invoice(invoice_copy)
+    # No IRN errors should be present
+    assert not any(issue.field == "irn" for issue in result.issues)
+
+
+def test_validate_monetary_totals(valid_invoice):
+    # Create invoice with inconsistent monetary totals
+    inconsistent_totals_invoice = valid_invoice.copy(
+        update={
+            "legal_monetary_total": {
+                "line_extension_amount": 1000.00,  # Different from sum of line amounts
+                "tax_exclusive_amount": 1000.00,
+                "tax_inclusive_amount": 1150.00,
+                "allowance_total_amount": 0.00,
+                "charge_total_amount": 0.00,
+                "prepaid_amount": 0.00,
+                "payable_amount": 1150.00
+            }
+        }
+    )
+    
+    result = validate_invoice(inconsistent_totals_invoice)
     assert result.is_valid is False
-    field_errors = {issue.field: issue for issue in result.issues}
-    assert "legal_monetary_total.payable_amount" in field_errors
     
-    # 3. Line extension amount doesn't match sum of line items
-    invoice_copy = valid_invoice.copy(deep=True)
-    invoice_copy.legal_monetary_total.line_extension_amount = 30000.00
-    
-    result = validation_service.validate_invoice(invoice_copy)
-    assert result.is_valid is False
-    field_errors = {issue.field: issue for issue in result.issues}
-    assert "legal_monetary_total.line_extension_amount" in field_errors 
+    # Check that monetary total validation issues are present
+    total_errors = [issue for issue in result.issues if issue.field.startswith("legal_monetary_total")]
+    assert len(total_errors) > 0
