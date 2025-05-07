@@ -19,6 +19,8 @@ import {
   TableHead, 
   TableCell 
 } from '../components/ui/Table';
+import { Typography } from '../components/ui/Typography';
+import { Badge } from '../components/ui/Badge';
 import { AlertCircle, CheckCircle, Clock, ArrowUpRight, FileText } from 'lucide-react';
 
 // Define types
@@ -240,16 +242,16 @@ const OdooIRNManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Container maxWidth="xl" padding="medium" className="pt-8 md:pt-12">
-        <h1 className="text-3xl font-heading font-semibold mb-6">Odoo IRN Management</h1>
+    <Container>
+      <div className="py-8">
+        <Typography.Heading level="h1" className="mb-8">Odoo IRN Management</Typography.Heading>
         
         {/* Integration Selection */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Odoo Integration</CardTitle>
+            <CardTitle><Typography.Text weight="semibold">Select Odoo Integration</Typography.Text></CardTitle>
             <CardDescription>
-              Select an Odoo integration to manage invoices and IRNs
+              <Typography.Text variant="secondary">Choose the Odoo integration to fetch invoices</Typography.Text>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -288,9 +290,9 @@ const OdooIRNManagement: React.FC = () => {
         {/* Invoices List */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Odoo Invoices</CardTitle>
+            <CardTitle><Typography.Text weight="semibold">Odoo Invoices</Typography.Text></CardTitle>
             <CardDescription>
-              View and manage invoices from your Odoo integration
+              <Typography.Text variant="secondary">View and manage invoices from your Odoo integration</Typography.Text>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -308,9 +310,9 @@ const OdooIRNManagement: React.FC = () => {
             {loading && invoices.length === 0 ? (
               <div className="text-center py-8">Loading invoices...</div>
             ) : error ? (
-              <div className="text-center py-8 text-error flex items-center justify-center">
-                <AlertCircle className="mr-2" size={20} />
-                {error}
+              <div className="bg-error-light text-error p-4 mb-6 rounded flex items-center">
+                <AlertCircle className="mr-2" size={18} />
+                <Typography.Text variant="error">{error}</Typography.Text>
               </div>
             ) : filteredInvoices.length === 0 ? (
               <div className="text-center py-8 text-text-secondary">
@@ -401,19 +403,19 @@ const OdooIRNManagement: React.FC = () => {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>
-                IRN Details - Invoice {selectedInvoice.name || `INV-${selectedInvoice.id}`}
+                <Typography.Text weight="semibold">IRN Details - Invoice {selectedInvoice.name || `INV-${selectedInvoice.id}`}</Typography.Text>
               </CardTitle>
               <CardDescription>
-                View and manage IRNs for this invoice
+                <Typography.Text variant="secondary">View and manage IRNs for this invoice</Typography.Text>
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-4">Loading IRN details...</div>
+                <div className="text-center py-4"><Typography.Text>Loading IRN details...</Typography.Text></div>
               ) : irnDetails.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 gap-4">
-                  <div className="text-center text-text-secondary">
-                    No IRNs found for this invoice.
+                  <div className="text-center">
+                    <Typography.Text variant="secondary">No IRNs found for this invoice.</Typography.Text>
                   </div>
                   <Button 
                     onClick={() => generateIRN(selectedInvoice)}
@@ -427,30 +429,30 @@ const OdooIRNManagement: React.FC = () => {
                   {irnDetails.map((irn) => (
                     <div key={irn.irn} className="border border-border rounded-lg p-4">
                       <div className="flex flex-col md:flex-row md:justify-between mb-4">
-                        <h3 className="text-lg font-semibold mb-2 md:mb-0">
+                        <Typography.Heading level="h3" className="text-lg mb-2 md:mb-0">
                           {irn.irn}
-                        </h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(irn.status)}`}>
+                        </Typography.Heading>
+                        <Badge variant={irn.status === 'active' ? 'success' : irn.status === 'expired' ? 'destructive' : 'secondary'}>
                           {irn.status.charAt(0).toUpperCase() + irn.status.slice(1)}
-                        </span>
+                        </Badge>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                          <p className="text-sm text-text-secondary mb-1">Original Invoice</p>
-                          <p className="font-medium">{irn.invoice_number}</p>
+                          <Typography.Text size="sm" variant="secondary" className="mb-1">Original Invoice</Typography.Text>
+                          <Typography.Text weight="medium">{irn.invoice_number}</Typography.Text>
                         </div>
                         <div>
-                          <p className="text-sm text-text-secondary mb-1">Generated At</p>
-                          <p className="font-medium">{formatDate(irn.generated_at)}</p>
+                          <Typography.Text size="sm" variant="secondary" className="mb-1">Generated At</Typography.Text>
+                          <Typography.Text weight="medium">{formatDate(irn.generated_at)}</Typography.Text>
                         </div>
                         <div>
-                          <p className="text-sm text-text-secondary mb-1">Valid Until</p>
-                          <p className="font-medium">{formatDate(irn.valid_until)}</p>
+                          <Typography.Text size="sm" variant="secondary" className="mb-1">Valid Until</Typography.Text>
+                          <Typography.Text weight="medium">{formatDate(irn.valid_until)}</Typography.Text>
                         </div>
                         <div>
-                          <p className="text-sm text-text-secondary mb-1">Used At</p>
-                          <p className="font-medium">{irn.used_at ? formatDate(irn.used_at) : 'Not used yet'}</p>
+                          <Typography.Text size="sm" variant="secondary" className="mb-1">Used At</Typography.Text>
+                          <Typography.Text weight="medium">{irn.used_at ? formatDate(irn.used_at) : 'Not used yet'}</Typography.Text>
                         </div>
                       </div>
                       
@@ -581,8 +583,8 @@ const OdooIRNManagement: React.FC = () => {
             </CardFooter>
           </Card>
         )}
-      </Container>
-    </div>
+      </div>
+    </Container>
   );
 };
 

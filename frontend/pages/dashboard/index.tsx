@@ -1,14 +1,13 @@
 import { NextPage } from 'next';
-import { Box, Container, Flex, Heading, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
-import { useColorModeValue } from '@/components/ui/ChakraColorMode';
-import { SimpleGrid } from '@/components/ui/ChakraGrid';
-import { Link } from '@/components/ui/ChakraLink';
-import DashboardLayout from '@/components/layouts/DashboardLayout';
-import IntegrationStatusCard from '@/components/dashboard/IntegrationStatusCard';
-import TransactionMetricsCard from '@/components/dashboard/TransactionMetricsCard';
-import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard';
-import ErrorRateCard from '@/components/dashboard/ErrorRateCard';
+import { useState, useEffect } from 'react';
+import MainLayout from '../../components/layouts/MainLayout';
+import { Container } from '../../components/ui/Grid';
+import { Typography } from '../../components/ui/Typography';
+import { Card, CardContent, CardHeader, MetricCard } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import Link from 'next/link';
+import { AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 
 // Mock data for POC phase
 const mockIntegrations = [
@@ -36,95 +35,182 @@ const Dashboard: NextPage = () => {
   const [integrations, setIntegrations] = useState(mockIntegrations);
   const [transactions, setTransactions] = useState(mockTransactions);
   const [recentTransactions, setRecentTransactions] = useState(mockRecentTransactions);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-
   // In a real implementation, this would fetch data from the backend
   useEffect(() => {
-    // Fetch dashboard data from API
-    // Example: 
-    // const fetchDashboardData = async () => {
-    //   const response = await fetch('/api/dashboard/metrics');
-    //   const data = await response.json();
-    //   setIntegrations(data.integrations);
-    //   setTransactions(data.transactions);
-    //   setRecentTransactions(data.recentTransactions);
-    // };
-    //
-    // fetchDashboardData();
+    // Simulating API call
+    const fetchData = async () => {
+      // In a real app, these would be separate API calls
+      // const integrationsData = await api.get('/integrations');
+      // const transactionsData = await api.get('/transactions/metrics');
+      // const recentData = await api.get('/transactions/recent');
+      
+      // setIntegrations(integrationsData);
+      // setTransactions(transactionsData);
+      // setRecentTransactions(recentData);
+    };
+    
+    fetchData();
   }, []);
 
+  const handleRefresh = () => {
+    setIsLoading(true);
+    // Simulate API call delay
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  // Helper function to format dates
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Never';
+    return new Date(dateString).toLocaleString();
+  };
+
   return (
-    <DashboardLayout>
-      <Container maxW="container.xl" py={8}>
-        <Heading as="h1" size="xl" mb={6}>Dashboard</Heading>
-        
-        {/* Integration Status Section */}
-        <Box mb={8}>
-          <Flex justifyContent="space-between" alignItems="center" mb={4}>
-            <Heading as="h2" size="md">Integration Status</Heading>
-            <Link href="/integrations" color="blue.500" fontSize="sm">View All</Link>
-          </Flex>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-            <IntegrationStatusCard 
-              count={integrations.filter(i => i.status === 'active').length} 
-              status="Active" 
-              colorScheme="green"
+    <MainLayout title="Dashboard | Taxpoynt eInvoice">
+      <Container>
+        <div className="py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+            <Typography.Heading level="h1">Dashboard</Typography.Heading>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4 md:mt-0 flex items-center gap-2"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+              Refresh Data
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <MetricCard
+              title="Total Invoices (Today)"
+              value={transactions.today.toString()}
             />
-            <IntegrationStatusCard 
-              count={integrations.filter(i => i.status === 'configured').length}
-              status="Configured" 
-              colorScheme="blue"
+            <MetricCard
+              title="Weekly Transactions"
+              value={transactions.week.toString()}
             />
-            <IntegrationStatusCard 
-              count={integrations.filter(i => i.status === 'error').length}
-              status="Error" 
-              colorScheme="red"
+            <MetricCard
+              title="Monthly Transactions"
+              value={transactions.month.toString()}
             />
-          </SimpleGrid>
-        </Box>
-        
-        {/* Metrics Section */}
-        <Box mb={8}>
-          <Heading as="h2" size="md" mb={4}>Transaction Metrics</Heading>
-          <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
-            <TransactionMetricsCard 
-              title="Today" 
-              count={transactions.today} 
-              icon="today"
+            <MetricCard
+              title="Success Rate"
+              value={`${transactions.success}%`}
+              change={{
+                value: "0.8%",
+                type: "increase"
+              }}
             />
-            <TransactionMetricsCard 
-              title="This Week" 
-              count={transactions.week} 
-              icon="week"
-            />
-            <TransactionMetricsCard 
-              title="This Month" 
-              count={transactions.month} 
-              icon="month"
-            />
-            <ErrorRateCard 
-              successRate={transactions.success}
-            />
-          </SimpleGrid>
-        </Box>
-        
-        {/* Recent Transactions Section */}
-        <Box>
-          <Heading as="h2" size="md" mb={4}>Recent Transactions</Heading>
-          <Box 
-            bg={bgColor} 
-            borderRadius="lg" 
-            border="1px" 
-            borderColor={borderColor} 
-            overflow="hidden"
-          >
-            <RecentTransactionsCard transactions={recentTransactions} />
-          </Box>
-        </Box>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader title="Integration Status" subtitle="Status of connected integrations" />
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-border">
+                        <th className="text-left p-3 font-semibold">Integration</th>
+                        <th className="text-left p-3 font-semibold">Client</th>
+                        <th className="text-left p-3 font-semibold">Status</th>
+                        <th className="text-left p-3 font-semibold">Last Synced</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {integrations.map(integration => (
+                        <tr key={integration.id} className="border-b border-border">
+                          <td className="p-3">{integration.name}</td>
+                          <td className="p-3">{integration.client}</td>
+                          <td className="p-3">
+                            <Badge 
+                              variant={
+                                integration.status === 'active' ? 'success' : 
+                                integration.status === 'error' ? 'destructive' : 
+                                'secondary'
+                              }
+                            >
+                              {integration.status}
+                            </Badge>
+                          </td>
+                          <td className="p-3">{formatDate(integration.lastSynced)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader title="Transaction Metrics" subtitle="Weekly transaction volume" />
+              <CardContent>
+                <div className="h-64 flex items-center justify-center bg-background-alt rounded-md">
+                  <Typography.Text variant="secondary">Chart placeholder - will display transaction metrics</Typography.Text>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <Card>
+              <CardHeader title="Recent Transactions" subtitle="Latest system activity" />
+              <CardContent>
+                <div className="space-y-4">
+                  {recentTransactions.map(transaction => (
+                    <div key={transaction.id} className="flex justify-between items-center p-3 bg-background-alt rounded-md">
+                      <div>
+                        <Typography.Text weight="medium">
+                          {transaction.type === 'irn_generation' ? 'IRN Generation' : 
+                           transaction.type === 'validation' ? 'Validation' : 
+                           'Submission'}
+                        </Typography.Text>
+                        <Typography.Text variant="secondary" size="sm">
+                          {transaction.integration} - {formatDate(transaction.timestamp)}
+                        </Typography.Text>
+                      </div>
+                      <div>
+                        {transaction.status === 'success' ? (
+                          <Badge variant="success" className="flex items-center gap-1">
+                            <CheckCircle size={14} />
+                            <span>Success</span>
+                          </Badge>
+                        ) : transaction.status === 'failed' ? (
+                          <Badge variant="destructive" className="flex items-center gap-1">
+                            <AlertCircle size={14} />
+                            <span>Failed</span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Clock size={14} />
+                            <span>Pending</span>
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader title="Error Rate" subtitle="Daily error percentage" />
+              <CardContent>
+                <div className="h-64 flex items-center justify-center bg-background-alt rounded-md">
+                  <Typography.Text variant="secondary">Chart placeholder - will display error rates</Typography.Text>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </Container>
-    </DashboardLayout>
+    </MainLayout>
   );
 };
 

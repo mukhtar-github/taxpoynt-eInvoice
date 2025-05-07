@@ -1,6 +1,8 @@
 import React from 'react';
 import { Container, Row, Col } from '../ui/Grid';
 import { Card, CardHeader, CardContent, MetricCard } from '../ui/Card';
+import { Typography } from '../ui/Typography';
+import { Badge } from '../ui/Badge';
 
 // Mock data for the dashboard
 const mockMetrics = {
@@ -50,8 +52,8 @@ const recentActivity = [
 const MetricsDashboard: React.FC = () => {
   return (
     <Container>
-      <div style={{ padding: 'var(--spacing-6) 0' }}>
-        <h1 style={{ marginBottom: 'var(--spacing-6)' }}>Dashboard</h1>
+      <div className="py-6">
+        <Typography.Heading level="h1" className="mb-6">Dashboard</Typography.Heading>
         
         {/* Metrics Cards */}
         <Row gap={6}>
@@ -84,167 +86,106 @@ const MetricsDashboard: React.FC = () => {
             />
           </Col>
         </Row>
-        
-        {/* Summary and Activity Cards */}
-        <Row gap={6} style={{ marginTop: 'var(--spacing-8)' }}>
-          {/* Invoice Summary Card */}
-          <Col span={12} lg={8}>
-            <Card variant="default">
-              <CardHeader 
-                title="Invoice Processing Status" 
-                subtitle="Last 30 days activity"
-              />
-              <CardContent>
-                <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-background-alt)', borderRadius: 'var(--border-radius-md)' }}>
-                  <p style={{ color: 'var(--color-text-secondary)' }}>Chart placeholder</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Col>
-          
-          {/* Recent Activity Card */}
-          <Col span={12} lg={4}>
-            <Card variant="default" style={{ height: '100%' }}>
-              <CardHeader 
-                title="Recent Activity" 
-                subtitle="System events and notifications"
-              />
-              <CardContent>
-                <div>
-                  {recentActivity.map(activity => (
-                    <div 
-                      key={activity.id} 
-                      style={{ 
-                        padding: 'var(--spacing-3) 0',
-                        borderBottom: activity.id !== recentActivity.length ? '1px solid var(--color-border)' : 'none',
-                      }}
-                    >
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'flex-start'
-                      }}>
-                        <div 
-                          style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%', 
-                            backgroundColor: 
-                              activity.status === 'success' ? 'var(--color-success)' : 
-                              activity.status === 'error' ? 'var(--color-error)' : 
-                              'var(--color-info)',
-                            marginTop: '6px',
-                            marginRight: 'var(--spacing-3)',
-                          }} 
-                        />
+
+        {/* Main Dashboard Content */}
+        <div className="mt-8">
+          <Row gap={6}>
+            {/* Main Activity Section */}
+            <Col span={12} lg={8}>
+              <Card className="mb-6">
+                <CardHeader 
+                  title="Recent Activity" 
+                  subtitle="Latest system events and transactions"
+                />
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentActivity.map(item => (
+                      <div key={item.id} className="flex justify-between items-center p-3 bg-background-alt rounded-md">
                         <div>
-                          <p style={{ 
-                            fontSize: 'var(--font-size-sm)',
-                            margin: 0,
-                            marginBottom: 'var(--spacing-1)',
-                          }}>
-                            {activity.description}
-                          </p>
-                          <span style={{ 
-                            fontSize: 'var(--font-size-xs)',
-                            color: 'var(--color-text-muted)', 
-                          }}>
-                            {activity.timestamp}
-                          </span>
+                          <Typography.Text weight="medium">{item.description}</Typography.Text>
+                          <Typography.Text variant="secondary" size="sm">{item.timestamp}</Typography.Text>
                         </div>
+                        <Badge 
+                          variant={
+                            item.status === 'success' ? 'success' : 
+                            item.status === 'error' ? 'destructive' : 
+                            'secondary'
+                          }
+                        >
+                          {item.status}
+                        </Badge>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </Col>
-        </Row>
-        
-        {/* Integration Status Card */}
-        <Row style={{ marginTop: 'var(--spacing-8)' }}>
-          <Col span={12}>
-            <Card variant="default">
-              <CardHeader 
-                title="Integration Status" 
-                subtitle="Current status of connected systems"
-              />
-              <CardContent>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ 
-                    width: '100%', 
-                    borderCollapse: 'collapse',
-                    fontSize: 'var(--font-size-sm)',
-                  }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                        <th style={{ textAlign: 'left', padding: 'var(--spacing-3)', fontWeight: 'var(--font-weight-semibold)' }}>Integration</th>
-                        <th style={{ textAlign: 'left', padding: 'var(--spacing-3)', fontWeight: 'var(--font-weight-semibold)' }}>Status</th>
-                        <th style={{ textAlign: 'left', padding: 'var(--spacing-3)', fontWeight: 'var(--font-weight-semibold)' }}>Last Sync</th>
-                        <th style={{ textAlign: 'left', padding: 'var(--spacing-3)', fontWeight: 'var(--font-weight-semibold)' }}>Transactions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td style={{ padding: 'var(--spacing-3)' }}>Odoo ERP</td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>
-                          <span style={{ 
-                            backgroundColor: 'var(--color-success-light)', 
-                            color: 'var(--color-success)', 
-                            padding: 'var(--spacing-1) var(--spacing-2)',
-                            borderRadius: 'var(--border-radius-full)',
-                            fontSize: 'var(--font-size-xs)',
-                            fontWeight: 'var(--font-weight-medium)',
-                          }}>
-                            Active
-                          </span>
-                        </td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>5 minutes ago</td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>1,245</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td style={{ padding: 'var(--spacing-3)' }}>FIRS API</td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>
-                          <span style={{ 
-                            backgroundColor: 'var(--color-success-light)', 
-                            color: 'var(--color-success)', 
-                            padding: 'var(--spacing-1) var(--spacing-2)',
-                            borderRadius: 'var(--border-radius-full)',
-                            fontSize: 'var(--font-size-xs)',
-                            fontWeight: 'var(--font-weight-medium)',
-                          }}>
-                            Active
-                          </span>
-                        </td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>15 minutes ago</td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>2,547</td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: 'var(--spacing-3)' }}>Legacy System</td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>
-                          <span style={{ 
-                            backgroundColor: 'var(--color-warning-light)', 
-                            color: 'var(--color-warning)', 
-                            padding: 'var(--spacing-1) var(--spacing-2)',
-                            borderRadius: 'var(--border-radius-full)',
-                            fontSize: 'var(--font-size-xs)',
-                            fontWeight: 'var(--font-weight-medium)',
-                          }}>
-                            Degraded
-                          </span>
-                        </td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>3 hours ago</td>
-                        <td style={{ padding: 'var(--spacing-3)' }}>128</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </Col>
-        </Row>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              {/* Invoice Summary Card */}
+              <Card variant="default">
+                <CardHeader 
+                  title="Invoice Processing Status" 
+                  subtitle="Last 30 days activity"
+                />
+                <CardContent>
+                  <div className="h-64 flex items-center justify-center bg-background-alt rounded-md">
+                    <Typography.Text variant="secondary">Chart placeholder</Typography.Text>
+                  </div>
+                </CardContent>
+              </Card>
+            </Col>
+            {/* Recent Activity Card */}
+            <Col span={12} lg={4}>
+              <Card variant="default" className="h-full">
+                <CardHeader 
+                  title="Integration Status" 
+                  subtitle="Current status of connected systems"
+                />
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-border">
+                          <th className="text-left p-3 font-semibold">Integration</th>
+                          <th className="text-left p-3 font-semibold">Status</th>
+                          <th className="text-left p-3 font-semibold">Last Sync</th>
+                          <th className="text-left p-3 font-semibold">Transactions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-border">
+                          <td className="p-3">Odoo ERP</td>
+                          <td className="p-3">
+                            <Badge variant="success">Active</Badge>
+                          </td>
+                          <td className="p-3">5 minutes ago</td>
+                          <td className="p-3">1,245</td>
+                        </tr>
+                        <tr className="border-b border-border">
+                          <td className="p-3">FIRS API</td>
+                          <td className="p-3">
+                            <Badge variant="success">Active</Badge>
+                          </td>
+                          <td className="p-3">15 minutes ago</td>
+                          <td className="p-3">2,547</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3">Legacy System</td>
+                          <td className="p-3">
+                            <Badge variant="warning">Degraded</Badge>
+                          </td>
+                          <td className="p-3">3 hours ago</td>
+                          <td className="p-3">128</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </Col>
+          </Row>
+        </div>
       </div>
     </Container>
   );
 };
 
-export default MetricsDashboard; 
+export default MetricsDashboard;

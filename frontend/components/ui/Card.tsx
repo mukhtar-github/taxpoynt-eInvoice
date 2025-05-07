@@ -37,15 +37,30 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
 Card.displayName = "Card";
 
 // Card Header component
+interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
+  title?: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}
+
 const CardHeader = forwardRef<
   HTMLDivElement, 
-  HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+  CardHeaderProps
+>(({ className, title, subtitle, action, ...props }, ref) => (
   <div
     ref={ref}
     className={`flex flex-col space-y-1.5 pb-4 ${className || ''}`}
     {...props}
-  />
+  >
+    {title && <CardTitle>{title}</CardTitle>}
+    {subtitle && <CardDescription>{subtitle}</CardDescription>}
+    {action && (
+      <div className="mt-2">
+        {action}
+      </div>
+    )}
+    {props.children}
+  </div>
 ));
 CardHeader.displayName = "CardHeader";
 
