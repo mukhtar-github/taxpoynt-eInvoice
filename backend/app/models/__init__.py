@@ -5,5 +5,6 @@ from app.models.irn import IRNRecord, InvoiceData, IRNValidationRecord, IRNStatu
 from app.models.encryption import EncryptionKey, EncryptionConfig
 from app.models.firs_credentials import FIRSCredentials
 from app.models.api_keys import APIKey
+from app.models.api_credential import ApiCredential, CredentialType
 
 # Add new models here when created

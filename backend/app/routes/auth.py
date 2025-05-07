@@ -6,13 +6,13 @@ from typing import Any
 from app.core.security import authenticate_user, create_access_token, create_refresh_token, verify_refresh_token
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import TokenSchema, RefreshTokenSchema
+from app.schemas.auth import TokenSchema, RefreshTokenSchema, PasswordResetRequest, PasswordReset
 from app.schemas.user import UserCreate, UserResponse
 from app.crud.user import create_user, get_user_by_email # type: ignore
 from app.auth.oauth import oauth, authenticate_oauth_user
-from app.services.email_service import send_email_verification, verify_email_token
+from app.services.email_service import send_email_verification, verify_email_token, send_password_reset, verify_password_reset_token
 from app.core.config import settings
-from app.services.user_service import verify_user_email
+from app.services.user_service import verify_user_email, reset_user_password, get_user_by_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -138,6 +138,44 @@ async def verify_email(token: str, db: Session = Depends(get_db)) -> Any:
     verify_user_email(db, user)
     
     return {"message": "Email verification successful. You can now log in."}
+
+@router.post("/password/reset-request", status_code=status.HTTP_202_ACCEPTED)
+async def request_password_reset(
+    reset_request: PasswordResetRequest, 
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Request a password reset email.
+    """
+    user = get_user_by_email(db, email=reset_request.email)
+    if user:
+        # Send password reset email
+        send_password_reset(db, user, f"{settings.API_V1_STR}/auth")
+    
+    # Always return success to prevent email enumeration
+    return {"detail": "If the email exists, a password reset link has been sent"}
+
+
+@router.post("/password/reset", status_code=status.HTTP_200_OK)
+async def reset_password(
+    reset_data: PasswordReset,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Reset password using the token from the reset email.
+    """
+    user = verify_password_reset_token(db, reset_data.token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token",
+        )
+    
+    # Reset the password
+    reset_user_password(db, user, reset_data.password)
+    
+    return {"detail": "Password has been reset successfully"}
+
 
 @router.post("/logout")
 async def logout(response: Response):
