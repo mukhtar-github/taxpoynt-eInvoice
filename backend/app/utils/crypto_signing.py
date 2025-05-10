@@ -13,17 +13,21 @@ import hashlib
 import json
 import os
 import uuid
+import logging
 from datetime import datetime
 from typing import Dict, Tuple, Union, Optional, Any, List
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa, utils
+from cryptography.hazmat.primitives.asymmetric import padding, rsa, utils, ed25519
 from cryptography.exceptions import InvalidSignature
+from cryptography.x509 import load_pem_x509_certificate
 from fastapi import HTTPException
 
 from app.core.config import settings
 from app.utils.encryption import extract_keys_from_file, load_public_key
+
+logger = logging.getLogger(__name__)
 
 
 class CSIDGenerator:

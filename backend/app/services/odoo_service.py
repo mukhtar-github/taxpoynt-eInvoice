@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, OdooConfig]) -> Dict[str, Any]:
     """
-    Test connection to an Odoo server using OdooRPC.
+    Test connection to an Odoo server using OdooRPC with enhanced Odoo 18+ support.
     
     Args:
         connection_params: Connection parameters for Odoo server
         
     Returns:
-        Dictionary with test results
+        Dictionary with test results including version-specific capabilities
     """
     try:
         # Parse URL to get host, protocol, and port
@@ -59,7 +59,8 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         
         # Get server version
         version_info = odoo.version
-
+        major_version = int(version_info.get('server_version_info', [0])[0])
+        
         # Test access to partners to verify permissions
         partner_count = 0
         try:
@@ -68,14 +69,62 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         except Exception as e:
             logger.warning(f"Access to partners limited: {str(e)}")
         
+        # Test invoice access and capabilities
+        invoice_features = {}
+        try:
+            # Check for account.move model (used for invoices in recent Odoo versions)
+            if 'account.move' in odoo.env:
+                invoice_model = 'account.move'
+                invoice_count = odoo.env[invoice_model].search_count([('move_type', 'in', ['out_invoice', 'out_refund'])])
+                invoice_features['model'] = invoice_model
+                invoice_features['count'] = invoice_count
+                
+                # Test Odoo 18+ specific features if available
+                if major_version >= 18:
+                    # Check for e-invoicing capabilities
+                    module_list = odoo.env['ir.module.module'].search_read(
+                        [('name', 'in', ['account_edi', 'l10n_ng_einvoice']), ('state', '=', 'installed')],
+                        ['name', 'state']
+                    )
+                    invoice_features['e_invoice_modules'] = {mod['name']: mod['state'] for mod in module_list}
+                    
+                    # Check for IRN field support
+                    has_irn_field = False
+                    try:
+                        fields_data = odoo.env[invoice_model].fields_get(['irn_number', 'l10n_ng_irn'])
+                        has_irn_field = any(f in fields_data for f in ['irn_number', 'l10n_ng_irn'])
+                    except:
+                        pass
+                    invoice_features['irn_field_support'] = has_irn_field
+        except Exception as e:
+            logger.warning(f"Cannot test invoice access: {str(e)}")
+            invoice_features['error'] = str(e)
+        
+        # Test for API endpoints - specific to Odoo 18+
+        api_endpoints = {}
+        if major_version >= 18:
+            try:
+                # Check if REST API module is installed
+                rest_api_installed = odoo.env['ir.module.module'].search_count(
+                    [('name', 'in', ['restful', 'rest_api']), ('state', '=', 'installed')]
+                ) > 0
+                api_endpoints['rest_api_available'] = rest_api_installed
+            except Exception as e:
+                logger.warning(f"Cannot check REST API availability: {str(e)}")
+                api_endpoints['error'] = str(e)
+        
         return {
             "success": True,
             "message": f"Successfully connected to Odoo server as {user.name}",
             "details": {
                 "version_info": version_info,
+                "major_version": major_version,
                 "uid": odoo.env.uid,
                 "user_name": user.name,
-                "partner_count": partner_count
+                "partner_count": partner_count,
+                "invoice_features": invoice_features,
+                "api_endpoints": api_endpoints,
+                "is_odoo18_plus": major_version >= 18
             }
         }
         

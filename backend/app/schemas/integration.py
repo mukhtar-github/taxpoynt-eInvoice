@@ -166,3 +166,19 @@ class OdooConnectionTestRequest(BaseModel):
     auth_method: OdooAuthMethod
     password: Optional[str] = None
     api_key: Optional[str] = None
+
+
+# Integration Monitoring Status
+class IntegrationMonitoringStatus(BaseModel):
+    integration_id: str
+    name: str
+    status: str
+    last_checked: Optional[datetime] = None
+    next_check: Optional[datetime] = None
+    uptime_percentage: Optional[float] = None
+    consecutive_failures: int = 0
+    last_error: Optional[str] = None
+    is_being_monitored: bool = False
+    
+    class Config:
+        orm_mode = True

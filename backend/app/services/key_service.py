@@ -98,55 +98,97 @@ class KeyManagementService:
     def _load_keys_from_storage(self):
         """
         Load keys from persistent storage.
-        In production, this would use a secure storage solution.
-        """
+        In production, this would use a secure storage solution like AWS KMS,
+        HashiCorp Vault, or Azure Key Vault.
+        """        
+        # Skip if already loaded
         if self._loaded_keys:
             return
             
+        # First check environment
+        storage_file = None
+        if hasattr(settings, 'KEY_STORAGE_FILE'):
+            storage_file = settings.KEY_STORAGE_FILE
+            
+        # If environment variable not set, use default location
+        if not storage_file:
+            storage_dir = Path(settings.BASE_DIR) / "keys"
+            storage_file = storage_dir / "key_registry.enc"
+            
+        # If storage file exists, load keys
         try:
-            # In a real application, this would load from a secure database table
-            # or a key management service like AWS KMS or HashiCorp Vault
-            
-            # For development: try to load from a local file
-            keys_file = os.path.join(os.path.dirname(__file__), "../../data/keys.json")
-            
-            if os.path.exists(keys_file):
-                with open(keys_file, "r") as f:
-                    stored_keys = json.load(f)
+            if os.path.exists(storage_file):
+                # In production, use a proper secure storage solution
+                # This is only for development/testing
+                with open(storage_file, "rb") as f:
+                    encrypted_data = f.read()
                     
-                for key_id, key_data in stored_keys.items():
-                    self._key_registry[key_id] = key_data
-            
+                # The master key would be stored in a secure environment variable
+                # or retrieved from a secure key management service
+                master_key = get_app_encryption_key()
+                
+                # Decrypt the key registry
+                decrypted_data = decrypt_with_gcm(encrypted_data, master_key, as_dict=True)
+                
+                if decrypted_data and isinstance(decrypted_data, dict):
+                    self._key_registry.update(decrypted_data)
+                    
             self._loaded_keys = True
+                
         except Exception as e:
-            # Log error but continue with default key
-            print(f"Error loading keys: {str(e)}")
-    
-    def _persist_keys(self):
+            # Log the error but don't crash
+            logging.error(f"Error loading keys from storage: {e}")
+            
+    def _save_keys_to_storage(self):
         """
         Save keys to persistent storage.
-        In production, this would use a secure storage solution.
+        In production, this would use a secure storage solution like AWS KMS,
+        HashiCorp Vault, or Azure Key Vault.
         """
-        # In a real application, this would save to a secure database table
-        # or a key management service
-        
-        # For development: save to a local file
-        os.makedirs(os.path.join(os.path.dirname(__file__), "../../data"), exist_ok=True)
-        keys_file = os.path.join(os.path.dirname(__file__), "../../data/keys.json")
-        
+        # Get storage location
+        storage_file = None
+        if hasattr(settings, 'KEY_STORAGE_FILE'):
+            storage_file = settings.KEY_STORAGE_FILE
+            
+        # If environment variable not set, use default location
+        if not storage_file:
+            storage_dir = Path(settings.BASE_DIR) / "keys"
+            os.makedirs(storage_dir, exist_ok=True)
+            storage_file = storage_dir / "key_registry.enc"
+            
         try:
-            with open(keys_file, "w") as f:
-                json.dump(self._key_registry, f, indent=2)
+            # In production, use a proper secure storage solution
+            # This is only for development/testing
+            
+            # The master key would be stored in a secure environment variable
+            # or retrieved from a secure key management service
+            master_key = get_app_encryption_key()
+            
+            # Create backup of registry first
+            if os.path.exists(storage_file):
+                backup_file = f"{storage_file}.bak"
+                with open(storage_file, "rb") as src, open(backup_file, "wb") as dst:
+                    dst.write(src.read())
+            
+            # Encrypt and save the key registry
+            encrypted_data = encrypt_with_gcm(self._key_registry, master_key)
+            
+            with open(storage_file, "wb") as f:
+                f.write(encrypted_data)
+                
         except Exception as e:
-            # Log error but continue
-            print(f"Error persisting keys: {str(e)}")
+            # Log the error but don't crash
+            logging.error(f"Error saving keys to storage: {e}")
     
-    def rotate_key(self) -> str:
+    def rotate_key(self, organization_id: Optional[UUID] = None) -> str:
         """
-        Generate a new encryption key and set it as the current active key.
+        Generate a new encryption key and set it as the current key.
         
+        Args:
+            organization_id: Optional organization ID for organization-specific keys
+            
         Returns:
-            str: The new key ID
+            str: ID of the new key
         """
         self._ensure_initialized()
         

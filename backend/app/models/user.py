@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, Column, Integer, String, Enum, ForeignKey, DateT
 import enum
 from app.db.base import Base
 from sqlalchemy.sql import func # type: ignore
+from sqlalchemy.orm import relationship # type: ignore
 import uuid
 
 
@@ -54,6 +55,11 @@ class Organization(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    certificates = relationship("Certificate", back_populates="organization")
+    encryption_keys = relationship("EncryptionKey", back_populates="organization")
+    encryption_config = relationship("EncryptionConfig", back_populates="organization", uselist=False)
 
 
 class OrganizationUser(Base):
