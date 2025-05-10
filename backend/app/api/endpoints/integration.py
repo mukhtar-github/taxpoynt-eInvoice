@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session # type: ignore
 from app import crud, schemas # type: ignore
 from app.api.dependencies import get_db, get_current_active_user # type: ignore
 from app.services import integration_service # type: ignore
+from app.templates import odoo_integration
 
 router = APIRouter()
 
@@ -323,4 +324,50 @@ def get_monitored_integrations(
     """
     Get a list of all integrations being monitored.
     """
-    return integration_service.get_all_monitored_integrations(db=db)
+    integrations = integration_service.get_all_monitored_integrations(db)
+    return integrations
+
+
+@router.get("/templates/odoo", response_model=Dict[str, Any])
+def get_odoo_integration_templates(
+    current_user: schemas.User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Get Odoo integration templates specifically designed for e-Invoice and IRN integration.
+    
+    Returns a dictionary with Odoo integration templates that are optimized for 
+    connecting to the FIRS e-Invoicing system and generating compliant invoices.
+    """
+    # Get all available Odoo templates
+    templates = odoo_integration.get_odoo_templates()
+    
+    # Add IRN-specific configuration and information to each template
+    for template_id, template in templates.items():
+        if "einvoice" in template_id:
+            # Template already has e-invoice configurations
+            pass
+        else:
+            # Add IRN fields to standard templates
+            template.setdefault("irn_fields", {
+                "enabled": True,
+                "auto_generate": False,
+                "mappings": [
+                    {
+                        "odoo_field": "invoice_line_ids.tax_ids",
+                        "irn_field": "tax_information.tax_amount",
+                        "description": "Maps the Odoo tax amount to IRN tax information"
+                    },
+                    {
+                        "odoo_field": "partner_id.vat",
+                        "irn_field": "buyer.tax_identification_number",
+                        "description": "Maps the partner VAT to IRN buyer tax ID"
+                    },
+                    {
+                        "odoo_field": "company_id.vat",
+                        "irn_field": "seller.tax_identification_number",
+                        "description": "Maps the company VAT to IRN seller tax ID"
+                    }
+                ]
+            })
+    
+    return templates
