@@ -9,6 +9,8 @@ class APIKeyBase(BaseModel):
     """Base schema for API key."""
     name: str
     description: Optional[str] = None
+    rate_limit_per_minute: Optional[int] = Field(60, ge=1, le=1000, description="Rate limit per minute")
+    rate_limit_per_day: Optional[int] = Field(10000, ge=100, le=100000, description="Rate limit per day")
     
     class Config:
         orm_mode = True
@@ -29,6 +31,7 @@ class APIKeyResponse(APIKeyBase):
     """Schema for API key response."""
     id: UUID4
     prefix: str
+    secret_prefix: str
     created_at: datetime
     expires_at: Optional[datetime] = None
     last_used_at: Optional[datetime] = None
@@ -37,10 +40,17 @@ class APIKeyResponse(APIKeyBase):
 
 class APIKeyFullResponse(APIKeyResponse):
     """Schema for API key response including full key (only returned on creation)."""
-    key: str
+    api_key: str
+    secret_key: str
 
 
 class APIKeyList(BaseModel):
     """Schema for API key list response."""
     items: List[APIKeyResponse]
-    total: int 
+    total: int
+
+
+class APIKeyAuth(BaseModel):
+    """Schema for API key authentication."""
+    api_key: str
+    secret_key: str

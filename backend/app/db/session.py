@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 from app.core.config import settings
 
@@ -11,4 +11,9 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
+        
+def get_db_session() -> Session:
+    """Get a SQLAlchemy session directly for middleware use.
+    NOTE: The caller is responsible for closing this session."""
+    return SessionLocal()

@@ -40,25 +40,29 @@ async def create_new_api_key(
             detail="Not enough permissions to create API keys"
         )
     
-    # Create API key
-    db_api_key, full_key = create_api_key(
+    # Create API key and secret key
+    db_api_key, full_api_key, full_secret_key = create_api_key(
         db=db,
         user=current_user,
         organization=current_organization,
         key_data=api_key_data
     )
     
-    # Return full key (only displayed once)
+    # Return full keys (only displayed once)
     response = APIKeyFullResponse(
         id=db_api_key.id,
         name=db_api_key.name,
         description=db_api_key.description,
         prefix=db_api_key.prefix,
+        secret_prefix=db_api_key.secret_prefix,
+        rate_limit_per_minute=db_api_key.rate_limit_per_minute,
+        rate_limit_per_day=db_api_key.rate_limit_per_day,
         created_at=db_api_key.created_at,
         expires_at=db_api_key.expires_at,
         last_used_at=db_api_key.last_used_at,
         is_active=db_api_key.is_active,
-        key=full_key
+        api_key=full_api_key,
+        secret_key=full_secret_key
     )
     
     return response

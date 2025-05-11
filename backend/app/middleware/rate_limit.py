@@ -36,6 +36,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.default_limits = default_limits or {
             "ip": (60, 60),     # 60 requests per minute per IP
             "user": (120, 60),  # 120 requests per minute per user
+            "ip_daily": (10000, 86400),   # 10K requests per day per IP
+            "user_daily": (20000, 86400), # 20K requests per day per user
         }
         self.path_limits = path_limits or {
             # Auth endpoints

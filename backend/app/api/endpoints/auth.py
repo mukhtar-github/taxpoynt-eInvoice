@@ -8,13 +8,14 @@ from sqlalchemy.orm import Session # type: ignore
 
 from app.api.dependencies import get_current_active_user, get_current_admin_user, get_current_user_with_org
 from app.core.config import settings # type: ignore
-from app.core.security import create_access_token # type: ignore
+from app.core.security import create_access_token, create_refresh_token, verify_refresh_token, blacklist_token # type: ignore
 from app.db.session import get_db # type: ignore
 from app.models.user import User, UserRole, Organization, OrganizationUser # type: ignore
 from app.schemas.user import (
     User as UserSchema,
     UserCreate,
     Token,
+    TokenPayload,
     PasswordReset,
     PasswordResetConfirm,
     EmailVerification,
@@ -53,7 +54,7 @@ def login_access_token(
     db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
     """
-    OAuth2 compatible token login, get an access token for future requests
+    OAuth2 compatible token login, get an access token and refresh token for future requests
     """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
@@ -68,14 +69,24 @@ def login_access_token(
         )
         
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    token = create_access_token(
-        user.id, expires_delta=access_token_expires
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    # Create access token
+    access_token = create_access_token(
+        {"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    
+    # Create refresh token
+    refresh_token = create_refresh_token(
+        {"sub": str(user.id)}, expires_delta=refresh_token_expires
     )
     
     return {
-        "access_token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "refresh_expires_in": settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     }
 
 
@@ -199,6 +210,62 @@ def confirm_password_reset(
         
     updated_user = reset_user_password(db, user, reset_in.new_password)
     return updated_user
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh-token", response_model=Token)
+def refresh_token(
+    token_data: RefreshTokenRequest,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get a new access token using a refresh token
+    """
+    # Verify the refresh token
+    user_id = verify_refresh_token(token_data.refresh_token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    # Get the user from database
+    user = get_user_by_id(db, UUID(user_id))
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user or user not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    # Blacklist the old refresh token (optional - prevents refresh token reuse)
+    blacklist_token(token_data.refresh_token)
+        
+    # Create new tokens
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    # Create new access token
+    access_token = create_access_token(
+        {"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    
+    # Create new refresh token
+    new_refresh_token = create_refresh_token(
+        {"sub": str(user.id)}, expires_delta=refresh_token_expires
+    )
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "refresh_expires_in": settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    }
 
 
 @router.get("/me", response_model=UserSchema)

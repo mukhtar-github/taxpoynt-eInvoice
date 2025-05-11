@@ -108,9 +108,17 @@ class Settings(BaseSettings):
         raise ValueError(v)
     
     # Rate Limiting
-    RATE_LIMIT_AUTH_MINUTE: int = 10  # 10 requests per minute for auth endpoints
-    RATE_LIMIT_API_MINUTE: int = 60   # 60 requests per minute for regular API endpoints
-    RATE_LIMIT_BATCH_MINUTE: int = 10 # 10 requests per minute for batch operations
+    RATE_LIMIT_AUTH_MINUTE: int = 10     # 10 requests per minute for auth endpoints
+    RATE_LIMIT_API_MINUTE: int = 60      # 60 requests per minute for regular API endpoints
+    RATE_LIMIT_BATCH_MINUTE: int = 10    # 10 requests per minute for batch operations
+    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))  # Default general rate limit per minute
+    RATE_LIMIT_PER_DAY: int = int(os.getenv("RATE_LIMIT_PER_DAY", "10000"))     # Default general rate limit per day
+    
+    # TLS & Security Configuration
+    TLS_VERSION: str = os.getenv("TLS_VERSION", "1.2")  # Minimum TLS version to enforce
+    TLS_CIPHERS: str = os.getenv("TLS_CIPHERS", "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384")  # Secure cipher suite
+    HSTS_ENABLED: bool = os.getenv("HSTS_ENABLED", "True").lower() in ("true", "1", "t")
+    HSTS_MAX_AGE: int = int(os.getenv("HSTS_MAX_AGE", "31536000"))  # 1 year in seconds
 
     # OAuth providers
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")

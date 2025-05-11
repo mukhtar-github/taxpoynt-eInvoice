@@ -14,7 +14,6 @@ from typing import List
 import logging
 
 from fastapi import FastAPI, Request, HTTPException, Depends # type: ignore
-from fastapi.middleware.cors import CORSMiddleware # type: ignore
 from fastapi.responses import JSONResponse # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
 
@@ -22,8 +21,7 @@ from app.routers import crypto
 from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials
 from app.core.config import settings
 from app.dependencies.auth import get_current_user_from_token # type: ignore
-from app.middleware.rate_limit import RateLimitMiddleware
-from app.middleware.https_redirect import add_https_middleware
+from app.middleware import setup_middleware
 
 # Configure logging
 logging.basicConfig(
@@ -42,57 +40,9 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Configure CORS (Cross-Origin Resource Sharing)
-origins = [
-    # Add allowed origins here
-    "http://localhost",
-    "http://localhost:3000",
-    "https://taxpoynt.com",
-    "https://app.taxpoynt.com",
-    "*",  # <-- This should be removed in production
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Add HTTPS redirect middleware if enabled in configuration
-if settings.ENFORCE_HTTPS and not settings.APP_ENV == "development":
-    add_https_middleware(app)
-    logger.info("HTTPS enforcement middleware enabled")
-
-# Rate limiting middleware
-def identify_user(request: Request) -> str:
-    """
-    Extract user ID from request for rate limiting.
-    
-    Args:
-        request: Request object
-        
-    Returns:
-        User ID or IP address
-    """
-    # Try to get user from JWT token
-    authorization = request.headers.get("Authorization", "")
-    if authorization.startswith("Bearer "):
-        # In a real implementation, decode the JWT and extract user ID
-        return authorization
-    
-    # Fallback to client IP
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    
-    return request.client.host or "unknown"  # type: ignore
-
-app.add_middleware(
-    RateLimitMiddleware,
-    identify_user_func=identify_user,
-)
+# Set up all middleware (CORS, Rate limiting, API Key Auth, Security)
+setup_middleware(app)
+logger.info("Security middleware initialized: CORS, Rate Limiting, API Key Auth, and HTTPS enforcement enabled")
 
 # Exception handlers
 @app.exception_handler(HTTPException)
@@ -131,13 +81,34 @@ app.include_router(api_credentials.router, prefix=settings.API_V1_STR, tags=["ap
 
 if __name__ == "__main__":
     import uvicorn # type: ignore
+    import ssl
     
     # Get configuration from environment
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     reload = os.getenv("RELOAD", "False").lower() in ("true", "1", "t")
     
-    logger.info(f"Starting server on {host}:{port}")
+    # Configure SSL context with TLS 1.2+
+    ssl_context = None
+    if settings.CLIENT_KEY_PATH and settings.CLIENT_CERT_PATH:
+        # Create SSL context with minimum TLS version 1.2
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        
+        # Set minimum TLS version (TLS 1.2)
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+        
+        # Set secure cipher suites
+        ssl_context.set_ciphers(settings.TLS_CIPHERS)
+        
+        # Load certificate and key
+        ssl_context.load_cert_chain(
+            certfile=settings.CLIENT_CERT_PATH,
+            keyfile=settings.CLIENT_KEY_PATH
+        )
+        
+        logger.info(f"TLS {settings.TLS_VERSION}+ enabled with secure cipher suites")
+    
+    logger.info(f"Starting server on {host}:{port} with secure configuration")
     
     # Start the server
     uvicorn.run(
@@ -146,6 +117,7 @@ if __name__ == "__main__":
         port=port,
         reload=reload,
         log_level="info",
-        ssl_keyfile=settings.CLIENT_KEY_PATH if settings.CLIENT_KEY_PATH else None,
-        ssl_certfile=settings.CLIENT_CERT_PATH if settings.CLIENT_CERT_PATH else None,
+        ssl_keyfile=settings.CLIENT_KEY_PATH if not ssl_context else None,
+        ssl_certfile=settings.CLIENT_CERT_PATH if not ssl_context else None,
+        ssl=ssl_context,
     )
