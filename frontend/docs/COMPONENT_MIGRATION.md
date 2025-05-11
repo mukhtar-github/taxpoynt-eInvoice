@@ -8,7 +8,28 @@ This document outlines the ongoing migration from Chakra UI components to our ne
 
 As of May 2025, the Taxpoynt eInvoice frontend is in a transition period where both old (Chakra UI) and new (Tailwind CSS) components exist side by side. New features are being developed with the new component system, while existing features are gradually being migrated.
 
-**Latest Update (May 7, 2025)**: We have completed the migration of several core components including Typography, Grid system, Card components, and ColorPalette. Additionally, we've migrated the MetricsDashboard and Odoo IRN Management pages to use the new Tailwind CSS components.
+**Latest Update (May 11, 2025)**: We have made significant progress in our UI migration:
+
+1. **Completed Component Migration**:
+   - Core UI components: Typography, Grid system, Card, Modal, Toast, Spinner, ColorPalette
+   - Dashboard components: RecentTransactionsCard, TransactionMetricsCard, ErrorRateCard, IntegrationStatusCard
+   - Layout components: **DashboardLayout** (with Sidebar, NavItem, and Header)
+   - Form components: FormField, Input, Select, Textarea
+   - Integration components: IntegrationForm, JsonEditor
+
+2. **Page Migrations**: 
+   - Successfully migrated the Integrations page and New Integration page
+   - Dashboard pages with responsive metrics and transaction logs
+   - MetricsDashboard, and Odoo IRN Management pages 
+
+3. **UI Enhancements**:
+   - Mobile-first responsive containers with proper padding
+   - Standardized card components (16px padding, 24px between cards)
+   - Responsive tables with horizontal scroll for transaction logs
+   - **Improved mobile navigation with proper drawer overlay and animation**
+   - Custom circular progress component for success rate display
+
+We are progressing well in Phase 3 of our migration strategy. The migration of the DashboardLayout is particularly significant as it was a complex component with many dependencies and is used across multiple pages in the application. This brings us another step closer to completely removing Chakra UI dependencies.
 
 ## Migration Strategy
 
@@ -30,6 +51,8 @@ As of May 2025, the Taxpoynt eInvoice frontend is in a transition period where b
 ## Pages Migrated
 
 The following pages have been migrated to use the new component system:
+- Dashboard
+- Integrations
 - MetricsDashboard
 - Odoo IRN Management
 
@@ -45,10 +68,16 @@ Below is a mapping between old components and their new equivalents:
 | `Badge` | `Badge.tsx` | Migrated |
 | ChakraButton | `Button.tsx` | Migrated |
 | ChakraCard | `Card.tsx` | Migrated |
+| ChakraCardGrid (New) | `CardGrid` | Completed |
+| ChakraModal | `Modal.tsx` | Migrated |
+| ChakraToast | `Toast.tsx` | Migrated |
 | ChakraProgress | `Progress.tsx` | Migrated |
 | ChakraTable | `Table.tsx` | Migrated |
-| MobileNav | `MobileNav.tsx` | Migrated |
+| ChakraBox with overflow | `ResponsiveTable.tsx` | Migrated |
+| MobileNav | `MainNav.tsx` (with mobile drawer) | Enhanced |
+| ChakraContainer | `Container.tsx` (mobile-first) | Enhanced |
 | N/A (New) | `ColorPalette.tsx` | Completed |
+| N/A (New) | `Spinner.tsx` | Completed |
 
 ## Recently Added Components
 

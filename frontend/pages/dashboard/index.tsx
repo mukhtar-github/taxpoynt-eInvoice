@@ -1,11 +1,22 @@
 import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import MainLayout from '../../components/layouts/MainLayout';
-import { Container } from '../../components/ui/Grid';
+import { Container } from '../../components/ui/Container';
 import { Typography } from '../../components/ui/Typography';
-import { Card, CardContent, CardHeader, MetricCard } from '../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardGrid, MetricCard } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { TransactionLogTable } from '../../components/ui/ResponsiveTable';
+import { 
+  Table, 
+  TableContainer, 
+  TableHeader, 
+  TableBody, 
+  TableHead, 
+  TableRow, 
+  TableCell, 
+  TableEmpty
+} from '../../components/ui/Table';
 import Link from 'next/link';
 import { AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 
@@ -70,8 +81,7 @@ const Dashboard: NextPage = () => {
 
   return (
     <MainLayout title="Dashboard | Taxpoynt eInvoice">
-      <Container>
-        <div className="py-6">
+      <Container padding="medium" className="py-6">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6">
             <Typography.Heading level="h1">Dashboard</Typography.Heading>
             <Button 
@@ -86,7 +96,8 @@ const Dashboard: NextPage = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Metric cards with consistent 24px spacing between cards */}
+          <CardGrid columns={{ base: 1, md: 2, lg: 4 }} className="mb-8">
             <MetricCard
               title="Total Invoices (Today)"
               value={transactions.today.toString()}
@@ -107,44 +118,50 @@ const Dashboard: NextPage = () => {
                 type: "increase"
               }}
             />
-          </div>
+          </CardGrid>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Main content cards with responsive layout */}
+          <CardGrid columns={{ base: 1, lg: 2 }}>
             <Card>
               <CardHeader title="Integration Status" subtitle="Status of connected integrations" />
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b-2 border-border">
-                        <th className="text-left p-3 font-semibold">Integration</th>
-                        <th className="text-left p-3 font-semibold">Client</th>
-                        <th className="text-left p-3 font-semibold">Status</th>
-                        <th className="text-left p-3 font-semibold">Last Synced</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {integrations.map(integration => (
-                        <tr key={integration.id} className="border-b border-border">
-                          <td className="p-3">{integration.name}</td>
-                          <td className="p-3">{integration.client}</td>
-                          <td className="p-3">
-                            <Badge 
-                              variant={
-                                integration.status === 'active' ? 'success' : 
-                                integration.status === 'error' ? 'destructive' : 
-                                'secondary'
-                              }
-                            >
-                              {integration.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3">{formatDate(integration.lastSynced)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Responsive table with horizontal scroll */}
+                <TableContainer>
+                  <Table minWidth="600px">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Integration</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Synced</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {integrations.length === 0 ? (
+                        <TableEmpty colSpan={4} message="No integrations found" />
+                      ) : (
+                        integrations.map(integration => (
+                          <TableRow key={integration.id}>
+                            <TableCell>{integration.name}</TableCell>
+                            <TableCell>{integration.client}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  integration.status === 'active' ? 'success' : 
+                                  integration.status === 'error' ? 'destructive' : 
+                                  'secondary'
+                                }
+                              >
+                                {integration.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{formatDate(integration.lastSynced)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </CardContent>
             </Card>
             
@@ -156,46 +173,18 @@ const Dashboard: NextPage = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </CardGrid>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {/* Secondary content cards with responsive layout and proper spacing */}
+          <CardGrid columns={{ base: 1, lg: 2 }} className="mt-6">
             <Card>
               <CardHeader title="Recent Transactions" subtitle="Latest system activity" />
               <CardContent>
-                <div className="space-y-4">
-                  {recentTransactions.map(transaction => (
-                    <div key={transaction.id} className="flex justify-between items-center p-3 bg-background-alt rounded-md">
-                      <div>
-                        <Typography.Text weight="medium">
-                          {transaction.type === 'irn_generation' ? 'IRN Generation' : 
-                           transaction.type === 'validation' ? 'Validation' : 
-                           'Submission'}
-                        </Typography.Text>
-                        <Typography.Text variant="secondary" size="sm">
-                          {transaction.integration} - {formatDate(transaction.timestamp)}
-                        </Typography.Text>
-                      </div>
-                      <div>
-                        {transaction.status === 'success' ? (
-                          <Badge variant="success" className="flex items-center gap-1">
-                            <CheckCircle size={14} />
-                            <span>Success</span>
-                          </Badge>
-                        ) : transaction.status === 'failed' ? (
-                          <Badge variant="destructive" className="flex items-center gap-1">
-                            <AlertCircle size={14} />
-                            <span>Failed</span>
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Clock size={14} />
-                            <span>Pending</span>
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {/* Transaction log table with horizontal scroll capability */}
+                <TransactionLogTable 
+                  transactions={recentTransactions}
+                  isLoading={isLoading}
+                />
               </CardContent>
             </Card>
 
@@ -207,8 +196,7 @@ const Dashboard: NextPage = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
+          </CardGrid>
       </Container>
     </MainLayout>
   );

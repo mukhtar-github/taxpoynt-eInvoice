@@ -31,6 +31,7 @@ interface MainNavProps {
     email: string;
     avatar?: string;
   };
+  authButtons?: React.ReactNode;
   onLogout?: () => void;
 }
 
@@ -79,10 +80,8 @@ const navItems: NavItem[] = [
 export const MainNav: React.FC<MainNavProps> = ({
   title = 'Taxpoynt',
   logo,
-  userInfo = {
-    name: 'Demo User',
-    email: 'user@example.com'
-  },
+  userInfo,
+  authButtons,
   onLogout
 }) => {
   const router = useRouter();
@@ -186,54 +185,63 @@ export const MainNav: React.FC<MainNavProps> = ({
                 <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
               </Button>
 
-              <div className="relative">
-                <Button 
-                  variant="ghost" 
-                  className="flex items-center space-x-2"
-                  onClick={() => handleDropdownToggle('user')}
-                >
-                  <div className="w-8 h-8 rounded-full bg-background-alt flex items-center justify-center">
-                    {userInfo.avatar ? (
-                      <img src={userInfo.avatar} alt={userInfo.name} className="w-8 h-8 rounded-full" />
-                    ) : (
-                      <User className="h-5 w-5" />
-                    )}
+              {/* Desktop Auth or User Menu */}
+              {authButtons ? (
+                /* Auth Buttons for logged out state */
+                <div className="ml-4 relative flex-shrink-0">
+                  {authButtons}
+                </div>
+              ) : userInfo ? (
+                /* User Menu for logged in state */
+                <div className="ml-4 relative flex-shrink-0">
+                  <div className="flex items-center">
+                    <button 
+                      className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      onClick={() => handleDropdownToggle('user')}
+                    >
+                      <span className="sr-only">Open user menu</span>
+                      {/* User Icon or Avatar */}
+                      <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
+                        <span>{userInfo.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                    </button>
                   </div>
-                  <div className="text-left hidden md:block">
-                    <Typography.Text className="text-sm font-medium">{userInfo.name}</Typography.Text>
-                    <Typography.Text className="text-xs text-text-secondary">{userInfo.email}</Typography.Text>
-                  </div>
-                </Button>
 
-                {/* User Dropdown Menu */}
-                {openDropdown === 'user' && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-background ring-1 ring-black ring-opacity-5 z-10">
-                    <div className="py-1" role="menu" aria-orientation="vertical">
+                  {/* User Dropdown Menu */}
+                  {openDropdown === 'user' && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                      <div className="px-4 py-2 border-b border-border">
+                        <Typography.Text className="text-sm font-medium">{userInfo.name}</Typography.Text>
+                        <Typography.Text size="xs" variant="secondary">{userInfo.email}</Typography.Text>
+                      </div>
                       <Link 
                         href="/profile" 
-                        className="block px-4 py-2 text-sm text-text-primary hover:bg-background-alt" 
-                        role="menuitem"
+                        className="block px-4 py-2 text-sm text-text-primary hover:bg-gray-100 dark:hover:bg-gray-700" 
                       >
                         Profile
                       </Link>
                       <Link 
                         href="/settings/account" 
-                        className="block px-4 py-2 text-sm text-text-primary hover:bg-background-alt" 
-                        role="menuitem"
+                        className="block px-4 py-2 text-sm text-text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         Account Settings
                       </Link>
                       <button 
-                        onClick={onLogout} 
-                        className="block w-full text-left px-4 py-2 text-sm text-error hover:bg-background-alt" 
-                        role="menuitem"
+                        onClick={() => {
+                          if (onLogout) onLogout();
+                          setOpenDropdown(null);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-error hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         Logout
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              ) : (
+                /* No user or auth buttons fallback */
+                <div></div>
+              )}
             </div>
           </div>
         </div>
@@ -276,19 +284,21 @@ export const MainNav: React.FC<MainNavProps> = ({
           <div className="lg:hidden bg-background border-b border-border">
             <div className="container mx-auto px-4 py-3">
               {/* User Info Section */}
-              <div className="flex items-center space-x-3 py-3 border-b border-border mb-3">
-                <div className="w-10 h-10 rounded-full bg-background-alt flex items-center justify-center">
-                  {userInfo.avatar ? (
-                    <img src={userInfo.avatar} alt={userInfo.name} className="w-10 h-10 rounded-full" />
-                  ) : (
-                    <User className="h-6 w-6" />
-                  )}
+              {userInfo ? (
+                <div className="flex items-center space-x-3 py-3 border-b border-border mb-3">
+                  <div className="w-10 h-10 rounded-full bg-background-alt flex items-center justify-center">
+                    {userInfo.avatar ? (
+                      <img src={userInfo.avatar} alt={userInfo.name} className="w-10 h-10 rounded-full" />
+                    ) : (
+                      <User className="h-6 w-6" />
+                    )}
+                  </div>
+                  <div>
+                    <Typography.Text className="font-medium">{userInfo.name}</Typography.Text>
+                    <Typography.Text className="text-xs text-text-secondary">{userInfo.email}</Typography.Text>
+                  </div>
                 </div>
-                <div>
-                  <Typography.Text className="font-medium">{userInfo.name}</Typography.Text>
-                  <Typography.Text className="text-xs text-text-secondary">{userInfo.email}</Typography.Text>
-                </div>
-              </div>
+              ) : null}
 
               {/* Navigation Links */}
               <nav className="space-y-1">
@@ -356,12 +366,13 @@ export const MainNav: React.FC<MainNavProps> = ({
               </nav>
 
               {/* Mobile Menu Footer with Logout */}
-              <div className="pt-4 mt-4 border-t border-border">
-                <Button
-                  variant="ghost"
-                  className="flex w-full items-center text-error justify-start"
-                  onClick={onLogout}
-                >
+              {onLogout && (
+                <div className="pt-4 mt-4 border-t border-border">
+                  <Button
+                    variant="ghost"
+                    className="flex w-full items-center text-error justify-start"
+                    onClick={onLogout}
+                  >
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
                     className="mr-3 h-5 w-5 flex-shrink-0" 
@@ -379,6 +390,7 @@ export const MainNav: React.FC<MainNavProps> = ({
                   Logout
                 </Button>
               </div>
+              )}
             </div>
           </div>
         )}

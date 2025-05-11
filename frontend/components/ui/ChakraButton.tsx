@@ -1,7 +1,20 @@
-import React from 'react';
-import { Button as ChakraButton } from '@chakra-ui/react';
+/**
+ * @deprecated These components are deprecated and will be removed in a future version.
+ * Please use components from '../ui/Button.tsx' directly for consistent styling.
+ * 
+ * Migration guide:
+ * - Button -> Button
+ * - IconButton -> Button with size="icon" and appropriate icon as children
+ */
 
-interface ButtonProps {
+import React from 'react';
+import { Button as TailwindButton } from './Button';
+import { cn } from '../../utils/cn';
+
+/**
+ * @deprecated Use Button from '../ui/Button.tsx' directly
+ */
+interface ChakraButtonProps {
   leftIcon?: React.ReactElement;
   children: React.ReactNode;
   colorScheme?: string;
@@ -12,21 +25,71 @@ interface ButtonProps {
   isLoading?: boolean;
   type?: 'button' | 'submit' | 'reset';
   mt?: number;
+  className?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
+// This is a compatibility layer for the old Chakra Button
+// It maps Chakra props to our new Tailwind Button component
+/**
+ * @deprecated Use Button from '../ui/Button.tsx' directly
+ */
+export const Button: React.FC<ChakraButtonProps> = ({ 
   leftIcon, 
   children, 
+  colorScheme = 'blue',
+  variant = 'solid',
+  size = 'md',
+  isLoading,
+  onClick,
+  type,
+  width,
+  mt,
+  className,
   ...props 
 }) => {
+  // Map Chakra variants to Tailwind Button variants
+  const variantMap: Record<string, any> = {
+    solid: colorScheme === 'red' ? 'destructive' : 'primary',
+    outline: 'outline',
+    ghost: 'ghost',
+    link: 'link',
+  };
+
+  // Map Chakra sizes to Tailwind Button sizes
+  const sizeMap: Record<string, any> = {
+    xs: 'xs',
+    sm: 'sm',
+    md: 'default',
+    lg: 'lg',
+    xl: 'xl',
+  };
+
+  const mappedVariant = variantMap[variant] || 'primary';
+  const mappedSize = sizeMap[size] || 'default';
+  
   return (
-    <ChakraButton {...props as any}>
-      {leftIcon && <span style={{ marginRight: '0.5rem', display: 'inline-flex' }}>{leftIcon}</span>}
+    <TailwindButton
+      variant={mappedVariant}
+      size={mappedSize}
+      loading={isLoading}
+      onClick={onClick}
+      type={type}
+      className={cn(
+        width && `w-${width}`,
+        mt && `mt-${mt}`,
+        className
+      )}
+      {...props}
+    >
+      {leftIcon && <span className="mr-2 inline-flex">{leftIcon}</span>}
       {children}
-    </ChakraButton>
+    </TailwindButton>
   );
 };
 
+/**
+ * @deprecated Use Button with size="icon" from '../ui/Button.tsx' instead
+ */
 interface IconButtonProps {
   'aria-label': string;
   icon: React.ReactElement;
@@ -36,87 +99,64 @@ interface IconButtonProps {
   mr?: number;
   onClick?: () => void;
   display?: any;
+  className?: string;
 }
 
+// This is a compatibility layer for the old Chakra IconButton
+/**
+ * @deprecated Use Button with size="icon" from '../ui/Button.tsx' instead
+ */
 export const IconButton: React.FC<IconButtonProps> = ({ 
   icon, 
   'aria-label': ariaLabel, 
   size = 'md',
   colorScheme = 'gray',
   variant = 'solid',
+  mr,
+  onClick,
+  display,
+  className,
   ...props 
 }) => {
-  // Size mapping
-  const sizeMap = {
-    xs: { padding: '0.25rem', fontSize: '0.75rem' },
-    sm: { padding: '0.5rem', fontSize: '0.875rem' },
-    md: { padding: '0.75rem', fontSize: '1rem' },
-    lg: { padding: '1rem', fontSize: '1.25rem' },
-    xl: { padding: '1.25rem', fontSize: '1.5rem' }
+  // Map Chakra variants to Tailwind Button variants
+  const variantMap: Record<string, any> = {
+    solid: colorScheme === 'red' ? 'destructive' : 'primary',
+    outline: 'outline',
+    ghost: 'ghost',
+    link: 'link',
   };
-  
-  // Variant mapping
-  const getVariantStyles = () => {
-    switch (variant) {
-      case 'outline':
-        return {
-          border: '1px solid',
-          borderColor: `${colorScheme}.500`,
-          backgroundColor: 'transparent'
-        };
-      case 'ghost':
-        return {
-          backgroundColor: 'transparent'
-        };
-      default:
-        return {
-          backgroundColor: `${colorScheme}.500`,
-          color: 'white'
-        };
-    }
+
+  // Map Chakra sizes to Tailwind Button sizes
+  const sizeMap: Record<string, any> = {
+    xs: 'xs',
+    sm: 'sm',
+    md: 'default',
+    lg: 'lg',
+    xl: 'xl',
   };
-  
-  const { padding, fontSize } = sizeMap[size];
+
+  const mappedVariant = variantMap[variant] || 'primary';
+  const mappedSize = sizeMap[size] || 'default';
   
   return (
-    <button 
-      aria-label={ariaLabel} 
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding,
-        fontSize,
-        borderRadius: '0.375rem',
-        border: 'none',
-        cursor: 'pointer',
-        ...getVariantStyles(),
-        ...props.display && { display: props.display },
-        marginRight: props.mr ? `${props.mr * 0.25}rem` : undefined
-      }}
-      onClick={props.onClick}
+    <TailwindButton
+      variant={mappedVariant}
+      size={mappedSize}
+      onClick={onClick}
+      type="button"
+      aria-label={ariaLabel}
+      className={cn(
+        'p-0',
+        mr && `mr-${mr}`,
+        display && display !== 'inline-flex' ? display : '',
+        className
+      )}
+      {...props}
     >
       {icon}
-    </button>
+    </TailwindButton>
   );
 };
 
-// Custom toast hook
-export function useToast() {
-  return ({ 
-    title, 
-    description, 
-    status, 
-    duration, 
-    isClosable 
-  }: {
-    title: string;
-    description?: string;
-    status?: 'info' | 'warning' | 'success' | 'error';
-    duration?: number;
-    isClosable?: boolean;
-  }) => {
-    console.log(`Toast: ${title} - ${description} (${status})`);
-    // In a real implementation, you'd show a real toast
-  };
-} 
+// Redirect to our custom toast implementation
+export { useToast } from './Toast';

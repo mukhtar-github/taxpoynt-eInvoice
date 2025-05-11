@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Heading, Button, useTabs, Flex } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
+import MainLayout from '../../components/layouts/MainLayout';
+import { Container } from '../../components/ui/Container';
+import { Typography } from '../../components/ui/Typography';
+import { Button } from '../../components/ui/Button';
+import { Card, CardContent } from '../../components/ui/Card';
+import { useToast } from '../../components/ui/Toast';
 import { IntegrationForm } from '../../components/integrations';
 
 // Mock data - Replace with actual API calls
@@ -22,7 +27,7 @@ const NewIntegrationPage: React.FC = () => {
   const [clients, setClients] = useState(mockClients);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const toast = useTabs();
+  const toast = useToast();
 
   // In a real implementation, fetch data from API
   useEffect(() => {
@@ -47,7 +52,6 @@ const NewIntegrationPage: React.FC = () => {
         description: `${data.name} has been created successfully`,
         status: 'success',
         duration: 5000,
-        isClosable: true,
       });
       
       // Navigate back to integrations list
@@ -58,32 +62,36 @@ const NewIntegrationPage: React.FC = () => {
         description: error instanceof Error ? error.message : 'An unknown error occurred',
         status: 'error',
         duration: 5000,
-        isClosable: true,
       });
     }
   };
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <Box mb={8}>
-        <Flex justify="space-between" align="center">
-          <Heading size="lg">Create New Integration</Heading>
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/integrations')}
-          >
-            Back to List
-          </Button>
-        </Flex>
-      </Box>
-      
-      <Box bg="white" p={6} borderRadius="md" shadow="sm">
-        <IntegrationForm 
-          clients={clients}
-          onSubmit={handleCreateIntegration}
-        />
-      </Box>
-    </Container>
+    <MainLayout title="Create Integration | Taxpoynt eInvoice">
+      <Container maxWidth="xl" padding="medium">
+        <div className="mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <Typography.Heading level="h1">Create New Integration</Typography.Heading>
+            <Button 
+              variant="outline" 
+              className="mt-4 md:mt-0"
+              onClick={() => router.push('/integrations')}
+            >
+              Back to List
+            </Button>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent>
+            <IntegrationForm 
+              clients={clients}
+              onSubmit={handleCreateIntegration}
+            />
+          </CardContent>
+        </Card>
+      </Container>
+    </MainLayout>
   );
 };
 

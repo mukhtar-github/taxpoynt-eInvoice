@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Flex,
-  Heading,
-  Badge,
-  Text,
-  Spinner,
-} from '@chakra-ui/react';
+import MainLayout from '../../components/layouts/MainLayout';
+import { Container } from '../../components/ui/Container';
+import { Typography } from '../../components/ui/Typography';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Card, CardHeader, CardContent } from '../../components/ui/Card';
+import { 
+  Table, 
+  TableContainer, 
+  TableHeader, 
+  TableBody, 
+  TableHead, 
+  TableRow, 
+  TableCell, 
+  TableEmpty 
+} from '../../components/ui/Table';
+import { Spinner } from '../../components/ui/Spinner';
 import {
   Modal,
-  ModalOverlay,
-  ModalContent,
   ModalHeader,
-  ModalFooter,
   ModalBody,
-  ModalCloseButton,
-  useDisclosure
-} from '../../components/ui/ChakraModal';
-import { Table, Thead, Tbody, Tr, Th, Td } from '../../components/ui/ChakraTable';
-import { Button, IconButton, useToast } from '../../components/ui/ChakraButton';
-import { FiEdit2, FiTrash2, FiPlus, FiPlay } from 'react-icons/fi';
+} from '../../components/ui/Modal';
+import { useToast } from '../../components/ui/Toast';
+import { Edit2 as FiEdit2, Trash2 as FiTrash2, Plus as FiPlus, Play as FiPlay } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { IntegrationForm } from '../../components/integrations';
 
@@ -85,7 +87,10 @@ const IntegrationsPage: React.FC = () => {
   const [clients, setClients] = useState(mockClients);
   const [loading, setLoading] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
   const router = useRouter();
   const toast = useToast();
 
@@ -114,7 +119,7 @@ const IntegrationsPage: React.FC = () => {
     };
     
     setIntegrations([...integrations, newIntegration]);
-    onClose();
+    closeModal();
     
     toast({
       title: 'Integration created',
@@ -127,7 +132,7 @@ const IntegrationsPage: React.FC = () => {
 
   const handleEditIntegration = (integration: Integration) => {
     setSelectedIntegration(integration);
-    onOpen();
+    open();
   };
 
   const handleDeleteIntegration = (id: string) => {
@@ -166,131 +171,133 @@ const IntegrationsPage: React.FC = () => {
   };
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <Flex justify="space-between" align="center" mb={8}>
-        <Heading size="lg">Integrations</Heading>
+    <MainLayout title="Integrations | Taxpoynt eInvoice">
+      <Container maxWidth="xl" padding="medium">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+        <Typography.Heading level="h1">Integrations</Typography.Heading>
         <Button 
-          leftIcon={<FiPlus />} 
-          colorScheme="blue"
+          variant="default"
+          className="mt-4 md:mt-0 flex items-center gap-2"
           onClick={() => {
             setSelectedIntegration(null);
-            onOpen();
+            openModal();
           }}
         >
+          <FiPlus className="h-4 w-4" aria-hidden="true" />
           Create Integration
         </Button>
-      </Flex>
+      </div>
 
       {loading ? (
-        <Flex justify="center" my={10}>
-          <Spinner size="xl" />
-        </Flex>
+        <div className="my-10">
+          <Spinner size="xl" center />
+        </div>
       ) : integrations.length === 0 ? (
-        <Box 
-          p={10} 
-          textAlign="center" 
-          borderWidth={1} 
-          borderRadius="md"
-          borderStyle="dashed"
-        >
-          <Text fontSize="lg" mb={6}>No integrations found</Text>
-          <Button 
-            leftIcon={<FiPlus />} 
-            colorScheme="blue"
-            onClick={() => {
-              setSelectedIntegration(null);
-              onOpen();
-            }}
-          >
-            Create Your First Integration
-          </Button>
-        </Box>
+        <Card className="p-8 text-center border border-dashed">
+          <CardContent>
+            <Typography.Text size="lg" className="mb-6">No integrations found</Typography.Text>
+            <Button 
+              variant="default"
+              className="flex items-center gap-2 mx-auto"
+              onClick={() => {
+                setSelectedIntegration(null);
+                openModal();
+              }}
+            >
+              <FiPlus className="h-4 w-4" aria-hidden="true" />
+              Create Your First Integration
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Name</Th>
-              <Th>Client</Th>
-              <Th>Status</Th>
-              <Th>Last Tested</Th>
-              <Th>Actions</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {integrations.map((integration) => (
-              <Tr key={integration.id}>
-                <Td fontWeight="medium">{integration.name}</Td>
-                <Td>{integration.client_name}</Td>
-                <Td>
-                  <Badge 
-                    colorScheme={
-                      integration.status === 'active' ? 'green' :
-                      integration.status === 'configured' ? 'blue' :
-                      integration.status === 'failed' ? 'red' : 'gray'
-                    }
-                  >
-                    {integration.status}
-                  </Badge>
-                </Td>
-                <Td>
-                  {integration.last_tested 
-                    ? new Date(integration.last_tested).toLocaleString() 
-                    : 'Never'}
-                </Td>
-                <Td>
-                  <Flex>
-                    <IconButton
-                      aria-label="Test integration"
-                      icon={<FiPlay />}
-                      size="sm"
-                      colorScheme="green"
-                      variant="ghost"
-                      mr={2}
-                      onClick={() => handleTestIntegration(integration.id)}
-                    />
-                    <IconButton
-                      aria-label="Edit integration"
-                      icon={<FiEdit2 />}
-                      size="sm"
-                      colorScheme="blue"
-                      variant="ghost"
-                      mr={2}
-                      onClick={() => handleEditIntegration(integration)}
-                    />
-                    <IconButton
-                      aria-label="Delete integration"
-                      icon={<FiTrash2 />}
-                      size="sm"
-                      colorScheme="red"
-                      variant="ghost"
-                      onClick={() => handleDeleteIntegration(integration.id)}
-                    />
-                  </Flex>
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
+        <TableContainer variant="card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Tested</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {integrations.map((integration) => (
+                <TableRow key={integration.id}>
+                  <TableCell className="font-medium">{integration.name}</TableCell>
+                  <TableCell>{integration.client_name}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        integration.status === 'active' ? 'success' :
+                        integration.status === 'configured' ? 'default' :
+                        integration.status === 'failed' ? 'destructive' : 'secondary'
+                      }
+                    >
+                      {integration.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {integration.last_tested 
+                      ? new Date(integration.last_tested).toLocaleString() 
+                      : 'Never'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        aria-label="Test integration"
+                        variant="ghost"
+                        size="icon"
+                        className="text-success-dark hover:text-success hover:bg-success-light"
+                        onClick={() => handleTestIntegration(integration.id)}
+                      >
+                        <FiPlay className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        aria-label="Edit integration"
+                        variant="ghost"
+                        size="icon"
+                        className="text-primary hover:bg-primary-light"
+                        onClick={() => {
+                          handleEditIntegration(integration);
+                          openModal();
+                        }}
+                      >
+                        <FiEdit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        aria-label="Delete integration"
+                        variant="ghost"
+                        size="icon"
+                        className="text-error-dark hover:text-error hover:bg-error-light"
+                        onClick={() => handleDeleteIntegration(integration.id)}
+                      >
+                        <FiTrash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {/* Integration Form Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            {selectedIntegration ? 'Edit Integration' : 'Create Integration'}
-          </ModalHeader>
-          <ModalCloseButton onClick={onClose} />
-          <ModalBody>
-            <IntegrationForm 
-              clients={clients}
-              onSubmit={handleCreateIntegration}
-              initialData={convertIntegrationToFormData(selectedIntegration)}
-            />
-          </ModalBody>
-        </ModalContent>
+      <Modal isOpen={isModalOpen} onClose={closeModal} size="xl">
+        <ModalHeader>
+          {selectedIntegration ? 'Edit Integration' : 'Create Integration'}
+        </ModalHeader>
+        <ModalBody>
+          <IntegrationForm 
+            clients={clients}
+            onSubmit={handleCreateIntegration}
+            initialData={convertIntegrationToFormData(selectedIntegration)}
+          />
+        </ModalBody>
       </Modal>
-    </Container>
+      </Container>
+    </MainLayout>
   );
 };
 

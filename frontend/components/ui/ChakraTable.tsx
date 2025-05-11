@@ -1,66 +1,164 @@
-import React from 'react';
-import { Box } from '@chakra-ui/react';
+/**
+ * @deprecated These components are deprecated and will be removed in a future version.
+ * Please use the Tailwind versions from '../ui/Table.tsx' instead.
+ * 
+ * Migration guide:
+ * - Table -> Table
+ * - Thead -> TableHeader
+ * - Tbody -> TableBody
+ * - Tr -> TableRow
+ * - Th -> TableHead
+ * - Td -> TableCell
+ */
 
-interface TableProps {
-  variant?: string;
+import React from 'react';
+import { cn } from '../../utils/cn';
+
+/**
+ * @deprecated Use Table from '../ui/Table.tsx' instead
+ */
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  variant?: 'default' | 'simple';
+  className?: string;
   children: React.ReactNode;
 }
 
-export const Table: React.FC<TableProps> = ({ children, variant }) => {
+/**
+ * @deprecated Use Table from '../ui/Table.tsx' instead
+ */
+export const Table: React.FC<TableProps> = ({ 
+  children, 
+  variant = 'default',
+  className,
+  ...props 
+}) => {
   return (
-    <Box as="table" width="100%" borderCollapse="collapse">
+    <table 
+      className={cn(
+        'w-full border-collapse',
+        variant === 'simple' ? 'table-simple' : 'table-default',
+        className
+      )}
+      {...props}
+    >
       {children}
-    </Box>
+    </table>
   );
 };
 
-export const Thead: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <Box as="thead">{children}</Box>;
+/**
+ * @deprecated Use TableHeader from '../ui/Table.tsx' instead
+ */
+interface TheadProps extends React.HTMLAttributes<HTMLTableSectionElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * @deprecated Use TableHeader from '../ui/Table.tsx' instead
+ */
+export const Thead: React.FC<TheadProps> = ({ children, className, ...props }) => {
+  return <thead className={className} {...props}>{children}</thead>;
 };
 
-export const Tbody: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <Box as="tbody">{children}</Box>;
+/**
+ * @deprecated Use TableBody from '../ui/Table.tsx' instead
+ */
+interface TbodyProps extends React.HTMLAttributes<HTMLTableSectionElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * @deprecated Use TableBody from '../ui/Table.tsx' instead
+ */
+export const Tbody: React.FC<TbodyProps> = ({ children, className, ...props }) => {
+  return <tbody className={className} {...props}>{children}</tbody>;
 };
 
-export const Tr: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <Box as="tr">{children}</Box>;
+/**
+ * @deprecated Use TableRow from '../ui/Table.tsx' instead
+ */
+interface TrProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+/**
+ * @deprecated Use TableRow from '../ui/Table.tsx' instead
+ */
+export const Tr: React.FC<TrProps> = ({ children, className, ...props }) => {
+  return <tr className={className} {...props}>{children}</tr>;
 };
 
-interface ThProps {
+/**
+ * @deprecated Use TableHead from '../ui/Table.tsx' instead
+ */
+interface ThProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
   children: React.ReactNode;
   textAlign?: 'left' | 'center' | 'right';
+  className?: string;
 }
 
-export const Th: React.FC<ThProps> = ({ children, textAlign = 'left' }) => {
+/**
+ * @deprecated Use TableHead from '../ui/Table.tsx' instead
+ */
+export const Th: React.FC<ThProps> = ({ 
+  children, 
+  textAlign = 'left',
+  className,
+  ...props 
+}) => {
   return (
-    <Box 
-      as="th" 
-      p={3} 
-      borderBottom="1px" 
-      borderColor="gray.200" 
-      textAlign={textAlign}
-      fontWeight="bold"
+    <th 
+      className={cn(
+        'p-3 border-b border-gray-200 font-semibold',
+        textAlign === 'left' ? 'text-left' : 
+        textAlign === 'center' ? 'text-center' : 'text-right',
+        className
+      )}
+      {...props}
     >
       {children}
-    </Box>
+    </th>
   );
 };
 
-interface TdProps {
+/**
+ * @deprecated Use TableCell from '../ui/Table.tsx' instead
+ */
+interface TdProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   children: React.ReactNode;
-  fontWeight?: string;
+  fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  className?: string;
 }
 
-export const Td: React.FC<TdProps> = ({ children, fontWeight }) => {
+/**
+ * @deprecated Use TableCell from '../ui/Table.tsx' instead
+ */
+export const Td: React.FC<TdProps> = ({ 
+  children, 
+  fontWeight = 'normal',
+  className,
+  ...props 
+}) => {
+  const fontWeightClasses = {
+    normal: 'font-normal',
+    medium: 'font-medium',
+    semibold: 'font-semibold',
+    bold: 'font-bold'
+  };
+
   return (
-    <Box 
-      as="td" 
-      p={3} 
-      borderBottom="1px" 
-      borderColor="gray.100"
-      fontWeight={fontWeight}
+    <td 
+      className={cn(
+        'p-3 border-b border-gray-100',
+        fontWeightClasses[fontWeight],
+        className
+      )}
+      {...props}
     >
       {children}
-    </Box>
+    </td>
   );
 }; 

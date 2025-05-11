@@ -1,18 +1,35 @@
-import React from 'react';
-import { Box, Flex, Text, BoxProps } from '@chakra-ui/react';
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Please use components from '../ui/Card.tsx' for consistent styling.
+ * 
+ * Migration guide:
+ * - StandardCard -> Card with CardHeader and CardContent
+ * - CardGrid -> Use CSS Grid with Tailwind (grid grid-cols-X gap-6)
+ */
 
-interface StandardCardProps extends BoxProps {
+import React from 'react';
+import { cn } from '../../utils/cn';
+import { Typography } from './Typography';
+
+/**
+ * @deprecated Use Card, CardHeader, and CardContent from '../ui/Card.tsx' instead
+ */
+interface StandardCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
   action?: React.ReactNode;
   variant?: 'default' | 'outlined' | 'elevated';
   noPadding?: boolean;
+  className?: string;
 }
 
 /**
  * StandardCard component with consistent 16px padding and designed for 24px spacing between cards
- * To ensure proper spacing, place cards in a grid with gap="24px" or margin="24px"
+ * To ensure proper spacing, place cards in a grid with gap-6 (24px) or m-6
+ */
+/**
+ * @deprecated Use Card, CardHeader, and CardContent from '../ui/Card.tsx' instead
  */
 export const StandardCard: React.FC<StandardCardProps> = ({
   children,
@@ -21,106 +38,106 @@ export const StandardCard: React.FC<StandardCardProps> = ({
   action,
   variant = 'default',
   noPadding = false,
+  className,
   ...rest
 }) => {
   // Card styling based on variant
-  const cardStyles = {
-    default: {
-      bg: 'white',
-      borderWidth: '1px',
-      borderColor: 'var(--color-border)',
-      borderRadius: 'var(--border-radius-lg)',
-    },
-    outlined: {
-      bg: 'transparent',
-      borderWidth: '1px',
-      borderColor: 'var(--color-border)',
-      borderRadius: 'var(--border-radius-lg)',
-    },
-    elevated: {
-      bg: 'white',
-      borderRadius: 'var(--border-radius-lg)',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    },
+  const variantStyles = {
+    default: 'bg-white border border-border rounded-lg',
+    outlined: 'bg-transparent border border-border rounded-lg',
+    elevated: 'bg-white rounded-lg shadow-md'
   };
 
   return (
-    <Box
-      {...cardStyles[variant]}
-      p={noPadding ? 0 : 'var(--spacing-4)'}  // 16px padding
+    <div
+      className={cn(
+        variantStyles[variant],
+        noPadding ? '' : 'p-4',
+        className
+      )}
       {...rest}
     >
       {(title || subtitle || action) && (
-        <Flex 
-          justifyContent="space-between" 
-          alignItems="center" 
-          mb={children ? 'var(--spacing-4)' : 0}
-          p={noPadding ? 'var(--spacing-4)' : 0}
+        <div 
+          className={cn(
+            'flex justify-between items-center',
+            children ? 'mb-4' : '',
+            noPadding ? 'p-4' : ''
+          )}
         >
-          <Box>
+          <div>
             {title && (
-              <Text 
-                fontSize="var(--font-size-lg)" 
-                fontWeight="var(--font-weight-semibold)"
-                lineHeight="var(--line-height-snug)"
+              <Typography.Text 
+                size="lg" 
+                weight="semibold"
+                className="leading-snug"
               >
                 {title}
-              </Text>
+              </Typography.Text>
             )}
             {subtitle && (
-              <Text 
-                fontSize="var(--font-size-sm)" 
-                color="var(--color-text-secondary)"
-                mt="var(--spacing-1)"
+              <Typography.Text 
+                size="sm" 
+                variant="secondary"
+                className="mt-1"
               >
                 {subtitle}
-              </Text>
+              </Typography.Text>
             )}
-          </Box>
+          </div>
           {action && (
-            <Box>{action}</Box>
+            <div>{action}</div>
           )}
-        </Flex>
+        </div>
       )}
-      <Box p={noPadding && (title || subtitle || action) ? 'var(--spacing-4)' : 0}>
+      <div className={noPadding && (title || subtitle || action) ? 'p-4' : ''}>
         {children}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 
 /**
  * CardGrid component for displaying multiple cards with consistent spacing
  */
-interface CardGridProps extends BoxProps {
+/**
+ * @deprecated Use Tailwind grid classes directly (e.g., 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6')
+ */
+interface CardGridProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   columns?: { base?: number; sm?: number; md?: number; lg?: number; xl?: number };
+  className?: string;
 }
 
+/**
+ * @deprecated Use Tailwind grid classes directly (e.g., 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6')
+ */
 export const CardGrid: React.FC<CardGridProps> = ({
   children,
   columns = { base: 1, md: 2, lg: 3 },
+  className,
   ...rest
 }) => {
-  // Convert columns object to responsive template string
-  const templateColumns = {
-    base: `repeat(${columns.base || 1}, 1fr)`,
-    sm: columns.sm ? `repeat(${columns.sm}, 1fr)` : undefined,
-    md: columns.md ? `repeat(${columns.md}, 1fr)` : undefined,
-    lg: columns.lg ? `repeat(${columns.lg}, 1fr)` : undefined,
-    xl: columns.xl ? `repeat(${columns.xl}, 1fr)` : undefined,
-  };
+  // Create responsive grid classes
+  const gridClasses = [
+    `grid-cols-${columns.base || 1}`,
+    columns.sm && `sm:grid-cols-${columns.sm}`,
+    columns.md && `md:grid-cols-${columns.md}`,
+    columns.lg && `lg:grid-cols-${columns.lg}`,
+    columns.xl && `xl:grid-cols-${columns.xl}`,
+  ].filter(Boolean);
 
   return (
-    <Box
-      display="grid"
-      gridTemplateColumns={templateColumns}
-      gap="var(--spacing-6)" // 24px gap between cards
-      width="100%"
+    <div
+      className={cn(
+        'grid gap-6 w-full',
+        gridClasses,
+        className
+      )}
       {...rest}
     >
       {children}
-    </Box>
+    </div>
   );
 };
 

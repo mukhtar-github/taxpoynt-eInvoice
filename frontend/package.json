@@ -14,9 +14,6 @@
     "test:e2e": "cypress run"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.16.1",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
     "@radix-ui/react-progress": "^1.1.6",
     "@radix-ui/react-tabs": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.4",
@@ -27,7 +24,6 @@
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
-    "framer-motion": "^12.8.0",
     "lucide-react": "^0.320.0",
     "next": "^13.0.0",
     "react": "^18.2.0",

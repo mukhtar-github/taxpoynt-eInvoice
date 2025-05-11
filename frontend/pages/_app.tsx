@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AppProps } from 'next/app';
+import { ToastProvider } from '../components/ui/Toast';
 import '../styles/globals.css';
 
 /**
@@ -10,9 +11,11 @@ import '../styles/globals.css';
  */
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <div className="min-h-screen bg-background font-body text-text-primary">
-      <Component {...pageProps} />
-    </div>
+    <ToastProvider position="top-right">
+      <div className="min-h-screen bg-background font-body text-text-primary">
+        <Component {...pageProps} />
+      </div>
+    </ToastProvider>
   );
 }
 

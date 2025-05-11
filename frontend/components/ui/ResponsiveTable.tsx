@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Text, Flex } from '@chakra-ui/react';
+import { Typography } from './Typography';
+import { Badge, BadgeProps } from './Badge';
 
 interface Column {
   id: string;
@@ -31,31 +32,15 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
   stickyHeader = false,
 }) => {
   return (
-    <Box
-      width="100%"
-      overflowX="auto"
-      borderWidth="1px"
-      borderColor="var(--color-border)"
-      borderRadius="var(--border-radius-lg)"
-      boxShadow="sm"
-    >
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
-        <thead style={{ 
-          backgroundColor: 'var(--color-background-alt)',
-          position: stickyHeader ? 'sticky' : 'static',
-          top: 0,
-          zIndex: 1
-        }}>
+    <div className="w-full overflow-x-auto border border-border rounded-lg shadow-sm">
+      <table className="w-full border-collapse" style={{ minWidth: '600px' }}>
+        <thead className={`bg-background-alt ${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
           <tr>
             {columns.map((column) => (
               <th
                 key={column.id}
+                className="px-4 py-3 text-left text-sm font-semibold border-b border-border"
                 style={{
-                  padding: 'var(--spacing-3) var(--spacing-4)',
-                  textAlign: 'left',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 'var(--font-weight-semibold)',
-                  borderBottom: '1px solid var(--color-border)',
                   width: column.width,
                   minWidth: column.minWidth
                 }}
@@ -65,7 +50,7 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
             ))}
           </tr>
         </thead>
-        <tbody style={{ 
+        <tbody className="divide-y divide-border" style={{ 
           maxHeight: maxHeight,
           overflowY: maxHeight ? 'auto' : 'visible',
           display: maxHeight ? 'block' : 'table-row-group',
@@ -75,51 +60,30 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
             <tr>
               <td 
                 colSpan={columns.length}
-                style={{
-                  padding: 'var(--spacing-6)',
-                  textAlign: 'center',
-                  borderBottom: '1px solid var(--color-border)'
-                }}
+                className="px-6 py-6 text-center border-b border-border"
               >
-                <Text color="var(--color-text-secondary)">Loading...</Text>
+                <span className="text-text-secondary">Loading...</span>
               </td>
             </tr>
           ) : data.length === 0 ? (
             <tr>
               <td 
                 colSpan={columns.length}
-                style={{
-                  padding: 'var(--spacing-6)',
-                  textAlign: 'center',
-                  borderBottom: '1px solid var(--color-border)'
-                }}
+                className="px-6 py-6 text-center border-b border-border"
               >
-                <Text color="var(--color-text-secondary)">{emptyMessage}</Text>
+                <span className="text-text-secondary">{emptyMessage}</span>
               </td>
             </tr>
           ) : (
             data.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
-                style={{
-                  backgroundColor: 'white',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-background-alt)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
+                className="bg-white hover:bg-background-alt transition-colors duration-200"
               >
                 {columns.map((column) => (
                   <td
                     key={`${rowIndex}-${column.id}`}
-                    style={{
-                      padding: 'var(--spacing-3) var(--spacing-4)',
-                      borderBottom: '1px solid var(--color-border)',
-                      fontSize: 'var(--font-size-sm)'
-                    }}
+                    className="px-4 py-3 text-sm"
                   >
                     {column.accessor(row)}
                   </td>
@@ -129,14 +93,14 @@ export const ResponsiveTable: React.FC<ResponsiveTableProps> = ({
           )}
         </tbody>
       </table>
-    </Box>
+    </div>
   );
 };
 
 /**
  * Simplified transaction log table component specifically for transaction data
  */
-interface TransactionLogProps {
+export interface TransactionLogProps {
   transactions: any[];
   isLoading?: boolean;
 }
@@ -145,83 +109,55 @@ export const TransactionLogTable: React.FC<TransactionLogProps> = ({
   transactions,
   isLoading = false,
 }) => {
-  const columns: Column[] = [
-    {
-      id: 'date',
-      header: 'Date',
-      accessor: (row) => (
-        <Text fontWeight="var(--font-weight-medium)">{row.date}</Text>
-      ),
-      width: '120px',
-    },
-    {
-      id: 'reference',
-      header: 'Reference ID',
-      accessor: (row) => row.reference,
-      width: '200px',
-    },
+  const columns = [
     {
       id: 'type',
-      header: 'Type',
-      accessor: (row) => row.type,
-      width: '150px',
+      header: 'Transaction Type',
+      accessor: (row: any) => (
+        <Typography.Text weight="medium">
+          {row.type === 'irn_generation' ? 'IRN Generation' : 
+           row.type === 'validation' ? 'Validation' : 
+           row.type === 'submission' ? 'Submission' : row.type}
+        </Typography.Text>
+      ),
+      width: '30%',
+    },
+    {
+      id: 'integration',
+      header: 'Integration',
+      accessor: (row: any) => row.integration,
+      width: '20%',
     },
     {
       id: 'status',
       header: 'Status',
-      accessor: (row) => {
-        const colorMap: Record<string, string> = {
-          success: 'var(--color-success)',
-          pending: 'var(--color-warning)',
-          failed: 'var(--color-error)',
-          default: 'var(--color-text-secondary)',
-        };
+      accessor: (row: any) => {
+        let variant = 'secondary';
         
-        const color = colorMap[row.status.toLowerCase()] || colorMap.default;
+        if (row.status === 'success') {
+          variant = 'success';
+        } else if (row.status === 'failed') {
+          variant = 'destructive';
+        } else if (row.status === 'pending') {
+          variant = 'warning';
+        }
         
         return (
-          <Flex 
-            alignItems="center" 
-            justifyContent="flex-start"
-          >
-            <Box 
-              width="8px" 
-              height="8px" 
-              borderRadius="full" 
-              bg={color} 
-              mr="var(--spacing-2)" 
-            />
-            <Text>{row.status}</Text>
-          </Flex>
+          <Badge variant={variant as BadgeProps['variant']} className="inline-flex items-center justify-center max-w-[100px]">
+            {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+          </Badge>
         );
       },
-      width: '120px',
+      width: '20%',
     },
     {
-      id: 'amount',
-      header: 'Amount',
-      accessor: (row) => (
-        <Text fontWeight="var(--font-weight-medium)" textAlign="right">
-          ₦{row.amount.toLocaleString('en-NG')}
-        </Text>
-      ),
-      width: '120px',
-    },
-    {
-      id: 'actions',
-      header: '',
-      accessor: (row) => (
-        <Flex justifyContent="flex-end">
-          <Text 
-            color="var(--color-primary)" 
-            cursor="pointer"
-            _hover={{ textDecoration: 'underline' }}
-          >
-            View
-          </Text>
-        </Flex>
-      ),
-      width: '80px',
+      id: 'timestamp',
+      header: 'Date & Time',
+      accessor: (row: any) => {
+        const date = new Date(row.timestamp);
+        return date.toLocaleString();
+      },
+      width: '30%',
     },
   ];
 

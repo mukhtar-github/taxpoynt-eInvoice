@@ -1,12 +1,11 @@
 import React from 'react';
-import { Box, Flex } from '@chakra-ui/react';
-import { useColorModeValue } from '../ui/ChakraColorMode';
-import { Stat, StatLabel, StatNumber } from '../ui/ChakraStat';
+import { Card, CardContent } from '../ui/Card';
+import { Typography } from '../ui/Typography';
 
 interface IntegrationStatusCardProps {
   count: number;
   status: string;
-  colorScheme: string;
+  colorScheme: 'primary' | 'success' | 'warning' | 'error' | 'secondary';
 }
 
 const IntegrationStatusCard: React.FC<IntegrationStatusCardProps> = ({ 
@@ -14,40 +13,36 @@ const IntegrationStatusCard: React.FC<IntegrationStatusCardProps> = ({
   status, 
   colorScheme 
 }) => {
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const statusColor = useColorModeValue(`${colorScheme}.500`, `${colorScheme}.300`);
-  const statusBgColor = useColorModeValue(`${colorScheme}.50`, `${colorScheme}.900`);
+  // Define color variants based on the colorScheme prop
+  const getColors = () => {
+    switch (colorScheme) {
+      case 'success':
+        return 'bg-success-100 text-success-600 dark:bg-success-900 dark:text-success-300';
+      case 'warning':
+        return 'bg-warning-100 text-warning-600 dark:bg-warning-900 dark:text-warning-300';
+      case 'error':
+        return 'bg-error-100 text-error-600 dark:bg-error-900 dark:text-error-300';
+      case 'secondary':
+        return 'bg-secondary-100 text-secondary-600 dark:bg-secondary-900 dark:text-secondary-300';
+      default: // primary
+        return 'bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-300';
+    }
+  };
 
   return (
-    <Box
-      bg={bgColor}
-      p={5}
-      borderRadius="lg"
-      boxShadow="sm"
-      border="1px"
-      borderColor={borderColor}
-    >
-      <Flex justifyContent="space-between" alignItems="center">
-        <Box>
-          <StatLabel fontSize="sm" color="gray.500">{status} Integrations</StatLabel>
-          <StatNumber fontSize="3xl" fontWeight="bold">{count}</StatNumber>
-        </Box>
-        <Flex
-          w="12"
-          h="12"
-          bg={statusBgColor}
-          color={statusColor}
-          rounded="full"
-          alignItems="center"
-          justifyContent="center"
-          fontSize="xl"
-          fontWeight="bold"
-        >
-          {count}
-        </Flex>
-      </Flex>
-    </Box>
+    <Card className="h-full">
+      <CardContent className="p-5">
+        <div className="flex justify-between items-center">
+          <div>
+            <Typography.Text size="sm" variant="secondary">{status} Integrations</Typography.Text>
+            <Typography.Text size="xl" weight="bold" className="block mt-1">{count}</Typography.Text>
+          </div>
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${getColors()}`}>
+            {count}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

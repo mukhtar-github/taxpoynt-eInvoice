@@ -1,8 +1,12 @@
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { Box, Heading } from '@chakra-ui/react';
-import { FormControl, FormLabel, FormErrorMessage, Input, Select, Textarea, VStack } from '../ui/ChakraForm';
-import { Button, useToast } from '../ui/ChakraButton';
+import { Typography } from '../ui/Typography';
+import { FormField } from '../ui/FormField';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
+import { Textarea } from '../ui/Textarea';
+import { Button } from '../ui/Button';
+import { useToast } from '../ui/Toast';
 import { JsonEditor } from './JsonEditor';
 
 interface Client {
@@ -58,7 +62,7 @@ export const IntegrationForm: React.FC<IntegrationFormProps> = ({
         description: 'The integration has been successfully saved',
         status: 'success',
         duration: 5000,
-        isClosable: true,
+        isClosable: true
       });
     } catch (error) {
       toast({
@@ -66,62 +70,82 @@ export const IntegrationForm: React.FC<IntegrationFormProps> = ({
         description: error instanceof Error ? error.message : 'An unknown error occurred',
         status: 'error',
         duration: 5000,
-        isClosable: true,
+        isClosable: true
       });
     }
   };
   
   return (
-    <Box width="100%" maxWidth="800px" p={4}>
-      <Heading size="lg" mb={6}>
+    <div className="w-full max-w-3xl p-4">
+      <Typography.Heading level="h2" className="mb-6">
         {initialData.name ? 'Update Integration' : 'Create New Integration'}
-      </Heading>
+      </Typography.Heading>
       
       <form onSubmit={handleSubmit(handleFormSubmit)}>
-        <VStack spacing={6} align="flex-start">
-          <FormControl isInvalid={!!errors.name} isRequired>
-            <FormLabel htmlFor="name">Integration Name</FormLabel>
+        <div className="space-y-6">
+          <FormField 
+            label="Integration Name" 
+            htmlFor="name" 
+            required
+            error={!!errors.name}
+            errorMessage={errors.name?.message?.toString()}
+          >
             <Input
               id="name"
               placeholder="Enter integration name"
+              error={!!errors.name}
               {...register("name", {
                 required: "Name is required",
                 minLength: { value: 3, message: "Name must be at least 3 characters" }
               })}
             />
-            <FormErrorMessage>{errors.name?.message?.toString() || ''}</FormErrorMessage>
-          </FormControl>
+          </FormField>
           
-          <FormControl isInvalid={!!errors.client_id} isRequired>
-            <FormLabel htmlFor="client_id">Client</FormLabel>
+          <FormField 
+            label="Client" 
+            htmlFor="client_id" 
+            required
+            error={!!errors.client_id}
+            errorMessage={errors.client_id?.message?.toString()}
+          >
             <Select
               id="client_id"
-              placeholder="Select client"
+              error={!!errors.client_id}
               {...register("client_id", {
                 required: "Client selection is required"
               })}
             >
+              <option value="" disabled selected>Select client</option>
               {clients.map(client => (
                 <option key={client.id} value={client.id}>
                   {client.name}
                 </option>
               ))}
             </Select>
-            <FormErrorMessage>{errors.client_id?.message?.toString() || ''}</FormErrorMessage>
-          </FormControl>
+          </FormField>
           
-          <FormControl isInvalid={!!errors.description}>
-            <FormLabel htmlFor="description">Description</FormLabel>
+          <FormField 
+            label="Description" 
+            htmlFor="description"
+            error={!!errors.description}
+            errorMessage={errors.description?.message?.toString()}
+          >
             <Textarea
               id="description"
               placeholder="Enter integration description"
+              error={!!errors.description}
+              rows={4}
               {...register("description")}
             />
-            <FormErrorMessage>{errors.description?.message?.toString() || ''}</FormErrorMessage>
-          </FormControl>
+          </FormField>
           
-          <FormControl isInvalid={!!errors.config} isRequired>
-            <FormLabel htmlFor="config">Configuration</FormLabel>
+          <FormField 
+            label="Configuration" 
+            htmlFor="config" 
+            required
+            error={!!errors.config}
+            errorMessage={errors.config?.message?.toString()}
+          >
             <Controller
               name="config"
               control={control}
@@ -134,21 +158,18 @@ export const IntegrationForm: React.FC<IntegrationFormProps> = ({
                 />
               )}
             />
-            <FormErrorMessage>{errors.config?.message?.toString() || ''}</FormErrorMessage>
-          </FormControl>
+          </FormField>
           
           <Button 
-            mt={4} 
-            colorScheme="blue" 
-            isLoading={isSubmitting} 
+            loading={isSubmitting} 
             type="submit"
             size="lg"
-            width="full"
+            className="w-full mt-6"
           >
             {initialData.name ? 'Update Integration' : 'Create Integration'}
           </Button>
-        </VStack>
+        </div>
       </form>
-    </Box>
+    </div>
   );
 }; 

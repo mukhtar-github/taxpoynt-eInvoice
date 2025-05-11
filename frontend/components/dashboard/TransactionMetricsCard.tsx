@@ -1,7 +1,6 @@
 import React from 'react';
-import { Box, Flex, Text } from '@chakra-ui/react';
-import { useColorModeValue } from '../ui/ChakraColorMode';
-import { Icon } from '../ui/ChakraIcon';
+import { Card, CardContent } from '../ui/Card';
+import { Typography } from '../ui/Typography';
 import { FiCalendar, FiClock } from 'react-icons/fi';
 
 interface TransactionMetricsCardProps {
@@ -15,9 +14,6 @@ const TransactionMetricsCard: React.FC<TransactionMetricsCardProps> = ({
   count,
   icon
 }) => {
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const iconColor = useColorModeValue('blue.500', 'blue.300');
 
   // Choose icon based on icon prop
   const getIcon = () => {
@@ -34,33 +30,20 @@ const TransactionMetricsCard: React.FC<TransactionMetricsCardProps> = ({
   };
 
   return (
-    <Box
-      bg={bgColor}
-      p={5}
-      borderRadius="lg"
-      boxShadow="sm"
-      border="1px"
-      borderColor={borderColor}
-    >
-      <Flex justifyContent="space-between" alignItems="center">
-        <Box>
-          <Text fontSize="sm" color="gray.500">{title}</Text>
-          <Text fontSize="3xl" fontWeight="bold">{count.toLocaleString()}</Text>
-          <Text fontSize="sm" color="gray.500" mt={1}>transactions</Text>
-        </Box>
-        <Flex
-          w="12"
-          h="12"
-          bg="blue.50"
-          color={iconColor}
-          rounded="full"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Icon as={getIcon()} boxSize="6" />
-        </Flex>
-      </Flex>
-    </Box>
+    <Card className="h-full">
+      <CardContent className="p-5">
+        <div className="flex justify-between items-center">
+          <div>
+            <Typography.Text size="sm" variant="secondary">{title}</Typography.Text>
+            <Typography.Text size="xl" weight="bold" className="block mt-1">{count.toLocaleString()}</Typography.Text>
+            <Typography.Text size="sm" variant="secondary" className="mt-1">transactions</Typography.Text>
+          </div>
+          <div className="w-12 h-12 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center">
+            {React.createElement(getIcon(), { className: 'w-6 h-6' })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

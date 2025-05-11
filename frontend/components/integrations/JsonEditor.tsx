@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Box } from '@chakra-ui/react';
-import { useColorModeValue } from '../ui/ChakraColorMode';
+import { Typography } from '../ui/Typography';
+import { cn } from '../../utils/cn';
 
 interface JsonEditorProps {
   value: Record<string, any>;
@@ -14,8 +14,6 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
   height = '200px'
 }) => {
   const [error, setError] = useState<string | null>(null);
-  const bgColor = useColorModeValue('gray.50', 'gray.700');
-  const textColor = useColorModeValue('gray.800', 'gray.100');
   
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     try {
@@ -29,32 +27,22 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
   };
   
   return (
-    <Box position="relative" width="100%">
+    <div className="relative w-full">
       <textarea
         value={JSON.stringify(value, null, 2)}
         onChange={handleChange}
-        style={{
-          fontFamily: 'monospace',
-          padding: '12px',
-          borderRadius: '4px',
-          border: `1px solid ${error ? '#FC8181' : '#E2E8F0'}`,
-          width: '100%',
-          height,
-          resize: 'vertical',
-          backgroundColor: bgColor,
-          color: textColor
-        }}
+        className={cn(
+          "w-full font-mono p-3 rounded-md resize-vertical border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background",
+          error && "border-error focus:ring-error"
+        )}
+        style={{ height }}
       />
       
       {error && (
-        <Box
-          color="red.500"
-          fontSize="sm"
-          mt={1}
-        >
+        <Typography.Text variant="error" size="sm" className="mt-1">
           {error}
-        </Box>
+        </Typography.Text>
       )}
-    </Box>
+    </div>
   );
 }; 
