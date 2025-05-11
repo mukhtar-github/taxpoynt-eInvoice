@@ -1,7 +1,8 @@
 """FIRS API integration service.
 
 This service implements all required interactions with the Federal Inland Revenue Service (FIRS)
-API for e-Invoicing compliance. The implementation follows the official FIRS API documentation.
+API for e-Invoicing compliance, including IRN validation. The implementation follows the official 
+FIRS API documentation and provides sandbox environment testing for IRN validation.
 """
 
 import requests
@@ -16,6 +17,9 @@ from uuid import UUID
 from app.core.config import settings
 from app.utils.encryption import encrypt_text, decrypt_text
 from app.utils.logger import get_logger
+from app.models.irn import IRNRecord, IRNValidationRecord, IRNStatus
+from app.services.irn_service import create_validation_record
+from app.cache.irn_cache import IRNCache
 
 logger = get_logger(__name__)
 
@@ -418,6 +422,184 @@ class FIRSService:
         except requests.RequestException as e:
             logger.error(f"FIRS API request failed: {str(e)}")
             return []
+
+
+    async def validate_irn(self, irn_value: str, invoice_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Validate an IRN with the FIRS API.
+        
+        Args:
+            irn_value: The IRN to validate
+            invoice_data: Optional invoice data for advanced validation
+            
+        Returns:
+            Dictionary with validation result
+        """
+        try:
+            # Ensure token is valid
+            await self._ensure_valid_token()
+            
+            url = f"{self.base_url}/api/v1/einvoice/irn/validate"
+            headers = self._get_auth_headers()
+            
+            payload = {
+                "irn": irn_value
+            }
+            
+            if invoice_data:
+                payload["invoice_data"] = invoice_data
+            
+            logger.info(f"Validating IRN {irn_value} with FIRS API")
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": data.get("status") == "success",
+                    "message": data.get("message", "Validation completed"),
+                    "details": data.get("data", {})
+                }
+            else:
+                logger.error(f"Error validating IRN with FIRS API: {response.text}")
+                return {
+                    "success": False,
+                    "message": f"FIRS API error: {response.status_code}",
+                    "details": {
+                        "error": response.text,
+                        "status_code": response.status_code
+                    }
+                }
+                
+        except Exception as e:
+            logger.exception(f"Exception validating IRN with FIRS API: {str(e)}")
+            return {
+                "success": False,
+                "message": f"Error validating IRN: {str(e)}",
+                "details": {"error_type": type(e).__name__}
+            }
+    
+    async def validate_irn_sandbox(self, irn_value: str) -> Dict[str, Any]:
+        """
+        Validate an IRN using the FIRS sandbox environment.
+        
+        This is a simulated validation for testing purposes.
+        
+        Args:
+            irn_value: The IRN to validate
+            
+        Returns:
+            Dictionary with validation result
+        """
+        import asyncio
+        import secrets
+        
+        # Simulate API call delay
+        await asyncio.sleep(0.5)
+        
+        # First, check if IRN follows the expected format
+        is_valid_format = bool(
+            irn_value.startswith("IRN-") and 
+            len(irn_value.split("-")) == 4 and
+            len(irn_value) >= 20
+        )
+        
+        if not is_valid_format:
+            return {
+                "success": False,
+                "message": "Invalid IRN format",
+                "details": {
+                    "source": "firs_sandbox",
+                    "error_code": "FORMAT_ERROR",
+                    "error_details": "IRN must follow the format IRN-TIMESTAMP-UUID-HASH"
+                }
+            }
+        
+        # Simulate successful validation
+        return {
+            "success": True,
+            "message": "IRN validated successfully with FIRS sandbox",
+            "details": {
+                "source": "firs_sandbox",
+                "validation_id": f"FIRS-{secrets.token_hex(8)}",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        }
+
+
+async def validate_irns_with_firs_sandbox(db, irn_values: List[str], user_id: Optional[UUID] = None) -> Dict[str, Any]:
+    """
+    Validate a batch of IRNs with the FIRS sandbox API.
+    
+    Args:
+        db: Database session
+        irn_values: List of IRNs to validate
+        user_id: ID of the user requesting validation
+        
+    Returns:
+        Dictionary with validation results
+    """
+    logger.info(f"Validating {len(irn_values)} IRNs with FIRS sandbox")
+    
+    # Create FIRS service instance
+    firs_service = FIRSService()
+    
+    results = []
+    for irn_value in irn_values:
+        try:
+            # Get IRN record if it exists
+            irn_record = db.query(IRNRecord).filter(IRNRecord.irn == irn_value).first()
+            
+            # Validate with FIRS sandbox
+            validation_result = await firs_service.validate_irn_sandbox(irn_value)
+            
+            # Record validation in database if IRN exists
+            if irn_record:
+                validation_record = create_validation_record(
+                    db=db,
+                    irn_id=irn_value,
+                    is_valid=validation_result["success"],
+                    message=validation_result["message"],
+                    validated_by=str(user_id) if user_id else None,
+                    validation_source="firs_sandbox",
+                    request_data={"irn": irn_value},
+                    response_data=validation_result["details"]
+                )
+            
+            # Add IRN record details if available
+            if irn_record:
+                validation_result["details"]["irn_record"] = {
+                    "invoice_number": irn_record.invoice_number,
+                    "status": irn_record.status.value,
+                    "valid_until": irn_record.valid_until.isoformat()
+                }
+            
+            results.append({
+                "irn": irn_value,
+                "success": validation_result["success"],
+                "message": validation_result["message"],
+                "details": validation_result["details"]
+            })
+            
+        except Exception as e:
+            logger.error(f"Error validating IRN {irn_value} with FIRS sandbox: {str(e)}")
+            results.append({
+                "irn": irn_value,
+                "success": False,
+                "message": f"Error during validation: {str(e)}",
+                "details": {"error_type": type(e).__name__}
+            })
+    
+    # Commit database changes
+    db.commit()
+    
+    return {
+        "source": "firs_sandbox",
+        "total": len(irn_values),
+        "successful": sum(1 for r in results if r["success"]),
+        "failed": sum(1 for r in results if not r["success"]),
+        "results": results,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 
 # Create a default instance for easy importing

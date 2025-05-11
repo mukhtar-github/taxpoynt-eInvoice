@@ -5,20 +5,32 @@ This service implements the core logic for:
 1. Generating unique IRNs based on invoice data
 2. Verifying and validating IRNs
 3. Managing IRN lifecycle (creation, validation, expiration)
+4. Bulk IRN generation for batch processing
+5. IRN caching for performance optimization
+6. Audit logging for compliance and traceability
+7. FIRS sandbox API integration for validation
 """
 import uuid
 import hashlib
 import hmac
 import base64
+import json
+import logging
+import secrets
+import asyncio
 from datetime import datetime, timedelta
-from typing import Tuple, Dict, Any, Optional, List
+from typing import Tuple, Dict, Any, Optional, List, Union, Set
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.irn import IRNRecord, InvoiceData, IRNValidationRecord, IRNStatus
 from app.models.user import User
 from app.models.organization import Organization
-from app.schemas.irn import IRNCreate
+from app.schemas.irn import IRNCreate, IRNBatchGenerateRequest
+from app.cache.irn_cache import IRNCache
+from app.services.odoo_service import fetch_odoo_invoices
+
+logger = logging.getLogger(__name__)
 
 
 def generate_irn(invoice_data: Dict[str, Any]) -> Tuple[str, str, str]:
@@ -197,32 +209,46 @@ def decode_invoice_data(encoded_data: str) -> Dict[str, Any]:
 
 def create_validation_record(
     db: Session,
-    irn_id: uuid.UUID,
+    irn_id: str,
     is_valid: bool,
     message: str,
-    validated_by: str
+    validated_by: Optional[str] = None,
+    validation_source: str = "system",
+    request_data: Optional[Dict[str, Any]] = None,
+    response_data: Optional[Dict[str, Any]] = None
 ) -> IRNValidationRecord:
     """
-    Create a record of an IRN validation attempt.
+    Create a record of an IRN validation attempt with enhanced audit logging.
     
     Args:
         db: Database session
-        irn_id: UUID of the IRN
+        irn_id: ID of the IRN
         is_valid: Whether the validation was successful
         message: Validation message
-        validated_by: Who performed the validation
+        validated_by: User ID that performed the validation (if applicable)
+        validation_source: Source of validation (system, api, user, firs)
+        request_data: Data used in the validation request (for audit)
+        response_data: Response data from validation (for audit)
         
     Returns:
         Created validation record
     """
-    # Create the validation record
+    # Log the validation attempt
+    logger.info(
+        f"IRN validation attempt: {irn_id}, valid={is_valid}, source={validation_source}, message={message}"
+    )
+    
+    # Create the validation record with enhanced audit data
     validation_record = IRNValidationRecord(
         id=uuid.uuid4(),
-        irn_id=irn_id,
+        irn=irn_id,
         validation_date=datetime.utcnow(),
         validation_status=is_valid,
         validation_message=message,
-        validated_by=validated_by
+        validated_by=validated_by,
+        validation_source=validation_source,
+        request_data=request_data,
+        response_data=response_data
     )
     
     db.add(validation_record)

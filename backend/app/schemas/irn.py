@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, validator, root_validator # type: ignore
-from typing import Optional, Dict, Any, List # type: ignore
+from typing import Optional, Dict, Any, List, Union # type: ignore
 from datetime import datetime
 import re
 from uuid import UUID
@@ -314,5 +314,93 @@ class IRNValidationResponse(BaseModel):
                         "currency_code": "NGN"
                     }
                 }
+            }
+        }
+
+
+class IRNValidationBatchRequest(BaseModel):
+    """
+    Schema for batch IRN validation request
+    
+    Contains a list of IRNs to validate in a single request.
+    """
+    irn_values: List[str] = Field(
+        ...,
+        description="List of IRNs to validate",
+        min_items=1,
+        max_items=100  # Limit batch size for performance
+    )
+    
+    @validator('irn_values')
+    def validate_irn_values(cls, v):
+        if not v:
+            raise ValueError('At least one IRN must be provided')
+            
+        for irn in v:
+            if not irn:
+                raise ValueError('IRN values cannot be empty')
+            
+            # Basic format validation - can be extended
+            if not irn.startswith("IRN-"):
+                raise ValueError(f'Invalid IRN format for {irn}. IRNs should start with "IRN-"')
+        
+        # Check for duplicates
+        if len(v) != len(set(v)):
+            raise ValueError('Duplicate IRNs are not allowed in a batch validation request')
+            
+        return v
+
+
+class IRNValidationBatchResponse(BaseModel):
+    """
+    Schema for batch IRN validation response
+    
+    Contains validation results for multiple IRNs.
+    """
+    total: int = Field(
+        ...,
+        description="Total number of IRNs in the validation request"
+    )
+    validated: int = Field(
+        ...,
+        description="Number of IRNs that were successfully validated (regardless of validity)"
+    )
+    results: List[Dict[str, Any]] = Field(
+        ...,
+        description="Validation results for each IRN"
+    )
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "total": 3,
+                "validated": 3,
+                "results": [
+                    {
+                        "irn": "IRN-20230701-ABC123",
+                        "success": True,
+                        "message": "IRN is active",
+                        "details": {
+                            "status": "active",
+                            "invoice_number": "INV001",
+                            "valid_until": "2023-07-31T23:59:59"
+                        }
+                    },
+                    {
+                        "irn": "IRN-20230702-DEF456",
+                        "success": False,
+                        "message": "IRN has expired",
+                        "details": {
+                            "status": "expired",
+                            "invoice_number": "INV002",
+                            "valid_until": "2023-07-10T23:59:59"
+                        }
+                    },
+                    {
+                        "irn": "IRN-20230703-GHI789",
+                        "success": False,
+                        "message": "IRN not found"
+                    }
+                ]
             }
         }

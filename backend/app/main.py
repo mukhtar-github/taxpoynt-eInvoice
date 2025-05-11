@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
 
 from app.routers import crypto
-from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials
+from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn
 from app.core.config import settings
 from app.dependencies.auth import get_current_user_from_token # type: ignore
 from app.middleware import setup_middleware
@@ -78,6 +78,7 @@ app.include_router(crypto.router, prefix=f"{settings.API_V1_STR}/crypto", tags=[
 app.include_router(firs.router, prefix=settings.API_V1_STR, tags=["firs"])
 app.include_router(integrations.router, prefix=settings.API_V1_STR, tags=["integrations"])
 app.include_router(api_credentials.router, prefix=settings.API_V1_STR, tags=["api-credentials"])
+app.include_router(bulk_irn.router, prefix=f"{settings.API_V1_STR}/bulk-irn", tags=["bulk-irn"])
 
 if __name__ == "__main__":
     import uvicorn # type: ignore
