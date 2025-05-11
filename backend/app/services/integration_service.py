@@ -13,10 +13,10 @@ import threading
 from datetime import datetime, timedelta
 
 from app import crud
-from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration, IntegrationTestResult, OdooIntegrationCreate, OdooConnectionTestRequest # type: ignore
+from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration, IntegrationTestResult, OdooIntegrationCreate, OdooConnectionTestRequest, IntegrationExport, IntegrationImport, FIRSEnvironment # type: ignore
 from app.utils.encryption import encrypt_sensitive_value, decrypt_sensitive_value, get_app_encryption_key # type: ignore
 from app.models.integration import IntegrationType  # type: ignore
-from app.services.odoo_service import test_odoo_connection, fetch_odoo_invoices
+from app.services.odoo_service import test_odoo_connection as test_odoo, fetch_odoo_invoices
 
 # List of config fields that should be encrypted
 SENSITIVE_CONFIG_FIELDS = [
@@ -443,9 +443,91 @@ def _test_erp_connection(integration: Integration) -> IntegrationTestResult:
     )
 
 
-def test_odoo_connection(integration: Integration) -> IntegrationTestResult:
+def test_odoo_connection(connection_params: OdooConnectionTestRequest) -> IntegrationTestResult:
     """
-    Test connection to an Odoo server.
+    Test connection to an Odoo server using connection parameters.
+    
+    Args:
+        connection_params: Connection parameters for Odoo server
+        
+    Returns:
+        Test result with success status, message, and details
+    """
+    return test_odoo(connection_params)
+
+
+def test_odoo_firs_connection(connection_params: OdooConnectionTestRequest) -> IntegrationTestResult:
+    """
+    Test connection to FIRS through an Odoo server.
+    
+    This tests both the Odoo connection and the FIRS integration capabilities.
+    
+    Args:
+        connection_params: Connection request with Odoo parameters
+        
+    Returns:
+        Test result with success status, message, and details
+    """
+    # First test the base Odoo connection
+    connection_result = test_odoo(connection_params)
+    
+    # If the Odoo connection failed, return that result
+    if not connection_result.success:
+        return connection_result
+    
+    # If connection succeeded, check FIRS integration capabilities
+    if connection_result.details and "firs_features" in connection_result.details:
+        firs_features = connection_result.details["firs_features"]
+        
+        # Check if there was an error checking FIRS capabilities
+        if "error" in firs_features:
+            return IntegrationTestResult(
+                success=False,
+                message=f"Odoo connection succeeded, but FIRS integration check failed: {firs_features['error']}",
+                details=connection_result.details
+            )
+        
+        # Check if the appropriate environment is ready
+        environment = connection_params.firs_environment
+        
+        if environment == FIRSEnvironment.SANDBOX:
+            if firs_features.get("sandbox_ready", False):
+                return IntegrationTestResult(
+                    success=True,
+                    message="Successfully connected to Odoo and verified FIRS sandbox environment integration",
+                    details=connection_result.details
+                )
+            else:
+                return IntegrationTestResult(
+                    success=False,
+                    message="Odoo connection succeeded, but FIRS sandbox environment is not configured",
+                    details=connection_result.details
+                )
+        else:  # Production
+            if firs_features.get("production_ready", False):
+                return IntegrationTestResult(
+                    success=True,
+                    message="Successfully connected to Odoo and verified FIRS production environment integration",
+                    details=connection_result.details
+                )
+            else:
+                return IntegrationTestResult(
+                    success=False,
+                    message="Odoo connection succeeded, but FIRS production environment is not configured",
+                    details=connection_result.details
+                )
+    
+    # If we couldn't check FIRS features specifically
+    return IntegrationTestResult(
+        success=False,
+        message="Odoo connection succeeded, but FIRS integration capabilities could not be determined",
+        details=connection_result.details
+    )
+
+
+def test_integration_odoo_connection(integration: Integration) -> IntegrationTestResult:
+    """
+    Test connection to an Odoo server using an integration object.
     
     Args:
         integration: Integration object with Odoo configuration
@@ -453,41 +535,32 @@ def test_odoo_connection(integration: Integration) -> IntegrationTestResult:
     Returns:
         Test result with success status, message, and details
     """
-    logger.info(f"Testing Odoo connection for integration {integration.id}")
-    
-    if not integration.config:
-        return IntegrationTestResult(
-            success=False,
-            message="Missing configuration for Odoo integration",
-            details={"error": "No configuration provided"}
-        )
-    
     try:
-        # Extract configuration
-        config = integration.config
+        # Check if integration is of type Odoo
+        if integration.integration_type != IntegrationType.ODOO.value:
+            return IntegrationTestResult(
+                success=False,
+                message=f"Integration type '{integration.integration_type}' is not Odoo",
+                details={"error": "Invalid integration type"}
+            )
+            
+        # Get decrypted config
+        decrypted_integration = decrypt_integration_config(integration)
+        config = decrypted_integration.config
         
-        # Ensure sensitive fields are decrypted
-        config = decrypt_sensitive_config_fields(config)
-        
-        # Create connection test request
-        connection_test_request = OdooConnectionTestRequest(
-            url=config.get("url", ""),
-            database=config.get("database", ""),
-            username=config.get("username", ""),
-            auth_method=config.get("auth_method", "api_key"),
-            password=config.get("password", "") if config.get("auth_method") == "password" else None,
-            api_key=config.get("api_key", "") if config.get("auth_method") == "api_key" else None
+        # Convert config to OdooConnectionTestRequest
+        connection_params = OdooConnectionTestRequest(
+            url=config["url"],
+            database=config["database"],
+            username=config["username"],
+            auth_method=config["auth_method"],
+            password=config.get("password"),
+            api_key=config.get("api_key"),
+            firs_environment=config.get("firs_environment", FIRSEnvironment.SANDBOX)
         )
         
-        # Test connection using OdooRPC (through odoo_service)
-        result = test_odoo_connection(connection_test_request)
-        
-        return IntegrationTestResult(
-            success=result.get("success", False),
-            message=result.get("message", "Unknown error"),
-            details=result.get("details", {})
-        )
-        
+        # Test the connection
+        return test_odoo(connection_params)
     except Exception as e:
         logger.exception(f"Error testing Odoo connection: {str(e)}")
         return IntegrationTestResult(
@@ -1337,6 +1410,82 @@ def stop_integration_monitoring(
     Returns:
         True if monitoring stopped, False otherwise
     """
+
+
+def export_integration_config(db: Session, integration_id: UUID) -> IntegrationExport:
+    """
+    Export an integration configuration with sensitive fields removed.
+    
+    Args:
+        db: Database session
+        integration_id: ID of the integration to export
+        
+    Returns:
+        IntegrationExport object with configuration details
+    """
+    # Get the integration with decrypted config
+    integration = get_integration(db, integration_id)
+    if not integration:
+        raise ValueError(f"Integration with ID {integration_id} not found")
+    
+    # Create a copy of the config to modify
+    export_config = integration.config.copy() if integration.config else {}
+    
+    # Remove sensitive fields from the export
+    for field in SENSITIVE_CONFIG_FIELDS:
+        if field in export_config:
+            # Replace with a placeholder to indicate this needs to be provided again
+            export_config[field] = "<REQUIRES_INPUT>"
+        
+        # Also check for nested fields
+        for key in list(export_config.keys()):
+            if isinstance(export_config[key], dict) and field in export_config[key]:
+                export_config[key][field] = "<REQUIRES_INPUT>"
+    
+    # Create the export object
+    return IntegrationExport(
+        integration_id=integration.id,
+        name=integration.name,
+        description=integration.description,
+        integration_type=IntegrationType(integration.integration_type),
+        config=export_config,
+        sync_frequency=integration.sync_frequency,
+        created_at=integration.created_at,
+        exported_at=datetime.utcnow(),
+        export_version="1.0"
+    )
+
+
+def import_integration_config(db: Session, import_data: IntegrationImport, user_id: UUID) -> Integration:
+    """
+    Import an integration configuration to create a new integration.
+    
+    Args:
+        db: Database session
+        import_data: Integration import data
+        user_id: ID of the user importing the integration
+        
+    Returns:
+        The newly created integration
+    """
+    # Validate the configuration for the integration type
+    is_valid, errors = validate_integration_config(import_data.config, import_data.integration_type.value)
+    if not is_valid:
+        error_msg = "\n".join(errors)
+        raise ValueError(f"Invalid integration configuration: {error_msg}")
+    
+    # Create an IntegrationCreate object
+    integration_create = IntegrationCreate(
+        name=import_data.name,
+        description=import_data.description,
+        integration_type=import_data.integration_type,
+        config=import_data.config,
+        sync_frequency=import_data.sync_frequency,
+        client_id=import_data.client_id
+    )
+    
+    # Create the integration
+    return create_integration(db, integration_create, user_id)
     str_id = str(integration_id)
     
     # Check if monitoring thread exists

@@ -16,6 +16,12 @@ class OdooAuthMethod(str, Enum):
     API_KEY = "api_key"
 
 
+# FIRS Environment Types
+class FIRSEnvironment(str, Enum):
+    SANDBOX = "sandbox"
+    PRODUCTION = "production"
+
+
 # Odoo-specific configuration schema
 class OdooConfig(BaseModel):
     url: HttpUrl = Field(..., description="Odoo server URL (e.g., https://example.odoo.com)")
@@ -27,6 +33,10 @@ class OdooConfig(BaseModel):
     version: str = Field(default="16.0", description="Odoo version")
     rpc_path: str = Field(default="/jsonrpc", description="RPC endpoint path")
     timeout: int = Field(default=30, description="Connection timeout in seconds")
+    firs_environment: FIRSEnvironment = Field(default=FIRSEnvironment.SANDBOX, description="FIRS environment (sandbox or production)")
+    include_draft_invoices: bool = Field(default=False, description="Include draft invoices in sync")
+    fetch_attachments: bool = Field(default=False, description="Fetch invoice PDF attachments")
+    max_records_per_page: int = Field(default=100, ge=10, le=500, description="Maximum records per page for pagination")
     
     @validator('api_key')
     def validate_api_key(cls, v, values):
@@ -166,6 +176,7 @@ class OdooConnectionTestRequest(BaseModel):
     auth_method: OdooAuthMethod
     password: Optional[str] = None
     api_key: Optional[str] = None
+    firs_environment: FIRSEnvironment = FIRSEnvironment.SANDBOX
 
 
 # Integration Monitoring Status
@@ -182,3 +193,35 @@ class IntegrationMonitoringStatus(BaseModel):
     
     class Config:
         orm_mode = True
+
+
+# Odoo Invoice Fetch Parameters
+class OdooInvoiceFetchParams(BaseModel):
+    from_date: Optional[datetime] = Field(None, description="Fetch invoices from this date")
+    to_date: Optional[datetime] = Field(None, description="Fetch invoices up to this date")
+    include_draft: bool = Field(False, description="Include draft invoices")
+    include_attachments: bool = Field(False, description="Include invoice PDF attachments")
+    page: int = Field(1, ge=1, description="Page number for pagination")
+    page_size: int = Field(20, ge=1, le=100, description="Number of items per page")
+
+
+# Integration Configuration Export/Import
+class IntegrationExport(BaseModel):
+    integration_id: UUID
+    name: str
+    description: Optional[str] = None
+    integration_type: IntegrationType
+    config: Dict[str, Any]
+    sync_frequency: SyncFrequency
+    created_at: datetime
+    exported_at: datetime = Field(default_factory=datetime.utcnow)
+    export_version: str = "1.0"
+
+
+class IntegrationImport(BaseModel):
+    name: str
+    description: Optional[str] = None
+    integration_type: IntegrationType
+    config: Dict[str, Any]
+    sync_frequency: SyncFrequency
+    client_id: UUID

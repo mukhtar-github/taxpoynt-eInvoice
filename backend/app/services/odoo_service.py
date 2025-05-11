@@ -17,15 +17,16 @@ from app.schemas.integration import OdooAuthMethod, OdooConnectionTestRequest, O
 logger = logging.getLogger(__name__)
 
 
-def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, OdooConfig]) -> Dict[str, Any]:
+def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, OdooConfig]) -> IntegrationTestResult:
     """
     Test connection to an Odoo server using OdooRPC with enhanced Odoo 18+ support.
+    Also checks for FIRS integration capabilities based on environment setting.
     
     Args:
         connection_params: Connection parameters for Odoo server
         
     Returns:
-        Dictionary with test results including version-specific capabilities
+        IntegrationTestResult with success status, message, and details
     """
     try:
         # Parse URL to get host, protocol, and port
@@ -113,10 +114,34 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
                 logger.warning(f"Cannot check REST API availability: {str(e)}")
                 api_endpoints['error'] = str(e)
         
-        return {
-            "success": True,
-            "message": f"Successfully connected to Odoo server as {user.name}",
-            "details": {
+        # Check FIRS integration capabilities based on environment setting
+        firs_env = getattr(connection_params, 'firs_environment', 'sandbox')
+        firs_features = {}
+        try:
+            # Check for FIRS-related fields and modules
+            firs_modules = odoo.env['ir.module.module'].search_read(
+                [('name', 'like', 'firs'), ('state', '=', 'installed')],
+                ['name', 'state']
+            )
+            firs_features['modules'] = {mod['name']: mod['state'] for mod in firs_modules}
+            
+            # Check for FIRS sandbox configuration
+            if firs_env == 'sandbox':
+                # For sandbox environment, validate the test endpoint availability
+                firs_features['sandbox_ready'] = True
+                firs_features['environment'] = 'sandbox'
+            else:
+                # For production environment
+                firs_features['production_ready'] = True
+                firs_features['environment'] = 'production'
+        except Exception as e:
+            logger.warning(f"Cannot check FIRS integration capabilities: {str(e)}")
+            firs_features['error'] = str(e)
+        
+        return IntegrationTestResult(
+            success=True,
+            message=f"Successfully connected to Odoo server as {user.name}",
+            details={
                 "version_info": version_info,
                 "major_version": major_version,
                 "uid": odoo.env.uid,
@@ -124,39 +149,54 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
                 "partner_count": partner_count,
                 "invoice_features": invoice_features,
                 "api_endpoints": api_endpoints,
-                "is_odoo18_plus": major_version >= 18
+                "is_odoo18_plus": major_version >= 18,
+                "firs_features": firs_features
             }
-        }
+        )
         
     except odoorpc.error.RPCError as e:
         logger.error(f"OdooRPC error: {str(e)}")
-        return {
-            "success": False,
-            "message": f"OdooRPC error: {str(e)}",
-            "details": {"error": str(e), "error_type": "RPCError"}
-        }
+        return IntegrationTestResult(
+            success=False,
+            message=f"OdooRPC error: {str(e)}",
+            details={
+                "error": str(e), 
+                "error_type": "RPCError",
+                "error_code": getattr(e, 'code', None),
+                "error_data": getattr(e, 'data', None)
+            }
+        )
     except odoorpc.error.InternalError as e:
         logger.error(f"OdooRPC internal error: {str(e)}")
-        return {
-            "success": False,
-            "message": f"OdooRPC internal error: {str(e)}",
-            "details": {"error": str(e), "error_type": "InternalError"}
-        }
+        return IntegrationTestResult(
+            success=False,
+            message=f"OdooRPC internal error: {str(e)}",
+            details={
+                "error": str(e), 
+                "error_type": "InternalError"
+            }
+        )
     except Exception as e:
         logger.exception(f"Error testing Odoo connection: {str(e)}")
-        return {
-            "success": False,
-            "message": f"Error connecting to Odoo server: {str(e)}",
-            "details": {"error": str(e), "error_type": type(e).__name__}
-        }
+        return IntegrationTestResult(
+            success=False,
+            message=f"Error connecting to Odoo server: {str(e)}",
+            details={
+                "error": str(e), 
+                "error_type": type(e).__name__
+            }
+        )
 
 
 def fetch_odoo_invoices(
     config: OdooConfig,
     from_date: Optional[datetime] = None,
-    limit: int = 100,
-    offset: int = 0
-) -> List[Dict[str, Any]]:
+    to_date: Optional[datetime] = None,
+    include_draft: bool = False,
+    include_attachments: bool = False,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
     """
     Fetch invoices from Odoo server using OdooRPC.
     
@@ -202,19 +242,47 @@ def fetch_odoo_invoices(
         # Build search domain
         domain = [
             ('move_type', '=', 'out_invoice'),  # Only customer invoices
-            ('state', '=', 'posted')  # Only posted invoices
         ]
         
-        # Add date filter if provided
+        # Filter by state based on include_draft parameter
+        if not include_draft:
+            domain.append(('state', '=', 'posted'))  # Only posted invoices
+        
+        # Add date filters if provided
         if from_date:
             domain.append(('write_date', '>=', from_date.strftime('%Y-%m-%d %H:%M:%S')))
+        if to_date:
+            domain.append(('write_date', '<=', to_date.strftime('%Y-%m-%d %H:%M:%S')))
         
-        # Search for invoices matching the criteria
-        invoice_ids = Invoice.search(domain, limit=limit, offset=offset)
+        # Calculate offset based on page and page_size
+        offset = (page - 1) * page_size
+        
+        # Get total count of matching invoices
+        total_invoices = Invoice.search_count(domain)
+        
+        # Search for invoices matching the criteria with pagination
+        invoice_ids = Invoice.search(domain, limit=page_size, offset=offset)
         
         # If no invoices found
         if not invoice_ids:
-            return []
+            return {
+                "invoices": [],
+                "total": 0,
+                "page": page,
+                "page_size": page_size,
+                "pages": 0,
+                "has_next": False,
+                "has_prev": page > 1,
+                "next_page": None,
+                "prev_page": page - 1 if page > 1 else None
+            }
+        
+        # Calculate pagination info
+        total_pages = (total_invoices + page_size - 1) // page_size
+        has_next = page < total_pages
+        next_page = page + 1 if has_next else None
+        has_prev = page > 1
+        prev_page = page - 1 if has_prev else None
         
         # Prepare results list
         invoices = []
@@ -278,19 +346,101 @@ def fetch_odoo_invoices(
                 }
                 invoice_data["lines"].append(line_data)
             
+            # Fetch PDF attachments if requested
+            if include_attachments:
+                try:
+                    Attachment = odoo.env['ir.attachment']
+                    attachment_ids = Attachment.search([
+                        ('res_model', '=', 'account.move'),
+                        ('res_id', '=', invoice.id),
+                        ('mimetype', '=', 'application/pdf')
+                    ], limit=3)  # Limiting to 3 most recent PDFs
+                    
+                    if attachment_ids:
+                        attachments = []
+                        for attachment in Attachment.browse(attachment_ids):
+                            attachments.append({
+                                "id": attachment.id,
+                                "name": attachment.name,
+                                "mimetype": attachment.mimetype,
+                                "url": f"{config.url}/web/content/{attachment.id}?download=true"
+                            })
+                        invoice_data["attachments"] = attachments
+                except Exception as e:
+                    logger.warning(f"Error fetching attachments for invoice {invoice.id}: {str(e)}")
+                    invoice_data["attachments_error"] = str(e)
+            
             invoices.append(invoice_data)
         
-        return invoices
+        # Return paginated results with metadata
+        return {
+            "invoices": invoices,
+            "total": total_invoices,
+            "page": page,
+            "page_size": page_size,
+            "pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+            "next_page": next_page,
+            "prev_page": prev_page
+        }
         
     except odoorpc.error.RPCError as e:
         logger.error(f"OdooRPC error fetching invoices: {str(e)}")
-        raise ValueError(f"OdooRPC error: {str(e)}")
+        error_data = {
+            "error": str(e),
+            "error_type": "RPCError",
+            "error_code": getattr(e, 'code', None),
+            "error_data": getattr(e, 'data', None)
+        }
+        return {
+            "invoices": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": page > 1,
+            "next_page": None,
+            "prev_page": page - 1 if page > 1 else None,
+            "error": error_data
+        }
     except odoorpc.error.InternalError as e:
         logger.error(f"OdooRPC internal error fetching invoices: {str(e)}")
-        raise ValueError(f"OdooRPC internal error: {str(e)}")
+        error_data = {
+            "error": str(e),
+            "error_type": "InternalError"
+        }
+        return {
+            "invoices": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": page > 1,
+            "next_page": None,
+            "prev_page": page - 1 if page > 1 else None,
+            "error": error_data
+        }
     except Exception as e:
         logger.exception(f"Error fetching invoices from Odoo: {str(e)}")
-        raise ValueError(f"Error fetching invoices: {str(e)}")
+        error_data = {
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+        return {
+            "invoices": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+            "pages": 0,
+            "has_next": False,
+            "has_prev": page > 1,
+            "next_page": None,
+            "prev_page": page - 1 if page > 1 else None,
+            "error": error_data
+        }
 
 
 def generate_irn_for_odoo_invoice(

@@ -1,19 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Query # type: ignore
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Query, Path # type: ignore
 from sqlalchemy.orm import Session # type: ignore
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
+from datetime import datetime
 from uuid import UUID
 
 from app.db.session import get_db
 from app.models.integration import IntegrationType
 from app.schemas.integration import (
     Integration, IntegrationCreate, IntegrationUpdate, IntegrationTestResult,
-    OdooIntegrationCreate, OdooConnectionTestRequest, OdooConfig, IntegrationMonitoringStatus
+    OdooIntegrationCreate, OdooConnectionTestRequest, OdooConfig, IntegrationMonitoringStatus,
+    OdooInvoiceFetchParams, FIRSEnvironment, IntegrationExport, IntegrationImport
 )
+from app.schemas.pagination import PaginatedResponse
 from app.services.integration_service import (
     create_integration, get_integration, get_integrations, 
     update_integration, delete_integration, test_integration,
-    create_odoo_integration, test_odoo_connection
+    create_odoo_integration, test_odoo_connection, test_odoo_firs_connection,
+    export_integration_config, import_integration_config
 )
+from app.services.odoo_service import fetch_odoo_invoices
 from app.services.integration_monitor import (
     get_integration_monitoring_status, get_all_monitored_integrations,
     start_integration_monitoring, stop_integration_monitoring, run_integration_health_check
@@ -178,6 +183,24 @@ async def test_odoo_connectivity(
     creating an actual integration.
     """
     result = test_odoo_connection(connection_params)
+    return result
+
+
+@router.post("/odoo/test-firs-connection", response_model=IntegrationTestResult)
+async def test_odoo_firs_connectivity(
+    connection_params: OdooConnectionTestRequest = Body(...),
+    environment: FIRSEnvironment = Query(FIRSEnvironment.SANDBOX),
+    current_user: Any = Depends(get_current_user)
+) -> Any:
+    """
+    Test connection to FIRS through an Odoo server without creating an integration.
+    
+    This endpoint tests both Odoo connectivity and FIRS integration capabilities
+    in either sandbox or production environment.
+    """
+    # Ensure the environment is set correctly
+    connection_params.firs_environment = environment
+    result = test_odoo_firs_connection(connection_params)
     return result
 
 
@@ -412,6 +435,170 @@ async def create_integration_from_template(
         logger.error(f"Error creating credentials for integration {integration.id}: {str(e)}")
     
     return Integration.from_orm(integration)
+
+
+@router.get("/{integration_id}/invoices")
+async def fetch_odoo_invoices_by_integration(
+    integration_id: UUID = Path(...),
+    from_date: Optional[datetime] = Query(None),
+    to_date: Optional[datetime] = Query(None),
+    include_draft: bool = Query(False),
+    include_attachments: bool = Query(False),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user)
+) -> Any:
+    """
+    Fetch invoices from an Odoo integration with pagination support.
+    
+    This endpoint retrieves invoices from an Odoo server based on the
+    integration configuration. Results are paginated.
+    """
+    # Check if integration exists
+    integration = get_integration(db, integration_id)
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+    
+    # Verify that it's an Odoo integration
+    if integration.integration_type != IntegrationType.ODOO.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint only supports Odoo integrations"
+        )
+    
+    # Get the Odoo configuration from the integration
+    odoo_config = OdooConfig(**integration.config)
+    
+    # Fetch invoices
+    result = fetch_odoo_invoices(
+        config=odoo_config,
+        from_date=from_date,
+        to_date=to_date,
+        include_draft=include_draft,
+        include_attachments=include_attachments,
+        page=page,
+        page_size=page_size
+    )
+    
+    # Check for errors in the result
+    if "error" in result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching invoices: {result['error']['error']}"
+        )
+    
+    return result
+
+
+@router.post("/odoo/{integration_id}/invoices")
+async def fetch_odoo_invoices_with_params(
+    integration_id: UUID = Path(...),
+    params: OdooInvoiceFetchParams = Body(...),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user)
+) -> Any:
+    """
+    Fetch invoices from an Odoo integration using body parameters.
+    
+    This endpoint is similar to GET /integrations/{integration_id}/invoices
+    but accepts parameters in the request body instead of query params.
+    """
+    # Check if integration exists
+    integration = get_integration(db, integration_id)
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+    
+    # Verify that it's an Odoo integration
+    if integration.integration_type != IntegrationType.ODOO.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint only supports Odoo integrations"
+        )
+    
+    # Get the Odoo configuration from the integration
+    odoo_config = OdooConfig(**integration.config)
+    
+    # Fetch invoices
+    result = fetch_odoo_invoices(
+        config=odoo_config,
+        from_date=params.from_date,
+        to_date=params.to_date,
+        include_draft=params.include_draft,
+        include_attachments=params.include_attachments,
+        page=params.page,
+        page_size=params.page_size
+    )
+    
+    # Check for errors in the result
+    if "error" in result:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching invoices: {result['error']['error']}"
+        )
+    
+    return result
+
+
+@router.post("/{integration_id}/export", response_model=IntegrationExport)
+async def export_integration(
+    integration_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user)
+) -> Any:
+    """
+    Export an integration configuration.
+    
+    This endpoint exports the configuration of an integration, which can be
+    imported later to create a new integration with the same settings.
+    Sensitive fields like passwords and API keys will be removed.
+    """
+    # Check if integration exists
+    integration = get_integration(db, integration_id)
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+    
+    # Export the integration
+    try:
+        export_data = export_integration_config(db, integration_id)
+        return export_data
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error exporting integration: {str(e)}"
+        )
+
+
+@router.post("/import", response_model=Integration)
+async def import_integration(
+    import_data: IntegrationImport,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user)
+) -> Any:
+    """
+    Import an integration configuration.
+    
+    This endpoint creates a new integration based on exported configuration.
+    Note that sensitive fields like passwords and API keys need to be provided
+    again since they are not included in the export.
+    """
+    try:
+        new_integration = import_integration_config(db, import_data, current_user.id)
+        return new_integration
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error importing integration: {str(e)}"
+        )
 
 
 @router.post("/{integration_id}/secure-credentials")
