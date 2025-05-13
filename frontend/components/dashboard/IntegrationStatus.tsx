@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardHeader, 
@@ -14,8 +14,11 @@ import {
   XCircle, 
   AlertTriangle, 
   RefreshCw, 
-  ExternalLink 
+  ExternalLink,
+  Loader2 
 } from 'lucide-react';
+import { fetchOdooIntegrationMetrics } from '../../services/dashboardService';
+import { formatDistanceToNow } from 'date-fns';
 
 export type IntegrationStatusType = 'online' | 'offline' | 'degraded';
 
@@ -30,9 +33,14 @@ export interface IntegrationItem {
 }
 
 interface IntegrationStatusProps {
-  integrations: IntegrationItem[];
+  integrations?: IntegrationItem[];
   isLoading?: boolean;
   onRefresh?: () => void;
+  useRealData?: boolean;
+  timeRange?: string;
+  organizationId?: string;
+  refreshInterval?: number;
+  summaryData?: any; // Added to match the prop passed from dashboard.tsx
 }
 
 // Helper to get status icon based on status
@@ -65,34 +73,149 @@ const getResponseTimeIndicator = (responseTime?: number) => {
 };
 
 const IntegrationStatus: React.FC<IntegrationStatusProps> = ({ 
-  integrations, 
-  isLoading = false,
-  onRefresh 
+  integrations: propIntegrations, 
+  isLoading: propIsLoading = false,
+  onRefresh,
+  useRealData = false,
+  timeRange = '24h',
+  organizationId,
+  refreshInterval = 30000
 }) => {
+  // State for real-time data
+  const [localIntegrations, setLocalIntegrations] = useState<IntegrationItem[] | undefined>(propIntegrations);
+  const [loading, setLoading] = useState<boolean>(propIsLoading);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  
+  // Convert API data to component format
+  const mapApiIntegrationsToComponentFormat = (apiData: any): IntegrationItem[] => {
+    if (!apiData?.integration_statuses?.length) return [];
+    
+    return apiData.integration_statuses.map((integration: any) => {
+      // Determine status based on active state and last validation success
+      let status: IntegrationStatusType = 'offline';
+      if (integration.is_active) {
+        if (integration.last_validation_success === true) {
+          status = 'online';
+        } else if (integration.last_validation_success === false) {
+          status = 'degraded';
+        }
+      }
+      
+      // Format last validated time
+      let lastSyncTime = 'Never';
+      if (integration.last_validated) {
+        try {
+          lastSyncTime = formatDistanceToNow(new Date(integration.last_validated), { addSuffix: true });
+        } catch (e) {
+          lastSyncTime = 'Unknown';
+        }
+      }
+      
+      return {
+        id: integration.integration_id,
+        name: integration.name,
+        description: `Organization: ${integration.organization_id.substring(0, 8)}...`,
+        status,
+        lastSyncTime,
+        errorMessage: integration.last_validation_success === false ? 'Last validation failed' : undefined
+      };
+    });
+  };
+  
+  // Fetch real data from API
+  const fetchRealTimeData = async () => {
+    if (!useRealData) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const integrationMetrics = await fetchOdooIntegrationMetrics(timeRange, organizationId);
+      const mappedIntegrations = mapApiIntegrationsToComponentFormat(integrationMetrics);
+      
+      setLocalIntegrations(mappedIntegrations);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Error fetching integration metrics:', err);
+      setError('Failed to load integration data');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle refresh from parent or internal
+  const handleRefresh = () => {
+    if (useRealData) {
+      fetchRealTimeData();
+    } else if (onRefresh) {
+      onRefresh();
+    }
+  };
+  
+  useEffect(() => {
+    // Initial fetch
+    if (useRealData) {
+      fetchRealTimeData();
+    }
+    
+    // Set up polling for real-time updates
+    let intervalId: NodeJS.Timeout | undefined;
+    
+    if (useRealData && refreshInterval > 0) {
+      intervalId = setInterval(fetchRealTimeData, refreshInterval);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [useRealData, timeRange, organizationId, refreshInterval]);
+  
+  // Use the prop values as fallback if real data isn't available
+  const displayIntegrations = localIntegrations || propIntegrations || [];
+  const isLoadingData = loading || propIsLoading;
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Integration Status</CardTitle>
-          <CardDescription>Current status of system integrations</CardDescription>
+    <Card className="h-full">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-xl">Integration Status</CardTitle>
+            <CardDescription>
+              Current status of connected systems
+              {useRealData && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                </div>
+              )}
+            </CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={`mr-1 ${loading ? 'animate-spin' : ''}`} /> 
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onRefresh}
-          disabled={isLoading}
-          className="flex items-center gap-1"
-        >
-          <RefreshCw size={14} />
-          <span>Refresh</span>
-        </Button>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="py-4 text-center">Loading integration status...</div>
+        {isLoadingData ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-destructive">
+            {error}
+          </div>
+        ) : displayIntegrations.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No integrations configured
+          </div>
         ) : (
           <div className="space-y-4">
-            {integrations.map((integration) => (
+            {displayIntegrations.map((integration) => (
               <div 
                 key={integration.id} 
                 className="flex items-start justify-between p-4 bg-background-alt rounded-md"
@@ -123,12 +246,6 @@ const IntegrationStatus: React.FC<IntegrationStatusProps> = ({
                 </div>
               </div>
             ))}
-            
-            {integrations.length === 0 && (
-              <div className="text-center py-8 text-text-secondary">
-                No integrations configured
-              </div>
-            )}
           </div>
         )}
       </CardContent>

@@ -1,76 +1,173 @@
 import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
-import MainLayout from '../../components/layouts/MainLayout';
-import { Container } from '../../components/ui/Container';
-import { Typography } from '../../components/ui/Typography';
-import { Card, CardContent, CardHeader, CardGrid, MetricCard } from '../../components/ui/Card';
+import DashboardLayout from '../../components/layouts/DashboardLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardGrid, MetricCard } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { TransactionLogTable } from '../../components/ui/ResponsiveTable';
-import { 
-  Table, 
-  TableContainer, 
-  TableHeader, 
-  TableBody, 
-  TableHead, 
-  TableRow, 
-  TableCell, 
-  TableEmpty
-} from '../../components/ui/Table';
+import { Table, TableContainer, TableHeader, TableRow, TableHead, TableBody, TableCell, TableEmpty } from '../../components/ui/Table';
 import Link from 'next/link';
-import { AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { 
+  BarChart3, 
+  LineChart, 
+  Activity, 
+  Server, 
+  FileBarChart,
+  ShieldCheck,
+  Layers,
+  Settings,
+  RefreshCw,
+  TrendingUp,
+  Users
+} from 'lucide-react';
+import Head from 'next/head';
+import { fetchDashboardSummary } from '../../services/dashboardService';
+import axios, { AxiosError } from 'axios';
+import { TransactionLogTable } from '@/components/ui/ResponsiveTable';
+import Typography from '@/components/ui/Typography';
 
-// Mock data for POC phase
-const mockIntegrations = [
-  { id: '1', name: 'ERP Integration', client: 'ABC Corp', status: 'active', lastSynced: '2025-04-26T06:30:00Z' },
-  { id: '2', name: 'Accounting System', client: 'XYZ Ltd', status: 'configured', lastSynced: null },
-  { id: '3', name: 'POS Integration', client: 'Retail Co', status: 'error', lastSynced: '2025-04-25T14:22:00Z' },
+// Dashboard module definitions for navigation
+const dashboardModules = [
+  { 
+    id: 'overview', 
+    name: 'Dashboard Overview', 
+    description: 'Summary of all system components and metrics',
+    icon: <Activity className="h-8 w-8" />,
+    path: '/dashboard',
+    color: 'bg-blue-50 dark:bg-blue-950'
+  },
+  { 
+    id: 'metrics', 
+    name: 'Detailed Metrics', 
+    description: 'In-depth analytics and performance metrics',
+    icon: <BarChart3 className="h-8 w-8" />,
+    path: '/dashboard/metrics',
+    color: 'bg-emerald-50 dark:bg-emerald-950'
+  },
+  { 
+    id: 'irn', 
+    name: 'IRN Monitoring', 
+    description: 'Invoice Reference Number generation tracking',
+    icon: <FileBarChart className="h-8 w-8" />,
+    path: '/dashboard/irn-monitoring',
+    color: 'bg-indigo-50 dark:bg-indigo-950'
+  },
+  { 
+    id: 'validation', 
+    name: 'Validation Statistics', 
+    description: 'Invoice validation success rates and errors',
+    icon: <ShieldCheck className="h-8 w-8" />,
+    path: '/dashboard/validation-stats',
+    color: 'bg-violet-50 dark:bg-violet-950'
+  },
+  { 
+    id: 'integration', 
+    name: 'Integration Status', 
+    description: 'Status of Odoo and other system integrations',
+    icon: <Layers className="h-8 w-8" />,
+    path: '/dashboard/integration-status',
+    color: 'bg-amber-50 dark:bg-amber-950'
+  },
+  { 
+    id: 'system', 
+    name: 'System Health', 
+    description: 'API performance and infrastructure health metrics',
+    icon: <Server className="h-8 w-8" />,
+    path: '/dashboard/system-health',
+    color: 'bg-rose-50 dark:bg-rose-950'
+  },
+  { 
+    id: 'b2b', 
+    name: 'B2B vs B2C Analytics', 
+    description: 'Comparison of business vs consumer invoices',
+    icon: <Users className="h-8 w-8" />,
+    path: '/dashboard/b2b-vs-b2c',
+    color: 'bg-purple-50 dark:bg-purple-950'
+  }
 ];
 
-const mockTransactions = {
-  today: 124,
-  week: 738,
-  month: 2945,
-  success: 95.8
-};
+// Interface for the dashboard summary
+interface DashboardSummaryData {
+  timestamp: string;
+  irn_summary: {
+    total_irns: number;
+    active_irns: number;
+    unused_irns: number;
+    expired_irns: number;
+  };
+  validation_summary: {
+    total_validations: number;
+    success_rate: number;
+    common_errors: Array<{
+      error_code: string;
+      count: number;
+      percentage: number;
+    }>;
+  };
+  b2b_vs_b2c_summary: {
+    b2b_percentage: number;
+    b2c_percentage: number;
+    b2b_success_rate: number;
+    b2c_success_rate: number;
+  };
+  odoo_summary: {
+    active_integrations: number;
+    total_invoices: number;
+    success_rate: number;
+  };
+  system_summary: {
+    total_requests: number;
+    error_rate: number;
+    avg_response_time: number;
+  };
+}
 
-const mockRecentTransactions = [
-  { id: '1', type: 'irn_generation' as 'irn_generation', status: 'success' as 'success', integration: 'ERP Integration', timestamp: '2025-04-26T06:45:12Z' },
-  { id: '2', type: 'validation' as 'validation', status: 'success' as 'success', integration: 'ERP Integration', timestamp: '2025-04-26T06:44:23Z' },
-  { id: '3', type: 'submission' as 'submission', status: 'failed' as 'failed', integration: 'POS Integration', timestamp: '2025-04-26T06:22:58Z' },
-  { id: '4', type: 'irn_generation' as 'irn_generation', status: 'success' as 'success', integration: 'ERP Integration', timestamp: '2025-04-26T06:18:42Z' },
-  { id: '5', type: 'validation' as 'validation', status: 'success' as 'success', integration: 'ERP Integration', timestamp: '2025-04-26T06:15:19Z' },
-];
-
-const Dashboard: NextPage = () => {
-  const [integrations, setIntegrations] = useState(mockIntegrations);
-  const [transactions, setTransactions] = useState(mockTransactions);
-  const [recentTransactions, setRecentTransactions] = useState(mockRecentTransactions);
+const DashboardHub: NextPage = () => {
+  const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // In a real implementation, this would fetch data from the backend
+  // Fetch dashboard summary if available
   useEffect(() => {
-    // Simulating API call
-    const fetchData = async () => {
-      // In a real app, these would be separate API calls
-      // const integrationsData = await api.get('/integrations');
-      // const transactionsData = await api.get('/transactions/metrics');
-      // const recentData = await api.get('/transactions/recent');
-      
-      // setIntegrations(integrationsData);
-      // setTransactions(transactionsData);
-      // setRecentTransactions(recentData);
+    const fetchSummary = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await fetchDashboardSummary();
+        setSummary(data);
+      } catch (err) {
+        console.error('Error fetching dashboard summary', err);
+        // Properly handle and display the error message
+        if (axios.isAxiosError(err)) {
+          const axiosError = err as AxiosError;
+          setError((axiosError.response?.data as any)?.detail || 'Failed to load dashboard data');
+        } else {
+          setError('Failed to load dashboard data');
+        }
+      } finally {
+        setIsLoading(false);
+      }
     };
     
-    fetchData();
+    fetchSummary();
   }, []);
-
-  const handleRefresh = () => {
-    setIsLoading(true);
-    // Simulate API call delay
-    setTimeout(() => {
+  
+  const handleRefresh = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchDashboardSummary();
+      setSummary(data);
+    } catch (err) {
+      console.error('Error refreshing dashboard data', err);
+      if (axios.isAxiosError(err)) {
+        const axiosError = err as AxiosError;
+        setError((axiosError.response?.data as any)?.detail || 'Failed to refresh dashboard data');
+      } else {
+        setError('Failed to refresh dashboard data');
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // Helper function to format dates
@@ -80,8 +177,12 @@ const Dashboard: NextPage = () => {
   };
 
   return (
-    <MainLayout title="Dashboard | Taxpoynt eInvoice">
-      <Container padding="medium" className="py-6">
+    <>
+      <Head>
+        <title>FIRS e-Invoice | Dashboard Navigation</title>
+      </Head>
+      <DashboardLayout>
+        <div className="p-8">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6">
             <Typography.Heading level="h1">Dashboard</Typography.Heading>
             <Button 
@@ -100,19 +201,19 @@ const Dashboard: NextPage = () => {
           <CardGrid columns={{ base: 1, md: 2, lg: 4 }} className="mb-8">
             <MetricCard
               title="Total Invoices (Today)"
-              value={transactions.today.toString()}
+              value={summary?.irn_summary.total_irns.toString() || '0'}
             />
             <MetricCard
               title="Weekly Transactions"
-              value={transactions.week.toString()}
+              value={summary?.odoo_summary.total_invoices.toString() || '0'}
             />
             <MetricCard
               title="Monthly Transactions"
-              value={transactions.month.toString()}
+              value={summary?.system_summary.total_requests.toString() || '0'}
             />
             <MetricCard
               title="Success Rate"
-              value={`${transactions.success}%`}
+              value={`${summary?.validation_summary.success_rate}%`}
               change={{
                 value: "0.8%",
                 type: "increase"
@@ -137,25 +238,27 @@ const Dashboard: NextPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {integrations.length === 0 ? (
+                      {summary?.odoo_summary?.active_integrations === 0 ? (
                         <TableEmpty colSpan={4} message="No integrations found" />
                       ) : (
-                        integrations.map(integration => (
-                          <TableRow key={integration.id}>
-                            <TableCell>{integration.name}</TableCell>
-                            <TableCell>{integration.client}</TableCell>
+                        Array.from({ length: summary?.odoo_summary?.active_integrations ?? 0 }, (_, index) => (
+                          <TableRow key={index}>
+                            <TableCell>Integration {index + 1}</TableCell>
+                            <TableCell>Client {index + 1}</TableCell>
                             <TableCell>
                               <Badge 
                                 variant={
-                                  integration.status === 'active' ? 'success' : 
-                                  integration.status === 'error' ? 'destructive' : 
+                                  (summary?.odoo_summary?.success_rate ?? 0) > 0.5 ? 'success' : 
+                                  (summary?.odoo_summary?.success_rate ?? 0) < 0.5 ? 'destructive' : 
                                   'secondary'
                                 }
                               >
-                                {integration.status}
+                                {(summary?.odoo_summary?.success_rate ?? 0) > 0.5 ? 'Active' : 
+                                (summary?.odoo_summary?.success_rate ?? 0) < 0.5 ? 'Error' : 
+                                'Unknown'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{formatDate(integration.lastSynced)}</TableCell>
+                            <TableCell>{formatDate(summary?.timestamp ?? null)}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -182,7 +285,7 @@ const Dashboard: NextPage = () => {
               <CardContent>
                 {/* Transaction log table with horizontal scroll capability */}
                 <TransactionLogTable 
-                  transactions={recentTransactions}
+                  transactions={[]}
                   isLoading={isLoading}
                 />
               </CardContent>
@@ -197,9 +300,10 @@ const Dashboard: NextPage = () => {
               </CardContent>
             </Card>
           </CardGrid>
-      </Container>
-    </MainLayout>
+        </div>
+      </DashboardLayout>
+    </>
   );
 };
 
-export default Dashboard; 
+export default DashboardHub;
