@@ -205,4 +205,4 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
   );
 };
 
-export { ToastContext, ToastProvider, toastVariants };
+export { ToastContext, toastVariants };
