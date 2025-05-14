@@ -28,11 +28,14 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     const checkAuth = async () => {
       setIsLoading(true);
       try {
-        const storedUser = localStorage.getItem('taxpoynt_user');
-        if (storedUser) {
-          // Add a small delay to simulate network request for testing
-          await new Promise(resolve => setTimeout(resolve, 500));
-          setUser(JSON.parse(storedUser));
+        // Check if we're in a browser environment
+        if (typeof window !== 'undefined') {
+          const storedUser = localStorage.getItem('taxpoynt_user');
+          if (storedUser) {
+            // Add a small delay to simulate network request for testing
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setUser(JSON.parse(storedUser));
+          }
         }
       } catch (error) {
         console.error('Error loading auth state:', error);
@@ -62,7 +65,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         };
         
         setUser(mockUser);
-        localStorage.setItem('taxpoynt_user', JSON.stringify(mockUser));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('taxpoynt_user', JSON.stringify(mockUser));
+        }
         
         toast({
           title: "Login Successful",
@@ -90,7 +95,9 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('taxpoynt_user');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('taxpoynt_user');
+    }
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out.",
@@ -115,8 +122,28 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+  
+  // For server-side rendering, return a default context
   if (context === undefined) {
+    // Check if we're on the server
+    if (typeof window === 'undefined') {
+      // Return a default non-functional auth context for SSR
+      return {
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        login: async () => { 
+          console.warn('Auth functions not available during SSR'); 
+        },
+        logout: () => { 
+          console.warn('Auth functions not available during SSR'); 
+        }
+      };
+    }
+    
+    // In the browser, we should always have a provider
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  
   return context;
 };
