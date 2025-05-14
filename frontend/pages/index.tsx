@@ -24,7 +24,7 @@ const Home: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Taxpoynt eInvoice | Automated Tax Compliance for Nigerian Businesses</title>
+        <title>Taxpoynt E-Invoice | Automated Tax Compliance for Nigerian Businesses</title>
         <meta name="description" content="Transform your tax compliance with Nigeria's premier e-invoicing platform. Save time, eliminate errors, and stay compliant with FIRS regulations." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -50,7 +50,7 @@ const Home: React.FC = () => {
                 <Button 
                   size="lg"
                   variant="default" 
-                  className="bg-white text-primary-700 hover:bg-gray-100"
+                  className="bg-white text-primary-700 hover:bg-gray-100 font-semibold shadow-md"
                   onClick={() => router.push('/auth/signup')}
                 >
                   Start Your Free Trial
@@ -58,7 +58,7 @@ const Home: React.FC = () => {
                 <Button 
                   size="lg"
                   variant="outline" 
-                  className="border-white text-white hover:bg-white/30 group bg-primary-700/50 backdrop-blur-sm shadow-md"
+                  className="border-white text-white hover:bg-white/30 group bg-primary-700/50 backdrop-blur-sm shadow-md font-semibold text-shadow-sm"
                   onClick={() => router.push('/documentation')}
                 >
                   Learn More <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -71,7 +71,7 @@ const Home: React.FC = () => {
                   <div className="relative h-full flex items-center justify-center">
                     <Image 
                       src="/logo.svg" 
-                      alt="Taxpoynt eInvoice" 
+                      alt="Taxpoynt E-Invoice" 
                       width={150} 
                       height={150} 
                       className="drop-shadow-xl" 
@@ -88,7 +88,7 @@ const Home: React.FC = () => {
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Why Choose Taxpoynt eInvoice?
+                Why Choose Taxpoynt E-Invoice?
               </Typography.Heading>
               <Typography.Text size="lg" className="text-gray-600">
                 Our platform is designed to simplify tax compliance for Nigerian businesses of all sizes.
@@ -104,7 +104,7 @@ const Home: React.FC = () => {
                 },
                 { 
                   icon: <Clock className="h-10 w-10 text-primary-600" />, 
-                  title: 'Save Time', 
+                  title: 'Saves Time', 
                   description: 'Reduce manual processing time by up to 90% with our automated systems.' 
                 },
                 { 

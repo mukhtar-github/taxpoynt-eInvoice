@@ -79,7 +79,7 @@ const navItems: NavItem[] = [
  * Replaces the previous Chakra UI navigation with Tailwind CSS styling.
  */
 export const MainNav: React.FC<MainNavProps> = ({
-  title = 'Taxpoynt',
+  title = 'Taxpoynt E-Invoice',
   logo,
   userInfo,
   authButtons,
@@ -116,7 +116,7 @@ export const MainNav: React.FC<MainNavProps> = ({
                   <div className="relative w-8 h-8">
                     <Image src="/logo.svg" alt="Taxpoynt Logo" fill className="object-contain" priority />
                   </div>
-                  <Typography.Text className="text-lg font-semibold text-primary-700">{title}</Typography.Text>
+                  <Typography.Text className="text-base font-semibold text-primary-700" style={{height: '32px', display: 'flex', alignItems: 'center'}}>{title}</Typography.Text>
                 </Link>
               )}
             </div>
@@ -263,7 +263,7 @@ export const MainNav: React.FC<MainNavProps> = ({
                   <div className="relative w-7 h-7">
                     <Image src="/logo.svg" alt="Taxpoynt Logo" fill className="object-contain" priority />
                   </div>
-                  <Typography.Text className="text-base font-semibold text-primary-700">{title}</Typography.Text>
+                  <Typography.Text className="text-sm font-semibold text-primary-700" style={{height: '28px', display: 'flex', alignItems: 'center'}}>{title}</Typography.Text>
                 </Link>
               )}
             </div>

@@ -91,7 +91,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <Button 
                     size="lg" 
                     variant="default" 
-                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-md font-medium"
+                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-md font-semibold"
                     onClick={() => router.push('/auth/signup')}
                   >
                     Start Your Free Trial
@@ -99,7 +99,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    className="border-white text-white hover:bg-white/30 bg-primary-700/50 backdrop-blur-sm shadow-md"
+                    className="border-white text-white hover:bg-white/30 bg-primary-700/50 backdrop-blur-sm shadow-md font-semibold text-shadow-sm"
                     onClick={() => router.push('/features')}
                   >
                     See How It Works
