@@ -75,13 +75,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         
         {/* Hero section for homepage - only show on homepage when not authenticated */}
         {!isAuthenticated && router.pathname === '/' && (
-          <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white">
-            <div className="container mx-auto px-4 py-16 md:py-24">
+          <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white relative">
+            {/* Add overlay for better text visibility */}
+            <div className="absolute inset-0 bg-black bg-opacity-25 z-0"></div>
+            <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
               <div className="max-w-3xl mx-auto text-center">
-                <Typography.Heading level="h1" className="text-3xl md:text-5xl font-bold mb-6">
+                <Typography.Heading level="h1" className="text-3xl md:text-5xl font-bold mb-6 text-white drop-shadow-md">
                   Tax Compliance Made Effortless
                 </Typography.Heading>
-                <Typography.Text size="lg" className="mb-8 text-white/90">
+                <Typography.Text size="lg" className="mb-8 text-white drop-shadow-sm">
                   Taxpoynt delivers real-time e-invoicing that meets FIRS standards while saving you precious time.
                   Say goodbye to tax compliance headaches and hello to automated precision.
                 </Typography.Text>
@@ -89,7 +91,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <Button 
                     size="lg" 
                     variant="default" 
-                    className="bg-white text-primary-700 hover:bg-gray-100"
+                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-md font-medium"
                     onClick={() => router.push('/auth/signup')}
                   >
                     Start Your Free Trial
@@ -97,7 +99,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    className="border-white text-white hover:bg-white/10"
+                    className="border-white text-white hover:bg-white/30 bg-primary-700/50 backdrop-blur-sm shadow-md"
                     onClick={() => router.push('/features')}
                   >
                     See How It Works
