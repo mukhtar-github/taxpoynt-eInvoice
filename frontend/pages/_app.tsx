@@ -12,13 +12,13 @@ import '../styles/globals.css';
  */
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <AuthProvider>
-      <ToastProvider position="top-right">
+    <ToastProvider position="top-right">
+      <AuthProvider>
         <div className="min-h-screen bg-background font-body text-text-primary">
           <Component {...pageProps} />
         </div>
-      </ToastProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 
