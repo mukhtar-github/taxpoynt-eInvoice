@@ -50,24 +50,55 @@ const mockClients = [
   { id: '1', name: 'ACME Corporation' },
   { id: '2', name: 'Globex Industries' },
   { id: '3', name: 'Wayne Enterprises' },
+  { id: '4', name: 'First Bank Nigeria' },
+  { id: '5', name: 'Dangote Group' },
 ];
 
 const mockIntegrations = [
   {
     id: '1',
-    name: 'ERP System Integration',
+    name: 'SAP ERP Integration',
     client_id: '1',
     client_name: 'ACME Corporation',
-    status: 'configured',
-    last_tested: null,
+    status: 'active',
+    last_tested: '2025-05-10T14:30:00Z',
+    description: 'Direct integration with SAP ERP for automated invoice synchronization and real-time reporting.'
   },
   {
     id: '2',
-    name: 'Accounting Software Integration',
+    name: 'Odoo Integration',
     client_id: '2',
     client_name: 'Globex Industries',
     status: 'active',
-    last_tested: '2023-06-15T10:30:00Z',
+    last_tested: '2025-05-12T09:15:00Z',
+    description: 'Seamless Odoo integration for small to medium businesses needing end-to-end e-invoicing.'
+  },
+  {
+    id: '3',
+    name: 'Oracle ERP Integration',
+    client_id: '3',
+    client_name: 'Wayne Enterprises',
+    status: 'configured',
+    last_tested: '2025-05-13T16:45:00Z',
+    description: 'Enterprise-grade Oracle ERP integration with secure data transmission and validation.'
+  },
+  {
+    id: '4',
+    name: 'Microsoft Dynamics Integration',
+    client_id: '4',
+    client_name: 'First Bank Nigeria',
+    status: 'active',
+    last_tested: '2025-05-14T11:20:00Z',
+    description: 'Full Microsoft Dynamics 365 compatibility with bi-directional data flow.'
+  },
+  {
+    id: '5',
+    name: 'QuickBooks Integration',
+    client_id: '5',
+    client_name: 'Dangote Group',
+    status: 'configured',
+    last_tested: null,
+    description: 'Quick and easy QuickBooks integration for small businesses and accountants.'
   },
 ];
 
