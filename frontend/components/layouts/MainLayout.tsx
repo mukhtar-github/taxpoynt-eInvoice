@@ -24,7 +24,7 @@ interface MainLayoutProps {
  */
 const MainLayout: React.FC<MainLayoutProps> = ({
   children,
-  title = 'Taxpoynt eInvoice | Automated Tax Compliance for Nigerian Businesses',
+  title = 'Taxpoynt E-Invoice | Automated Tax Compliance for Nigerian Businesses',
   description = 'Transform your tax compliance with Nigeria\'s premier e-invoicing platform. Save time, eliminate errors, and stay compliant with FIRS regulations.',
   showNav = true,
   className
@@ -91,7 +91,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   <Button 
                     size="lg" 
                     variant="default" 
-                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-md font-semibold"
+                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-md font-semibold tracking-wide border-2 border-white"
                     onClick={() => router.push('/auth/signup')}
                   >
                     Start Your Free Trial

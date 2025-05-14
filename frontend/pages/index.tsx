@@ -50,7 +50,7 @@ const Home: React.FC = () => {
                 <Button 
                   size="lg"
                   variant="default" 
-                  className="bg-white text-primary-700 hover:bg-gray-100 font-semibold shadow-md"
+                  className="bg-white text-primary-700 hover:bg-gray-100 font-semibold shadow-md tracking-wide border-2 border-white"
                   onClick={() => router.push('/auth/signup')}
                 >
                   Start Your Free Trial
@@ -130,6 +130,52 @@ const Home: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Systems Integration Section */}
+        <div className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
+                Seamless Systems Integration
+              </Typography.Heading>
+              <Typography.Text size="lg" className="text-gray-600 mb-8">
+                Our platform connects directly with your existing business systems, enabling automatic e-invoice generation and submission without disrupting your workflow.
+              </Typography.Text>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-center">
+              {[
+                { name: 'SAP', logo: '/images/integrations/sap-logo.png', alt: 'SAP Integration' },
+                { name: 'Odoo', logo: '/images/integrations/odoo-logo.png', alt: 'Odoo Integration' },
+                { name: 'Oracle', logo: '/images/integrations/oracle-logo.png', alt: 'Oracle Integration' },
+                { name: 'Microsoft Dynamics', logo: '/images/integrations/dynamics-logo.png', alt: 'Microsoft Dynamics Integration' },
+                { name: 'QuickBooks', logo: '/images/integrations/quickbooks-logo.png', alt: 'QuickBooks Integration' },
+              ].map((integration, index) => (
+                <div key={index} className="text-center p-4 flex flex-col items-center">
+                  <div className="bg-gray-50 rounded-lg h-16 w-full flex items-center justify-center mb-3 shadow-sm">
+                    <Typography.Heading level="h4" className="font-semibold text-primary-700">
+                      {integration.name}
+                    </Typography.Heading>
+                  </div>
+                  <Typography.Text className="text-sm text-gray-600">
+                    Integration Ready
+                  </Typography.Text>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-10 text-center">
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white text-primary-700 border-primary-600 hover:bg-primary-50"
+                onClick={() => router.push('/integrations')}
+              >
+                Explore All Integrations
+              </Button>
             </div>
           </div>
         </div>
