@@ -32,13 +32,15 @@ const Home: React.FC = () => {
       </Head>
       <MainLayout>
         {/* Hero Section - Enhanced with image and better layout */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-16 md:py-24">
-          <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-16 md:py-24 relative">
+          {/* Add a subtle overlay pattern for better text readability */}
+          <div className="absolute inset-0 bg-black bg-opacity-20 z-0"></div>
+          <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
             <div className="space-y-6">
               <div className="inline-block bg-primary-500 bg-opacity-30 px-4 py-2 rounded-full">
                 <span className="text-white font-medium">FIRS Compliant E-Invoicing</span>
               </div>
-              <Typography.Heading level="h1" className="text-4xl md:text-6xl font-bold">
+              <Typography.Heading level="h1" className="text-4xl md:text-6xl font-bold text-white drop-shadow-md">
                 Transforming Tax Compliance for Nigerian Businesses
               </Typography.Heading>
               <Typography.Text size="lg" className="text-white/90 leading-relaxed max-w-xl">
@@ -56,7 +58,7 @@ const Home: React.FC = () => {
                 <Button 
                   size="lg"
                   variant="outline" 
-                  className="border-white text-white hover:bg-white/10 group"
+                  className="border-white text-white hover:bg-white/30 group bg-primary-700/50 backdrop-blur-sm shadow-md"
                   onClick={() => router.push('/documentation')}
                 >
                   Learn More <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
