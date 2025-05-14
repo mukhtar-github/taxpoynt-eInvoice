@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { Typography } from '../ui/Typography';
+import { CheckCircle, Globe, QrCode, Link as LinkIcon } from 'lucide-react';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -183,6 +184,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         ) : (
           <footer className="py-6 bg-background border-t border-border">
             <div className="container mx-auto px-4">
+              {/* Standards Certification Bar - Added for highlighting technical compliance */}
+              <div className="mb-4 py-3 border-b border-gray-100">
+                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-primary-600 mr-2" />
+                    <span className="text-sm text-gray-700 font-medium">UBL 2.1 Compliant</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Globe className="h-4 w-4 text-primary-600 mr-2" />
+                    <span className="text-sm text-gray-700 font-medium">PEPPOL Compatible</span>
+                  </div>
+                  <div className="flex items-center">
+                    <QrCode className="h-4 w-4 text-primary-600 mr-2" />
+                    <span className="text-sm text-gray-700 font-medium">QR Verification</span>
+                  </div>
+                  <div className="flex items-center">
+                    <LinkIcon className="h-4 w-4 text-primary-600 mr-2" />
+                    <span className="text-sm text-gray-700 font-medium">API-First Design</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Standard Footer Content */}
               <div className="flex flex-col md:flex-row justify-between items-center">
                 <div className="mb-4 md:mb-0">
                   <p className="text-sm text-text-secondary">

@@ -147,7 +147,23 @@ const Home: React.FC = () => {
                     <Typography.Text className="text-gray-600">
                       {integration.description}
                     </Typography.Text>
-                    <div className="mt-3">
+                    
+                    {/* Technical Standards Badges - Subtle indication of compatibility */}
+                    <div className="flex flex-wrap gap-1.5 mt-4 mb-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        UBL 2.1
+                      </span>
+                      {integration.name === 'SAP' || integration.name === 'Oracle' || integration.name === 'Microsoft Dynamics' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                          PEPPOL
+                        </span>
+                      ) : null}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                        API
+                      </span>
+                    </div>
+                    
+                    <div className="mt-2">
                       <Typography.Text className="text-sm text-primary-600 font-medium">
                         Integration Ready
                       </Typography.Text>
