@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Select } from '../ui/Select';
+import { LegacySelect } from '../ui/Select';
 import { Switch } from '../ui/Switch';
 import { Divider } from '../ui/Divider';
 
@@ -256,10 +256,10 @@ const OdooIntegrationForm: React.FC<OdooIntegrationFormProps> = ({
               name="odoo_config.auth_method"
               control={control}
               render={({ field }) => (
-                <Select id="auth_method" {...field}>
+                <LegacySelect id="auth_method" {...field}>
                   <option value="api_key">API Key (Recommended)</option>
                   <option value="password">Password</option>
-                </Select>
+                </LegacySelect>
               )}
             />
             <p className="text-sm text-text-secondary">
@@ -316,12 +316,12 @@ const OdooIntegrationForm: React.FC<OdooIntegrationFormProps> = ({
               name="odoo_config.version"
               control={control}
               render={({ field }) => (
-                <Select id="version" {...field}>
+                <LegacySelect id="version" {...field}>
                   <option value="17.0">17.0</option>
                   <option value="16.0">16.0</option>
                   <option value="15.0">15.0</option>
                   <option value="14.0">14.0</option>
-                </Select>
+                </LegacySelect>
               )}
             />
             <p className="text-sm text-text-secondary">
@@ -335,10 +335,10 @@ const OdooIntegrationForm: React.FC<OdooIntegrationFormProps> = ({
               name="odoo_config.rpc_path"
               control={control}
               render={({ field }) => (
-                <Select id="rpc_path" {...field}>
+                <LegacySelect id="rpc_path" {...field}>
                   <option value="/jsonrpc">JSON-RPC (/jsonrpc)</option>
                   <option value="/xmlrpc/2/common">XML-RPC (/xmlrpc/2/common)</option>
-                </Select>
+                </LegacySelect>
               )}
             />
             <p className="text-sm text-text-secondary">
@@ -352,12 +352,12 @@ const OdooIntegrationForm: React.FC<OdooIntegrationFormProps> = ({
               name="odoo_config.sync_frequency"
               control={control}
               render={({ field }) => (
-                <Select id="sync_frequency" {...field}>
+                <LegacySelect id="sync_frequency" {...field}>
                   <option value="realtime">Near Real-time (every 15 minutes)</option>
                   <option value="hourly">Hourly</option>
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
-                </Select>
+                </LegacySelect>
               )}
             />
             <p className="text-sm text-text-secondary">

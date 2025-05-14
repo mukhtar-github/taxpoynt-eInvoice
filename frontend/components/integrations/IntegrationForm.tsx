@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { Typography } from '../ui/Typography';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
+import { LegacySelect } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
@@ -108,7 +108,7 @@ export const IntegrationForm: React.FC<IntegrationFormProps> = ({
             error={!!errors.client_id}
             errorMessage={errors.client_id?.message?.toString()}
           >
-            <Select
+            <LegacySelect
               id="client_id"
               error={!!errors.client_id}
               {...register("client_id", {
@@ -121,7 +121,7 @@ export const IntegrationForm: React.FC<IntegrationFormProps> = ({
                   {client.name}
                 </option>
               ))}
-            </Select>
+            </LegacySelect>
           </FormField>
           
           <FormField 
