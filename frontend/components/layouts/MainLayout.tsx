@@ -132,8 +132,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                 <div className="md:col-span-2">
                   <Typography.Heading level="h3" className="text-xl font-bold mb-4">Taxpoynt E-Invoice</Typography.Heading>
                   <Typography.Text variant="secondary" className="max-w-md mb-6">
-                    Nigeria's leading e-invoicing platform that streamlines tax compliance for businesses of all sizes.
-                    Certified by FIRS and trusted by thousands of companies across Nigeria.
+                    Nigeria's premier e-invoicing platform that streamlines tax compliance for businesses of all sizes.
+                    Fully certified by FIRS, compliant with UBL 2.1 standards, and trusted by hundreds of companies across Nigeria.
                   </Typography.Text>
                   <div className="flex space-x-4">
                     <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-primary">
