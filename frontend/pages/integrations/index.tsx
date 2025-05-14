@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import MainLayout from '../../components/layouts/MainLayout';
+import DashboardLayout from '../../components/layouts/DashboardLayout';
+import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { Container } from '../../components/ui/Container';
 import { Typography } from '../../components/ui/Typography';
 import { Badge } from '../../components/ui/Badge';
@@ -171,7 +172,7 @@ const IntegrationsPage: React.FC = () => {
   };
 
   return (
-    <MainLayout title="Integrations | Taxpoynt eInvoice">
+    <DashboardLayout>
       <Container maxWidth="xl" padding="medium">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <Typography.Heading level="h1">Integrations</Typography.Heading>
@@ -297,8 +298,17 @@ const IntegrationsPage: React.FC = () => {
         </ModalBody>
       </Modal>
       </Container>
-    </MainLayout>
+    </DashboardLayout>
   );
 };
 
-export default IntegrationsPage; 
+// Wrap the component with ProtectedRoute
+const ProtectedIntegrationsPage = () => {
+  return (
+    <ProtectedRoute>
+      <IntegrationsPage />
+    </ProtectedRoute>
+  );
+};
+
+export default ProtectedIntegrationsPage;

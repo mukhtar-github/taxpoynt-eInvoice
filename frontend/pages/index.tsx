@@ -1,20 +1,24 @@
-import React from 'react';
-import Head from 'next/head';
-import MetricsDashboard from '../components/dashboard/MetricsDashboard';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import MainLayout from '../components/layouts/MainLayout';
+import { useAuth } from '../context/AuthContext';
 
 const Home: React.FC = () => {
-  return (
-    <>
-      <Head>
-        <title>TaxPoynt e-Invoice | Dashboard</title>
-        <meta name="description" content="TaxPoynt e-Invoice dashboard for monitoring e-invoicing status and integrations" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
-      <main>
-        <MetricsDashboard />
-      </main>
-    </>
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // For unauthenticated users, just show the MainLayout with hero section
+  return (
+    <MainLayout children={undefined}>
+      {/* The hero section is already included in MainLayout when on homepage */}
+    </MainLayout>
   );
 };
 

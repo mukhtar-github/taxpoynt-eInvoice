@@ -1,5 +1,6 @@
 import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
+import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardGrid, MetricCard } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -306,4 +307,13 @@ const DashboardHub: NextPage = () => {
   );
 };
 
-export default DashboardHub;
+// Wrap the component with the ProtectedRoute component
+const ProtectedDashboardHub: NextPage = () => {
+  return (
+    <ProtectedRoute>
+      <DashboardHub />
+    </ProtectedRoute>
+  );
+};
+
+export default ProtectedDashboardHub;

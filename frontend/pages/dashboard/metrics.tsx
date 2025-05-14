@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layouts/DashboardLayout';
+import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import EnhancedIRNMetricsCard from '../../components/dashboard/EnhancedIRNMetricsCard';
 import ValidationMetricsCard from '../../components/dashboard/ValidationMetricsCard';
 import B2BvsB2CMetricsCard from '../../components/dashboard/B2BvsB2CMetricsCard';
@@ -305,4 +306,13 @@ const MetricsDashboard: React.FC = () => {
   );
 };
 
-export default MetricsDashboard;
+// Wrap the component with ProtectedRoute
+const ProtectedMetricsDashboard = () => {
+  return (
+    <ProtectedRoute>
+      <MetricsDashboard />
+    </ProtectedRoute>
+  );
+};
+
+export default ProtectedMetricsDashboard;
