@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { cn } from '../../utils/cn';
 import { Typography } from './Typography';
@@ -112,8 +113,10 @@ export const MainNav: React.FC<MainNavProps> = ({
                 logo
               ) : (
                 <Link href="/" className="flex items-center space-x-2">
-                  <img src="/logo.svg" alt="Taxpoynt Logo" className="w-8 h-8" />
-                  <Typography.Text className="text-lg font-semibold">{title}</Typography.Text>
+                  <div className="relative w-8 h-8">
+                    <Image src="/logo.svg" alt="Taxpoynt Logo" fill className="object-contain" priority />
+                  </div>
+                  <Typography.Text className="text-lg font-semibold text-primary-700">{title}</Typography.Text>
                 </Link>
               )}
             </div>
@@ -257,8 +260,10 @@ export const MainNav: React.FC<MainNavProps> = ({
                 logo
               ) : (
                 <Link href="/" className="flex items-center space-x-2">
-                  <img src="/logo.svg" alt="Taxpoynt Logo" className="w-7 h-7" />
-                  <Typography.Text className="text-base font-semibold">{title}</Typography.Text>
+                  <div className="relative w-7 h-7">
+                    <Image src="/logo.svg" alt="Taxpoynt Logo" fill className="object-contain" priority />
+                  </div>
+                  <Typography.Text className="text-base font-semibold text-primary-700">{title}</Typography.Text>
                 </Link>
               )}
             </div>
