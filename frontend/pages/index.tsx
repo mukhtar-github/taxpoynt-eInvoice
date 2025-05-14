@@ -17,7 +17,9 @@ import {
   Server,
   HardDrive,
   GitMerge,
-  Layers
+  Layers,
+  Shield,
+  Globe
 } from 'lucide-react';
 
 const Home: React.FC = () => {
@@ -186,19 +188,20 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Features Section */}
+        {/* Why Choose Section - Enhanced with technical standards value */}
         <div className="py-16 bg-white">
           <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto mb-12">
+            <div className="text-center max-w-3xl mx-auto mb-10">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
                 Why Choose Taxpoynt E-Invoice?
               </Typography.Heading>
               <Typography.Text size="lg" className="text-gray-600">
-                Our platform is designed to simplify tax compliance for Nigerian businesses of all sizes.
+                Our platform combines business efficiency with enterprise-grade technical standards to future-proof your tax compliance.
               </Typography.Text>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Business Benefits */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
               {[
                 { 
                   icon: <FileCheck className="h-10 w-10 text-primary-600" />, 
@@ -233,6 +236,54 @@ const Home: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+            
+            {/* Technical Standards Value Section */}
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-8">
+                <Typography.Heading level="h3" className="text-2xl font-bold mb-2">
+                  Enterprise Standards That Matter
+                </Typography.Heading>
+                <Typography.Text size="lg" className="text-gray-600">
+                  Our adherence to global technical standards delivers tangible business value
+                </Typography.Text>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-blue-50 rounded-lg p-6 border border-blue-100">
+                  <div className="flex items-center mb-4">
+                    <Shield className="h-8 w-8 text-primary-600 mr-3" />
+                    <Typography.Heading level="h4" className="text-lg font-semibold">
+                      Risk Reduction & Compliance
+                    </Typography.Heading>
+                  </div>
+                  <ul className="space-y-2 pl-11">
+                    <li className="text-gray-700 list-disc">
+                      <span className="font-medium">UBL 2.1 Compliance</span>: Ensures your e-invoices meet both FIRS requirements and global standards
+                    </li>
+                    <li className="text-gray-700 list-disc">
+                      <span className="font-medium">QR Verification</span>: Protects against fraud and simplifies invoice validation
+                    </li>
+                  </ul>
+                </div>
+                
+                <div className="bg-green-50 rounded-lg p-6 border border-green-100">
+                  <div className="flex items-center mb-4">
+                    <Globe className="h-8 w-8 text-primary-600 mr-3" />
+                    <Typography.Heading level="h4" className="text-lg font-semibold">
+                      Future-Proof Investment
+                    </Typography.Heading>
+                  </div>
+                  <ul className="space-y-2 pl-11">
+                    <li className="text-gray-700 list-disc">
+                      <span className="font-medium">PEPPOL Compatibility</span>: Prepares Nigerian businesses for international trade documentation
+                    </li>
+                    <li className="text-gray-700 list-disc">
+                      <span className="font-medium">API-First Design</span>: Ensures seamless integration with any current or future business system
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
