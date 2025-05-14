@@ -17,7 +17,9 @@ const Home: React.FC = () => {
   // For unauthenticated users, just show the MainLayout with hero section
   return (
     <MainLayout>
-      {/* The hero section is already included in MainLayout when on homepage */}
+      <div>
+        {/* The hero section is already included in MainLayout when on homepage */}
+      </div>
     </MainLayout>
   );
 };
