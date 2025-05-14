@@ -7,7 +7,18 @@ import { Typography } from '../components/ui/Typography';
 import { Card, CardContent } from '../components/ui/Card';
 import Image from 'next/image';
 import Head from 'next/head';
-import { ArrowRight, FileCheck, Clock, BarChart2, CheckCircle } from 'lucide-react';
+import { 
+  ArrowRight, 
+  FileCheck, 
+  Clock, 
+  BarChart2, 
+  CheckCircle,
+  Database,
+  Server,
+  HardDrive,
+  GitMerge,
+  Layers
+} from 'lucide-react';
 
 const Home: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -41,16 +52,16 @@ const Home: React.FC = () => {
                 <span className="text-white font-medium">FIRS Compliant E-Invoicing</span>
               </div>
               <Typography.Heading level="h1" className="text-4xl md:text-6xl font-bold text-white drop-shadow-md">
-                Transforming Tax Compliance for Nigerian Businesses
+                Transforming Tax Compliance Through ERP Integration
               </Typography.Heading>
               <Typography.Text size="lg" className="text-white/90 leading-relaxed max-w-xl">
-                Automate your e-invoicing workflow, ensure FIRS compliance, and eliminate manual errors with our comprehensive platform designed specifically for Nigerian businesses.
+                Automate your e-invoicing workflow through seamless ERP systems integration, ensure FIRS compliance, and eliminate manual errors with our platform designed specifically for Nigerian businesses.
               </Typography.Text>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button 
                   size="lg"
                   variant="default" 
-                  className="bg-white text-primary-700 hover:bg-gray-100 font-semibold shadow-md tracking-wide border-2 border-white"
+                  className="bg-white text-primary-700 hover:bg-gray-100 font-bold shadow-lg tracking-wide border-2 border-white text-shadow-sm"
                   onClick={() => router.push('/auth/signup')}
                 >
                   Start Your Free Trial
@@ -83,8 +94,82 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Features Section */}
+        {/* Systems Integration Section */}
         <div className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-3xl mx-auto mb-10">
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
+                Seamless Systems Integration
+              </Typography.Heading>
+              <Typography.Text size="lg" className="text-gray-600 mb-4">
+                Our platform connects directly with your existing business systems, enabling automatic e-invoice generation and submission without disrupting your workflow.
+              </Typography.Text>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
+              {[
+                { 
+                  icon: <Database className="h-10 w-10 text-primary-600" />,
+                  name: 'SAP', 
+                  description: 'Direct integration with SAP ERP for automated invoice synchronization and real-time reporting.' 
+                },
+                { 
+                  icon: <Server className="h-10 w-10 text-primary-600" />,
+                  name: 'Odoo', 
+                  description: 'Seamless Odoo integration for small to medium businesses needing end-to-end e-invoicing.' 
+                },
+                { 
+                  icon: <HardDrive className="h-10 w-10 text-primary-600" />,
+                  name: 'Oracle', 
+                  description: 'Enterprise-grade Oracle ERP integration with secure data transmission and validation.' 
+                },
+                { 
+                  icon: <GitMerge className="h-10 w-10 text-primary-600" />,
+                  name: 'Microsoft Dynamics', 
+                  description: 'Full Microsoft Dynamics 365 compatibility with bi-directional data flow.' 
+                },
+                { 
+                  icon: <Layers className="h-10 w-10 text-primary-600" />,
+                  name: 'QuickBooks', 
+                  description: 'Quick and easy QuickBooks integration for small businesses and accountants.' 
+                },
+              ].map((integration, index) => (
+                <Card key={index} className="border-none shadow-sm hover:shadow-md transition-shadow h-full">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center mb-4">
+                      <div className="mr-3">{integration.icon}</div>
+                      <Typography.Heading level="h3" className="text-xl font-semibold">
+                        {integration.name}
+                      </Typography.Heading>
+                    </div>
+                    <Typography.Text className="text-gray-600">
+                      {integration.description}
+                    </Typography.Text>
+                    <div className="mt-3">
+                      <Typography.Text className="text-sm text-primary-600 font-medium">
+                        Integration Ready
+                      </Typography.Text>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            <div className="mt-10 text-center">
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white text-primary-700 border-primary-600 hover:bg-primary-50 font-semibold"
+                onClick={() => router.push('/integrations')}
+              >
+                Explore All Integrations
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
@@ -130,52 +215,6 @@ const Home: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Systems Integration Section */}
-        <div className="py-16 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Seamless Systems Integration
-              </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-600 mb-8">
-                Our platform connects directly with your existing business systems, enabling automatic e-invoice generation and submission without disrupting your workflow.
-              </Typography.Text>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-center">
-              {[
-                { name: 'SAP', logo: '/images/integrations/sap-logo.png', alt: 'SAP Integration' },
-                { name: 'Odoo', logo: '/images/integrations/odoo-logo.png', alt: 'Odoo Integration' },
-                { name: 'Oracle', logo: '/images/integrations/oracle-logo.png', alt: 'Oracle Integration' },
-                { name: 'Microsoft Dynamics', logo: '/images/integrations/dynamics-logo.png', alt: 'Microsoft Dynamics Integration' },
-                { name: 'QuickBooks', logo: '/images/integrations/quickbooks-logo.png', alt: 'QuickBooks Integration' },
-              ].map((integration, index) => (
-                <div key={index} className="text-center p-4 flex flex-col items-center">
-                  <div className="bg-gray-50 rounded-lg h-16 w-full flex items-center justify-center mb-3 shadow-sm">
-                    <Typography.Heading level="h4" className="font-semibold text-primary-700">
-                      {integration.name}
-                    </Typography.Heading>
-                  </div>
-                  <Typography.Text className="text-sm text-gray-600">
-                    Integration Ready
-                  </Typography.Text>
-                </div>
-              ))}
-            </div>
-            
-            <div className="mt-10 text-center">
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-white text-primary-700 border-primary-600 hover:bg-primary-50"
-                onClick={() => router.push('/integrations')}
-              >
-                Explore All Integrations
-              </Button>
             </div>
           </div>
         </div>

@@ -44,7 +44,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       <div className="min-h-screen bg-background flex flex-col">
         {showNav && (
           <MainNav 
-            title="Taxpoynt eInvoice"
+            title="Taxpoynt E-Invoice"
             userInfo={isAuthenticated ? {
               name: user?.name || '',
               email: user?.email || '',
@@ -79,19 +79,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             {/* Add overlay for better text visibility */}
             <div className="absolute inset-0 bg-black bg-opacity-25 z-0"></div>
             <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-              <div className="max-w-3xl mx-auto text-center">
-                <Typography.Heading level="h1" className="text-3xl md:text-5xl font-bold mb-6 text-white drop-shadow-md">
-                  Tax Compliance Made Effortless
+              <div className="max-w-4xl mx-auto text-center md:text-left">
+                <Typography.Heading level="h1" className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-md">
+                  Tax Compliance Through Seamless ERP Integration
                 </Typography.Heading>
-                <Typography.Text size="lg" className="mb-8 text-white drop-shadow-sm">
-                  Taxpoynt delivers real-time e-invoicing that meets FIRS standards while saving you precious time.
-                  Say goodbye to tax compliance headaches and hello to automated precision.
+                <Typography.Text size="lg" className="mb-6 text-white drop-shadow-sm max-w-2xl">
+                  Automate your e-invoicing workflow through ERP systems integration, ensure FIRS compliance, and eliminate manual errors with our platform designed specifically for Nigerian businesses.
                 </Typography.Text>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button 
                     size="lg" 
                     variant="default" 
-                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-md font-semibold tracking-wide border-2 border-white"
+                    className="bg-white text-primary-700 hover:bg-gray-100 shadow-lg font-bold tracking-wide border-2 border-white text-shadow-sm"
                     onClick={() => router.push('/auth/signup')}
                   >
                     Start Your Free Trial
@@ -131,7 +130,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div className="md:col-span-2">
-                  <Typography.Heading level="h3" className="text-xl font-bold mb-4">Taxpoynt eInvoice</Typography.Heading>
+                  <Typography.Heading level="h3" className="text-xl font-bold mb-4">Taxpoynt E-Invoice</Typography.Heading>
                   <Typography.Text variant="secondary" className="max-w-md mb-6">
                     Nigeria's leading e-invoicing platform that streamlines tax compliance for businesses of all sizes.
                     Certified by FIRS and trusted by thousands of companies across Nigeria.
@@ -185,7 +184,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
               <div className="flex flex-col md:flex-row justify-between items-center">
                 <div className="mb-4 md:mb-0">
                   <p className="text-sm text-text-secondary">
-                    {'©'} {Number(new Date().getFullYear())} Taxpoynt eInvoice. All rights reserved.
+                    {'©'} {Number(new Date().getFullYear())} Taxpoynt E-Invoice. All rights reserved.
                   </p>
                 </div>
                 
