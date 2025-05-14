@@ -79,6 +79,7 @@ export const useToast = () => {
 export interface ToastProps extends VariantProps<typeof toastVariants> {
   toast: Toast;
   onDismiss: (id: string) => void;
+  className?: string;
 }
 
 export const ToastComponent: React.FC<ToastProps> = ({ toast, onDismiss, variant, className }) => {
