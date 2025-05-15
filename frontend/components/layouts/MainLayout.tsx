@@ -38,10 +38,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         <title>{title}</title>
         <meta name="description" content={description} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        {/* Favicon implementation with full cross-browser support */}
+        <link rel="icon" href="/icons/logo.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icons/logo.svg" />
+        <link rel="manifest" href="/site.webmanifest" />
       </Head>
 
       <div className="min-h-screen bg-background flex flex-col">

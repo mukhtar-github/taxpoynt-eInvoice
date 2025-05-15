@@ -1,0 +1,19 @@
+{
+  "name": "Taxpoynt E-Invoice",
+  "short_name": "Taxpoynt",
+  "icons": [
+    {
+      "src": "/icons/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/logo.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#4F46E5",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

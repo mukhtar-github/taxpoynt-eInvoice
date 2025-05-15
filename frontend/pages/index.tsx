@@ -40,10 +40,10 @@ const Home: React.FC = () => {
         <title>Taxpoynt E-Invoice | Automated Tax Compliance for Nigerian Businesses</title>
         <meta name="description" content="Transform your tax compliance with Nigeria's premier e-invoicing platform. Save time, eliminate errors, and stay compliant with FIRS regulations." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        {/* Using consistent favicon implementation from MainLayout */}
+        <link rel="icon" href="/icons/logo.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icons/logo.svg" />
+        <link rel="manifest" href="/site.webmanifest" />
       </Head>
       <MainLayout>
         {/* Hero Section - Enhanced with image and better layout */}
@@ -85,7 +85,7 @@ const Home: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent">
                   <div className="relative h-full flex items-center justify-center">
                     <Image 
-                      src="/logo.svg" 
+                      src="/icons/logo.svg" 
                       alt="Taxpoynt E-Invoice" 
                       width={150} 
                       height={150} 
