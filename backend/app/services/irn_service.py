@@ -43,36 +43,59 @@ def generate_irn(invoice_data: Dict[str, Any]) -> Tuple[str, str, str]:
     Returns:
         Tuple containing (irn_value, verification_code, hash_value)
     """
-    # Generate a unique identifier (UUID v4)
-    unique_id = str(uuid.uuid4())
+    # Import the IRN generator
+    from app.utils.irn_generator import generate_firs_irn
     
-    # Create a timestamp component in the format YYYYMMDDHHMMSS
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    try:
+        # Generate IRN using the enhanced FIRS-compliant generator
+        irn_result = generate_firs_irn(invoice_data)
+        
+        # Extract components from the result
+        irn_value = irn_result['irn']
+        verification_code = irn_result['verification_code']
+        hash_value = irn_result['hash_value']
+        
+        # Log successful generation
+        logger.info(f"Generated IRN: {irn_value} for invoice: {invoice_data.get('invoice_number', '')}")  
+        
+        return irn_value, verification_code, hash_value
     
-    # Extract key invoice fields for the hash
-    invoice_number = invoice_data.get('invoice_number', '')
-    invoice_date = invoice_data.get('invoice_date', '')
-    customer_tax_id = invoice_data.get('customer_tax_id', '')
-    total_amount = str(invoice_data.get('total_amount', 0))
-    
-    # Create a string to hash
-    data_to_hash = f"{invoice_number}|{invoice_date}|{customer_tax_id}|{total_amount}|{timestamp}|{unique_id}"
-    
-    # Create a hash of the invoice data for verification
-    hash_value = hashlib.sha256(data_to_hash.encode()).hexdigest()
-    
-    # Generate a verification code using HMAC and a secret key
-    verification_code = hmac.new(
-        settings.SECRET_KEY.encode(),
-        hash_value.encode(),
-        hashlib.sha256
-    ).hexdigest()[:12]  # Take first 12 characters for brevity
-    
-    # Construct the IRN value
-    # Format: IRN-{timestamp}-{first 8 chars of unique_id}-{first 6 chars of hash}
-    irn_value = f"IRN-{timestamp}-{unique_id[:8]}-{hash_value[:6]}".upper()
-    
-    return irn_value, verification_code, hash_value
+    except Exception as e:
+        # Log error
+        logger.error(f"Error generating IRN: {str(e)}")
+        
+        # Fallback to legacy method if new implementation fails
+        # This ensures backward compatibility
+        unique_id = str(uuid.uuid4())
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        
+        # Extract key invoice fields for the hash
+        invoice_number = invoice_data.get('invoice_number', '')
+        invoice_date = invoice_data.get('invoice_date', '')
+        customer_tax_id = invoice_data.get('customer_tax_id', '')
+        total_amount = str(invoice_data.get('total_amount', 0))
+        
+        # Create a string to hash
+        data_to_hash = f"{invoice_number}|{invoice_date}|{customer_tax_id}|{total_amount}|{timestamp}|{unique_id}"
+        
+        # Create a hash of the invoice data for verification
+        hash_value = hashlib.sha256(data_to_hash.encode()).hexdigest()
+        
+        # Generate a verification code using HMAC and a secret key
+        verification_code = hmac.new(
+            settings.SECRET_KEY.encode(),
+            hash_value.encode(),
+            hashlib.sha256
+        ).hexdigest()[:12]  # Take first 12 characters for brevity
+        
+        # Construct the IRN value with legacy format
+        # Format: IRN-{timestamp}-{first 8 chars of unique_id}-{first 6 chars of hash}
+        irn_value = f"IRN-{timestamp}-{unique_id[:8]}-{hash_value[:6]}".upper()
+        
+        # Log fallback to legacy method
+        logger.warning(f"Used legacy IRN generation for invoice: {invoice_data.get('invoice_number', '')}")  
+        
+        return irn_value, verification_code, hash_value
 
 
 def verify_irn(
@@ -93,39 +116,65 @@ def verify_irn(
     Returns:
         Tuple containing (is_valid, message)
     """
-    # Find the IRN record in the database
-    irn_record = db.query(IRNRecord).filter(IRNRecord.irn_value == irn_value).first()
-    
-    if not irn_record:
-        return False, "IRN not found"
-    
-    # Check if the IRN is active
-    if irn_record.status != IRNStatus.ACTIVE:
-        return False, f"IRN is {irn_record.status.value}"
-    
-    # Check if the IRN has expired
-    if datetime.utcnow() > irn_record.expires_at:
-        # Update the status to expired
-        irn_record.status = IRNStatus.EXPIRED
-        db.add(irn_record)
-        db.commit()
-        return False, "IRN has expired"
-    
-    # Verify the verification code
-    expected_verification_code = hmac.new(
-        settings.SECRET_KEY.encode(),
-        irn_record.hash_value.encode(),
-        hashlib.sha256
-    ).hexdigest()[:12]
-    
-    if verification_code != expected_verification_code:
-        return False, "Invalid verification code"
-    
-    # Verify the invoice data hash
-    # This would involve creating a hash of the provided invoice data and comparing
-    # it with the stored hash, but for simplicity we'll skip the detailed verification
-    
-    return True, "IRN is valid"
+    try:
+        # First, check if this IRN exists in the database for quick validation
+        irn_record = db.query(IRNRecord).filter(IRNRecord.irn_value == irn_value).first()
+        
+        if irn_record:
+            # Check if the IRN has expired
+            if irn_record.expiration_date and irn_record.expiration_date < datetime.utcnow():
+                return False, "IRN has expired"
+            
+            # Check if the IRN is revoked
+            if irn_record.status == IRNStatus.REVOKED:
+                return False, "IRN has been revoked"
+            
+            # Check if verification code matches
+            if verification_code != irn_record.verification_code:
+                return False, "Invalid verification code"
+            
+            # If stored invoice data exists, verify it against the provided data
+            if irn_record.invoice_data:
+                stored_data = decode_invoice_data(irn_record.invoice_data)
+                
+                # Verify key invoice details
+                if stored_data.get('invoice_number') != invoice_data.get('invoice_number'):
+                    return False, "Invoice number mismatch"
+                
+                if stored_data.get('total_amount') != invoice_data.get('total_amount'):
+                    return False, "Invoice amount mismatch"
+                
+                # More detailed validations could be added here
+            
+            return True, "IRN verification successful"
+        
+        # If not in database, determine if it's a FIRS-formatted IRN or a legacy IRN
+        if irn_value.startswith("IRN-"):
+            # Legacy format: IRN-{timestamp}-{unique_id}-{hash}
+            parts = irn_value.split('-')
+            if len(parts) != 4 or parts[0] != 'IRN':
+                return False, "Invalid IRN format"
+            
+            # Currently, we can't fully verify an unknown legacy IRN without the original unique_id
+            return False, "Legacy IRN not found in database"
+        else:
+            # Attempt to verify FIRS-formatted IRN using the new generator
+            from app.utils.irn_generator import verify_irn as verify_firs_irn
+            
+            # Use the new verification function
+            is_valid, message = verify_firs_irn(irn_value, invoice_data)
+            
+            if is_valid:
+                logger.info(f"Verified external FIRS IRN: {irn_value}")
+                # Consider adding this verified IRN to the database
+                return True, "External FIRS IRN verification successful"
+            else:
+                logger.warning(f"Failed to verify external FIRS IRN: {irn_value} - {message}")
+                return False, message
+        
+    except Exception as e:
+        logger.error(f"Error verifying IRN: {e}")
+        return False, f"Verification error: {str(e)}"
 
 
 def get_irn_expiration_date() -> datetime:

@@ -6,8 +6,8 @@ import datetime
 import pytest # type: ignore
 from fastapi import HTTPException # type: ignore
 
-from app.utils.irn import (
-    generate_irn,
+from app.utils.irn_generator import (
+    generate_firs_irn as generate_irn,
     parse_irn,
     validate_invoice_number,
     validate_irn,

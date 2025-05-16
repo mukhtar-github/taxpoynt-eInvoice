@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field # type: ignore
 from sqlalchemy.orm import Session
 
 from app.utils.encryption import encrypt_irn_data, extract_keys_from_file, load_public_key # type: ignore
-from app.utils.irn import generate_irn, validate_irn # type: ignore
+from app.utils.irn_generator import generate_firs_irn as generate_irn, validate_irn # Using new implementation
 from app.utils.qr_code import generate_qr_code, generate_qr_code_for_irn, qr_code_as_base64 # type: ignore
 from app.utils.crypto_signing import sign_invoice, verify_csid, csid_generator
 from app.db.session import get_db # type: ignore

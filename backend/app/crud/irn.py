@@ -8,7 +8,7 @@ import logging
 
 from app.models.irn import IRNRecord
 from app.schemas.irn import IRNGenerateRequest, IRNMetricsResponse
-from app.utils.irn import validate_invoice_number, validate_service_id, validate_timestamp, generate_irn as utils_generate_irn
+from app.utils.irn_generator import validate_invoice_number, validate_service_id, validate_timestamp, generate_firs_irn as utils_generate_irn
 from fastapi import HTTPException # type: ignore
 
 logger = logging.getLogger(__name__)

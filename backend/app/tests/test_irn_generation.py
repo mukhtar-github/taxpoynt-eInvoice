@@ -4,11 +4,11 @@ import re
 from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
 
-from app.utils.irn import (
+from app.utils.irn_generator import (
     validate_invoice_number, 
     validate_service_id,
     validate_timestamp,
-    generate_irn, 
+    generate_firs_irn as generate_irn, 
     parse_irn, 
     validate_irn
 )
