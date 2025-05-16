@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
 
 from app.routers import crypto
-from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn, validation_management, dashboard
+from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn, validation_management, dashboard, odoo_ubl
 from app.core.config import settings
 from app.dependencies.auth import get_current_user_from_token # type: ignore
 from app.middleware import setup_middleware
@@ -81,6 +81,7 @@ app.include_router(api_credentials.router, prefix=settings.API_V1_STR, tags=["ap
 app.include_router(bulk_irn.router, prefix=f"{settings.API_V1_STR}/bulk-irn", tags=["bulk-irn"])
 app.include_router(validation_management.router, prefix=f"{settings.API_V1_STR}/validation-management", tags=["validation-management"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+app.include_router(odoo_ubl.router, prefix=settings.API_V1_STR, tags=["odoo-ubl"])
 
 if __name__ == "__main__":
     import uvicorn # type: ignore

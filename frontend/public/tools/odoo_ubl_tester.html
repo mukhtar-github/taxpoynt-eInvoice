@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odoo UBL Mapping Tester</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; }
+        .card { margin-bottom: 20px; }
+        pre { max-height: 400px; overflow: auto; }
+        #xmlViewer { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Odoo UBL Mapping Tester</h1>
+        <p class="lead">A simple tool for testing the Odoo to BIS Billing 3.0 UBL mapping functionality</p>
+        
+        <!-- Connection Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Odoo Connection Settings</h5>
+            </div>
+            <div class="card-body">
+                <form id="connectionForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="host" class="form-label">Host URL</label>
+                            <input type="text" class="form-control" id="host" placeholder="https://odoo.example.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="db" class="form-label">Database</label>
+                            <input type="text" class="form-control" id="db" placeholder="odoo_db">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="user" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="user" placeholder="admin">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" placeholder="Password">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="apiKey" class="form-label">API Key (optional, use this or password)</label>
+                        <input type="text" class="form-control" id="apiKey" placeholder="API Key">
+                    </div>
+                    <button type="button" id="testConnectionBtn" class="btn btn-primary">Test Connection</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Invoices List -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Odoo Invoices</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="fromDate" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="fromDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="toDate" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="toDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="includeDraft" class="form-label">Include Draft</label>
+                        <select class="form-select" id="includeDraft">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" id="fetchInvoicesBtn" class="btn btn-primary">Fetch Invoices</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" id="invoicesTable">
+                        <thead>
+                            <tr>
+                                <th>Invoice ID</th>
+                                <th>Number</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Invoices will be listed here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="invoicePagination" class="mt-3">
+                    <!-- Pagination will be added here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- UBL Mapping Results -->
+        <div class="card">
+            <div class="card-header">
+                <h5>UBL Mapping Results</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="json-tab" data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab">JSON</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="xml-tab" data-bs-toggle="tab" data-bs-target="#xml" type="button" role="tab">XML</button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="resultTabsContent">
+                    <div class="tab-pane fade show active" id="json" role="tabpanel">
+                        <pre id="jsonViewer">Select an invoice to view UBL mapping results</pre>
+                    </div>
+                    <div class="tab-pane fade" id="xml" role="tabpanel">
+                        <div id="xmlViewer">Select an invoice to view UBL XML</div>
+                        <div class="mt-3">
+                            <button id="downloadXmlBtn" class="btn btn-sm btn-secondary" disabled>Download XML</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Batch Processing -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Batch Processing</h5>
+            </div>
+            <div class="card-body">
+                <p>Process multiple invoices at once using the same date range settings as above.</p>
+                <button type="button" id="batchProcessBtn" class="btn btn-primary">Batch Process Invoices</button>
+                <div class="mt-3">
+                    <pre id="batchResultViewer">Batch processing results will appear here</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Token Modal -->
+    <div class="modal fade" id="tokenModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Authentication Required</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Enter your API token to access the Odoo UBL API:</p>
+                    <div class="mb-3">
+                        <label for="apiToken" class="form-label">API Token</label>
+                        <input type="text" class="form-control" id="apiToken">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveTokenBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Base API URL
+        const API_BASE_URL = '/api/v1/odoo-ubl';
+        let apiToken = localStorage.getItem('odooUblApiToken') || '';
+        let currentInvoiceId = null;
+        let currentPage = 1;
+        const pageSize = 10;
+        
+        // DOM elements
+        const tokenModal = new bootstrap.Modal(document.getElementById('tokenModal'));
+        const jsonViewer = document.getElementById('jsonViewer');
+        const xmlViewer = document.getElementById('xmlViewer');
+        const downloadXmlBtn = document.getElementById('downloadXmlBtn');
+        
+        // Check if token exists
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!apiToken) {
+                tokenModal.show();
+            }
+            
+            // Set today's date and one month ago for default date range
+            const today = new Date();
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            
+            document.getElementById('toDate').value = formatDate(today);
+            document.getElementById('fromDate').value = formatDate(oneMonthAgo);
+        });
+        
+        // Save token
+        document.getElementById('saveTokenBtn').addEventListener('click', function() {
+            const tokenInput = document.getElementById('apiToken');
+            apiToken = tokenInput.value.trim();
+            if (apiToken) {
+                localStorage.setItem('odooUblApiToken', apiToken);
+                tokenModal.hide();
+            } else {
+                alert('Please enter a valid API token');
+            }
+        });
+        
+        // Test connection
+        document.getElementById('testConnectionBtn').addEventListener('click', function() {
+            const connectionParams = getConnectionParams();
+            if (!validateConnectionParams(connectionParams)) {
+                return;
+            }
+            
+            const queryParams = new URLSearchParams(connectionParams);
+            fetchWithAuth(`${API_BASE_URL}/test-connection?${queryParams}`)
+                .then(data => {
+                    jsonViewer.textContent = JSON.stringify(data, null, 2);
+                    alert('Connection test successful!');
+                })
+                .catch(error => {
+                    jsonViewer.textContent = JSON.stringify(error, null, 2);
+                    alert('Connection test failed: ' + error.message);
+                });
+        });
+        
+        // Fetch invoices
+        document.getElementById('fetchInvoicesBtn').addEventListener('click', function() {
+            fetchInvoices(1);
+        });
+        
+        // Batch process
+        document.getElementById('batchProcessBtn').addEventListener('click', function() {
+            const connectionParams = getConnectionParams();
+            if (!validateConnectionParams(connectionParams)) {
+                return;
+            }
+            
+            const batchParams = {
+                ...connectionParams,
+                from_date: document.getElementById('fromDate').value,
+                to_date: document.getElementById('toDate').value,
+                include_draft: document.getElementById('includeDraft').value === 'true',
+                page: currentPage,
+                page_size: pageSize
+            };
+            
+            fetchWithAuth(`${API_BASE_URL}/batch-process`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(batchParams)
+            })
+            .then(data => {
+                document.getElementById('batchResultViewer').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('batchResultViewer').textContent = JSON.stringify(error, null, 2);
+                alert('Batch processing failed: ' + error.message);
+            });
+        });
+        
+        // Helper functions
+        function getConnectionParams() {
+            return {
+                host: document.getElementById('host').value.trim(),
+                db: document.getElementById('db').value.trim(),
+                user: document.getElementById('user').value.trim(),
+                password: document.getElementById('password').value.trim(),
+                api_key: document.getElementById('apiKey').value.trim()
+            };
+        }
+        
+        function validateConnectionParams(params) {
+            if (!params.host || !params.db || !params.user) {
+                alert('Host, database, and username are required');
+                return false;
+            }
+            if (!params.password && !params.api_key) {
+                alert('Either password or API key is required');
+                return false;
+            }
+            return true;
+        }
+        
+        function fetchInvoices(page) {
+            const connectionParams = getConnectionParams();
+            if (!validateConnectionParams(connectionParams)) {
+                return;
+            }
+            
+            currentPage = page;
+            const queryParams = new URLSearchParams({
+                ...connectionParams,
+                from_date: document.getElementById('fromDate').value,
+                to_date: document.getElementById('toDate').value,
+                include_draft: document.getElementById('includeDraft').value,
+                page: page,
+                page_size: pageSize
+            });
+            
+            fetchWithAuth(`${API_BASE_URL}/invoices?${queryParams}`)
+                .then(data => {
+                    renderInvoicesTable(data.data);
+                    renderPagination(data.pagination);
+                })
+                .catch(error => {
+                    alert('Failed to fetch invoices: ' + error.message);
+                });
+        }
+        
+        function renderInvoicesTable(invoices) {
+            const tbody = document.querySelector('#invoicesTable tbody');
+            tbody.innerHTML = '';
+            
+            if (!invoices || invoices.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5" class="text-center">No invoices found</td>';
+                tbody.appendChild(row);
+                return;
+            }
+            
+            invoices.forEach(invoice => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${invoice.id}</td>
+                    <td>${invoice.number || 'N/A'}</td>
+                    <td>${invoice.date || 'N/A'}</td>
+                    <td>${formatCurrency(invoice.amount_total, invoice.currency_id?.name || 'USD')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info view-ubl" data-id="${invoice.id}">View UBL</button>
+                        <button class="btn btn-sm btn-secondary view-xml" data-id="${invoice.id}">View XML</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Add event listeners to buttons
+            document.querySelectorAll('.view-ubl').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    viewUbl(this.getAttribute('data-id'));
+                });
+            });
+            
+            document.querySelectorAll('.view-xml').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    viewXml(this.getAttribute('data-id'));
+                });
+            });
+        }
+        
+        function renderPagination(pagination) {
+            if (!pagination) return;
+            
+            const paginationEl = document.getElementById('invoicePagination');
+            paginationEl.innerHTML = '';
+            
+            if (pagination.total_pages <= 1) return;
+            
+            const nav = document.createElement('nav');
+            nav.setAttribute('aria-label', 'Invoice pagination');
+            
+            const ul = document.createElement('ul');
+            ul.className = 'pagination';
+            
+            // Previous page
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            const prevLink = document.createElement('a');
+            prevLink.className = 'page-link';
+            prevLink.href = '#';
+            prevLink.textContent = 'Previous';
+            if (currentPage > 1) {
+                prevLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fetchInvoices(currentPage - 1);
+                });
+            }
+            prevLi.appendChild(prevLink);
+            ul.appendChild(prevLi);
+            
+            // Page numbers
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                const link = document.createElement('a');
+                link.className = 'page-link';
+                link.href = '#';
+                link.textContent = i;
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fetchInvoices(i);
+                });
+                li.appendChild(link);
+                ul.appendChild(li);
+            }
+            
+            // Next page
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === pagination.total_pages ? 'disabled' : ''}`;
+            const nextLink = document.createElement('a');
+            nextLink.className = 'page-link';
+            nextLink.href = '#';
+            nextLink.textContent = 'Next';
+            if (currentPage < pagination.total_pages) {
+                nextLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fetchInvoices(currentPage + 1);
+                });
+            }
+            nextLi.appendChild(nextLink);
+            ul.appendChild(nextLi);
+            
+            nav.appendChild(ul);
+            paginationEl.appendChild(nav);
+        }
+        
+        function viewUbl(invoiceId) {
+            const connectionParams = getConnectionParams();
+            if (!validateConnectionParams(connectionParams)) {
+                return;
+            }
+            
+            currentInvoiceId = invoiceId;
+            const queryParams = new URLSearchParams({
+                ...connectionParams,
+                validate_schema: true
+            });
+            
+            fetchWithAuth(`${API_BASE_URL}/invoices/${invoiceId}/ubl?${queryParams}`)
+                .then(data => {
+                    // Show JSON tab
+                    document.getElementById('json-tab').click();
+                    jsonViewer.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    jsonViewer.textContent = JSON.stringify(error, null, 2);
+                    alert('Failed to get UBL mapping: ' + error.message);
+                });
+        }
+        
+        function viewXml(invoiceId) {
+            const connectionParams = getConnectionParams();
+            if (!validateConnectionParams(connectionParams)) {
+                return;
+            }
+            
+            currentInvoiceId = invoiceId;
+            const queryParams = new URLSearchParams({
+                ...connectionParams,
+                validate_schema: true
+            });
+            
+            // Show XML tab
+            document.getElementById('xml-tab').click();
+            
+            // Use fetch directly to get the raw XML response
+            fetch(`${API_BASE_URL}/invoices/${invoiceId}/ubl/xml?${queryParams}`, {
+                headers: {
+                    'Authorization': `Bearer ${apiToken}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(xml => {
+                // Pretty print XML
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xml, "text/xml");
+                const serializer = new XMLSerializer();
+                const prettyXml = formatXml(serializer.serializeToString(xmlDoc));
+                
+                xmlViewer.textContent = prettyXml;
+                downloadXmlBtn.disabled = false;
+                downloadXmlBtn.onclick = function() {
+                    downloadXmlFile(xml, `invoice_${invoiceId}_ubl.xml`);
+                };
+            })
+            .catch(error => {
+                xmlViewer.textContent = `Error loading XML: ${error.message}`;
+                downloadXmlBtn.disabled = true;
+            });
+        }
+        
+        // Utility functions
+        function fetchWithAuth(url, options = {}) {
+            if (!apiToken) {
+                tokenModal.show();
+                return Promise.reject(new Error('Authentication required'));
+            }
+            
+            const headers = options.headers || {};
+            headers['Authorization'] = `Bearer ${apiToken}`;
+            
+            return fetch(url, {
+                ...options,
+                headers
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Token expired or invalid
+                        tokenModal.show();
+                        throw new Error('Authentication failed');
+                    }
+                    return response.json().then(error => {
+                        throw new Error(error.detail || `HTTP error ${response.status}`);
+                    });
+                }
+                return response.json();
+            });
+        }
+        
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        function formatCurrency(amount, currency) {
+            if (amount === undefined || amount === null) return 'N/A';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency
+            }).format(amount);
+        }
+        
+        function formatXml(xml) {
+            let formatted = '';
+            let indent = '';
+            const tab = '  ';
+            xml.split(/>\s*</).forEach(function(node) {
+                if (node.match(/^\/\w/)) {
+                    indent = indent.substring(tab.length);
+                }
+                formatted += indent + '<' + node + '>\r\n';
+                if (node.match(/^<?\w[^>]*[^\/]$/) && !node.startsWith("?")) {
+                    indent += tab;
+                }
+            });
+            return formatted.substring(1, formatted.length - 3);
+        }
+        
+        function downloadXmlFile(xml, filename) {
+            const blob = new Blob([xml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
