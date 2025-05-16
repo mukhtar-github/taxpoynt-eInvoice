@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlparse
 import odoorpc
 
+from app.services.odoo_connector import OdooConnector, OdooConnectionError, OdooAuthenticationError, OdooDataError
 from app.schemas.integration import OdooAuthMethod, OdooConnectionTestRequest, OdooConfig, IntegrationTestResult
 
 logger = logging.getLogger(__name__)
@@ -19,8 +20,7 @@ logger = logging.getLogger(__name__)
 
 def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, OdooConfig]) -> IntegrationTestResult:
     """
-    Test connection to an Odoo server using OdooRPC with enhanced Odoo 18+ support.
-    Also checks for FIRS integration capabilities based on environment setting.
+    Test connection to an Odoo server using the OdooConnector.
     
     Args:
         connection_params: Connection parameters for Odoo server
@@ -29,43 +29,23 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         IntegrationTestResult with success status, message, and details
     """
     try:
-        # Parse URL to get host, protocol, and port
-        parsed_url = urlparse(str(connection_params.url))
-        host = parsed_url.netloc.split(':')[0]
-        protocol = parsed_url.scheme or 'jsonrpc'
+        # Create an OdooConnector instance
+        connector = OdooConnector(connection_params)
         
-        # Determine port (default is 8069 unless specified)
-        port = 443 if protocol == 'jsonrpc+ssl' else 8069
-        if ':' in parsed_url.netloc:
-            try:
-                port = int(parsed_url.netloc.split(':')[1])
-            except (IndexError, ValueError):
-                pass
+        # Authenticate to test the connection
+        connector.authenticate()
         
-        # Initialize OdooRPC connection
-        odoo = odoorpc.ODOO(host, protocol=protocol, port=port)
-        
-        # Authenticate with the server
-        password_or_key = (
-            connection_params.password 
-            if connection_params.auth_method == OdooAuthMethod.PASSWORD 
-            else connection_params.api_key
-        )
-        
-        # Login to Odoo
-        odoo.login(connection_params.database, connection_params.username, password_or_key)
-        
-        # Get user info to verify connection
-        user = odoo.env['res.users'].browse(odoo.env.uid)
+        # Get user info
+        user_info = connector.get_user_info()
         
         # Get server version
-        version_info = odoo.version
-        major_version = int(version_info.get('server_version_info', [0])[0])
+        version_info = connector.version_info
+        major_version = connector.major_version
         
         # Test access to partners to verify permissions
         partner_count = 0
         try:
-            partners = odoo.env['res.partner'].search([('is_company', '=', True)], limit=5)
+            partners = connector.odoo.env['res.partner'].search([('is_company', '=', True)], limit=5)
             partner_count = len(partners) if partners else 0
         except Exception as e:
             logger.warning(f"Access to partners limited: {str(e)}")
@@ -74,16 +54,16 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         invoice_features = {}
         try:
             # Check for account.move model (used for invoices in recent Odoo versions)
-            if 'account.move' in odoo.env:
+            if 'account.move' in connector.odoo.env:
                 invoice_model = 'account.move'
-                invoice_count = odoo.env[invoice_model].search_count([('move_type', 'in', ['out_invoice', 'out_refund'])])
+                invoice_count = connector.odoo.env[invoice_model].search_count([('move_type', 'in', ['out_invoice', 'out_refund'])])
                 invoice_features['model'] = invoice_model
                 invoice_features['count'] = invoice_count
                 
                 # Test Odoo 18+ specific features if available
                 if major_version >= 18:
                     # Check for e-invoicing capabilities
-                    module_list = odoo.env['ir.module.module'].search_read(
+                    module_list = connector.odoo.env['ir.module.module'].search_read(
                         [('name', 'in', ['account_edi', 'l10n_ng_einvoice']), ('state', '=', 'installed')],
                         ['name', 'state']
                     )
@@ -92,7 +72,7 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
                     # Check for IRN field support
                     has_irn_field = False
                     try:
-                        fields_data = odoo.env[invoice_model].fields_get(['irn_number', 'l10n_ng_irn'])
+                        fields_data = connector.odoo.env[invoice_model].fields_get(['irn_number', 'l10n_ng_irn'])
                         has_irn_field = any(f in fields_data for f in ['irn_number', 'l10n_ng_irn'])
                     except:
                         pass
@@ -106,7 +86,7 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         if major_version >= 18:
             try:
                 # Check if REST API module is installed
-                rest_api_installed = odoo.env['ir.module.module'].search_count(
+                rest_api_installed = connector.odoo.env['ir.module.module'].search_count(
                     [('name', 'in', ['restful', 'rest_api']), ('state', '=', 'installed')]
                 ) > 0
                 api_endpoints['rest_api_available'] = rest_api_installed
@@ -119,7 +99,7 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         firs_features = {}
         try:
             # Check for FIRS-related fields and modules
-            firs_modules = odoo.env['ir.module.module'].search_read(
+            firs_modules = connector.odoo.env['ir.module.module'].search_read(
                 [('name', 'like', 'firs'), ('state', '=', 'installed')],
                 ['name', 'state']
             )
@@ -140,12 +120,12 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
         
         return IntegrationTestResult(
             success=True,
-            message=f"Successfully connected to Odoo server as {user.name}",
+            message=f"Successfully connected to Odoo server as {user_info['name']}",
             details={
                 "version_info": version_info,
                 "major_version": major_version,
-                "uid": odoo.env.uid,
-                "user_name": user.name,
+                "uid": connector.odoo.env.uid,
+                "user_name": user_info['name'],
                 "partner_count": partner_count,
                 "invoice_features": invoice_features,
                 "api_endpoints": api_endpoints,
@@ -154,38 +134,43 @@ def test_odoo_connection(connection_params: Union[OdooConnectionTestRequest, Odo
             }
         )
         
-    except odoorpc.error.RPCError as e:
-        logger.error(f"OdooRPC error: {str(e)}")
+    except OdooConnectionError as e:
+        logger.error(f"Odoo connection error: {str(e)}")
         return IntegrationTestResult(
             success=False,
-            message=f"OdooRPC error: {str(e)}",
-            details={
-                "error": str(e), 
-                "error_type": "RPCError",
-                "error_code": getattr(e, 'code', None),
-                "error_data": getattr(e, 'data', None)
-            }
+            message=f"Connection error: {str(e)}",
+            details={"error": str(e), "error_type": "ConnectionError"}
         )
-    except odoorpc.error.InternalError as e:
-        logger.error(f"OdooRPC internal error: {str(e)}")
+    except OdooAuthenticationError as e:
+        logger.error(f"Odoo authentication error: {str(e)}")
         return IntegrationTestResult(
             success=False,
-            message=f"OdooRPC internal error: {str(e)}",
-            details={
-                "error": str(e), 
-                "error_type": "InternalError"
-            }
+            message=f"Authentication error: {str(e)}",
+            details={"error": str(e), "error_type": "AuthenticationError"}
         )
     except Exception as e:
         logger.exception(f"Error testing Odoo connection: {str(e)}")
         return IntegrationTestResult(
             success=False,
             message=f"Error connecting to Odoo server: {str(e)}",
-            details={
-                "error": str(e), 
-                "error_type": type(e).__name__
-            }
+            details={"error": str(e), "error_type": type(e).__name__}
         )
+
+
+def _create_error_response(page: int, page_size: int, error_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper function to create a standard error response with pagination metadata."""
+    return {
+        "invoices": [],
+        "total": 0,
+        "page": page,
+        "page_size": page_size,
+        "pages": 0,
+        "has_next": False,
+        "has_prev": page > 1,
+        "next_page": None,
+        "prev_page": page - 1 if page > 1 else None,
+        "error": error_data
+    }
 
 
 def fetch_odoo_invoices(
@@ -198,249 +183,50 @@ def fetch_odoo_invoices(
     page_size: int = 20
 ) -> Dict[str, Any]:
     """
-    Fetch invoices from Odoo server using OdooRPC.
+    Fetch invoices from Odoo server using OdooConnector.
     
     Args:
         config: Odoo configuration
-        from_date: Fetch invoices from this date (default: None)
-        limit: Maximum number of invoices to fetch (default: 100)
-        offset: Offset for pagination (default: 0)
+        from_date: Fetch invoices from this date
+        to_date: Fetch invoices up to this date
+        include_draft: Whether to include draft invoices
+        include_attachments: Whether to include document attachments
+        page: Page number for pagination
+        page_size: Number of records per page
         
     Returns:
-        List of invoice dictionaries
+        Dictionary with invoices and pagination metadata
     """
     try:
-        # Parse URL to get host, protocol, and port
-        parsed_url = urlparse(str(config.url))
-        host = parsed_url.netloc.split(':')[0]
-        protocol = parsed_url.scheme or 'jsonrpc'
+        # Create connector and authenticate
+        connector = OdooConnector(config)
         
-        # Determine port (default is 8069 unless specified)
-        port = 443 if protocol == 'jsonrpc+ssl' else 8069
-        if ':' in parsed_url.netloc:
-            try:
-                port = int(parsed_url.netloc.split(':')[1])
-            except (IndexError, ValueError):
-                pass
-        
-        # Initialize OdooRPC connection
-        odoo = odoorpc.ODOO(host, protocol=protocol, port=port)
-        
-        # Authenticate with the server
-        password_or_key = (
-            config.password 
-            if config.auth_method == OdooAuthMethod.PASSWORD 
-            else config.api_key
+        # Get invoices with pagination
+        return connector.get_invoices(
+            from_date=from_date,
+            to_date=to_date,
+            include_draft=include_draft,
+            include_attachments=include_attachments,
+            page=page,
+            page_size=page_size
         )
         
-        # Login to Odoo
-        odoo.login(config.database, config.username, password_or_key)
-        
-        # Get the invoice model (account.move in Odoo 13+)
-        Invoice = odoo.env['account.move']
-        
-        # Build search domain
-        domain = [
-            ('move_type', '=', 'out_invoice'),  # Only customer invoices
-        ]
-        
-        # Filter by state based on include_draft parameter
-        if not include_draft:
-            domain.append(('state', '=', 'posted'))  # Only posted invoices
-        
-        # Add date filters if provided
-        if from_date:
-            domain.append(('write_date', '>=', from_date.strftime('%Y-%m-%d %H:%M:%S')))
-        if to_date:
-            domain.append(('write_date', '<=', to_date.strftime('%Y-%m-%d %H:%M:%S')))
-        
-        # Calculate offset based on page and page_size
-        offset = (page - 1) * page_size
-        
-        # Get total count of matching invoices
-        total_invoices = Invoice.search_count(domain)
-        
-        # Search for invoices matching the criteria with pagination
-        invoice_ids = Invoice.search(domain, limit=page_size, offset=offset)
-        
-        # If no invoices found
-        if not invoice_ids:
-            return {
-                "invoices": [],
-                "total": 0,
-                "page": page,
-                "page_size": page_size,
-                "pages": 0,
-                "has_next": False,
-                "has_prev": page > 1,
-                "next_page": None,
-                "prev_page": page - 1 if page > 1 else None
-            }
-        
-        # Calculate pagination info
-        total_pages = (total_invoices + page_size - 1) // page_size
-        has_next = page < total_pages
-        next_page = page + 1 if has_next else None
-        has_prev = page > 1
-        prev_page = page - 1 if has_prev else None
-        
-        # Prepare results list
-        invoices = []
-        
-        # Browse invoice records
-        for invoice in Invoice.browse(invoice_ids):
-            # Get partner (customer) data
-            partner = invoice.partner_id
-            
-            # Get currency
-            currency = invoice.currency_id
-            
-            # Format invoice data
-            invoice_data = {
-                "id": invoice.id,
-                "name": invoice.name,
-                "invoice_number": invoice.name,
-                "reference": getattr(invoice, 'ref', '') or '',
-                "invoice_date": invoice.invoice_date,
-                "invoice_date_due": invoice.invoice_date_due,
-                "state": invoice.state,
-                "amount_total": invoice.amount_total,
-                "amount_untaxed": invoice.amount_untaxed,
-                "amount_tax": invoice.amount_tax,
-                "currency": {
-                    "id": currency.id,
-                    "name": currency.name,
-                    "symbol": currency.symbol
-                },
-                "partner": {
-                    "id": partner.id,
-                    "name": partner.name,
-                    "vat": partner.vat if hasattr(partner, 'vat') else '',
-                    "email": partner.email,
-                    "phone": partner.phone,
-                },
-                "lines": []
-            }
-            
-            # Get invoice lines
-            for line in invoice.invoice_line_ids:
-                product = line.product_id
-                taxes = [{
-                    "id": tax.id,
-                    "name": tax.name,
-                    "amount": tax.amount
-                } for tax in line.tax_ids] if hasattr(line, 'tax_ids') else []
-                
-                line_data = {
-                    "id": line.id,
-                    "name": line.name,
-                    "quantity": line.quantity,
-                    "price_unit": line.price_unit,
-                    "price_subtotal": line.price_subtotal,
-                    "taxes": taxes,
-                    "product": {
-                        "id": product.id,
-                        "name": product.name,
-                        "default_code": product.default_code if hasattr(product, 'default_code') else '',
-                    }
-                }
-                invoice_data["lines"].append(line_data)
-            
-            # Fetch PDF attachments if requested
-            if include_attachments:
-                try:
-                    Attachment = odoo.env['ir.attachment']
-                    attachment_ids = Attachment.search([
-                        ('res_model', '=', 'account.move'),
-                        ('res_id', '=', invoice.id),
-                        ('mimetype', '=', 'application/pdf')
-                    ], limit=3)  # Limiting to 3 most recent PDFs
-                    
-                    if attachment_ids:
-                        attachments = []
-                        for attachment in Attachment.browse(attachment_ids):
-                            attachments.append({
-                                "id": attachment.id,
-                                "name": attachment.name,
-                                "mimetype": attachment.mimetype,
-                                "url": f"{config.url}/web/content/{attachment.id}?download=true"
-                            })
-                        invoice_data["attachments"] = attachments
-                except Exception as e:
-                    logger.warning(f"Error fetching attachments for invoice {invoice.id}: {str(e)}")
-                    invoice_data["attachments_error"] = str(e)
-            
-            invoices.append(invoice_data)
-        
-        # Return paginated results with metadata
-        return {
-            "invoices": invoices,
-            "total": total_invoices,
-            "page": page,
-            "page_size": page_size,
-            "pages": total_pages,
-            "has_next": has_next,
-            "has_prev": has_prev,
-            "next_page": next_page,
-            "prev_page": prev_page
-        }
-        
-    except odoorpc.error.RPCError as e:
-        logger.error(f"OdooRPC error fetching invoices: {str(e)}")
-        error_data = {
-            "error": str(e),
-            "error_type": "RPCError",
-            "error_code": getattr(e, 'code', None),
-            "error_data": getattr(e, 'data', None)
-        }
-        return {
-            "invoices": [],
-            "total": 0,
-            "page": page,
-            "page_size": page_size,
-            "pages": 0,
-            "has_next": False,
-            "has_prev": page > 1,
-            "next_page": None,
-            "prev_page": page - 1 if page > 1 else None,
-            "error": error_data
-        }
-    except odoorpc.error.InternalError as e:
-        logger.error(f"OdooRPC internal error fetching invoices: {str(e)}")
-        error_data = {
-            "error": str(e),
-            "error_type": "InternalError"
-        }
-        return {
-            "invoices": [],
-            "total": 0,
-            "page": page,
-            "page_size": page_size,
-            "pages": 0,
-            "has_next": False,
-            "has_prev": page > 1,
-            "next_page": None,
-            "prev_page": page - 1 if page > 1 else None,
-            "error": error_data
-        }
+    except OdooConnectionError as e:
+        logger.error(f"Odoo connection error: {str(e)}")
+        error_data = {"error": str(e), "error_type": "ConnectionError"}
+        return _create_error_response(page, page_size, error_data)
+    except OdooAuthenticationError as e:
+        logger.error(f"Odoo authentication error: {str(e)}")
+        error_data = {"error": str(e), "error_type": "AuthenticationError"}
+        return _create_error_response(page, page_size, error_data)
+    except OdooDataError as e:
+        logger.error(f"Odoo data error: {str(e)}")
+        error_data = {"error": str(e), "error_type": "DataError"}
+        return _create_error_response(page, page_size, error_data)
     except Exception as e:
         logger.exception(f"Error fetching invoices from Odoo: {str(e)}")
-        error_data = {
-            "error": str(e),
-            "error_type": type(e).__name__
-        }
-        return {
-            "invoices": [],
-            "total": 0,
-            "page": page,
-            "page_size": page_size,
-            "pages": 0,
-            "has_next": False,
-            "has_prev": page > 1,
-            "next_page": None,
-            "prev_page": page - 1 if page > 1 else None,
-            "error": error_data
-        }
+        error_data = {"error": str(e), "error_type": type(e).__name__}
+        return _create_error_response(page, page_size, error_data)
 
 
 def generate_irn_for_odoo_invoice(
@@ -466,127 +252,79 @@ def generate_irn_for_odoo_invoice(
     from app.models.irn import IRNRecord, InvoiceData, IRNStatus
     from app.db.session import SessionLocal
     import hashlib
-    import secrets
     from datetime import datetime, timedelta
+    import secrets
+    import string
+    
+    db = SessionLocal()
     
     try:
-        # Connect to Odoo
-        parsed_url = urlparse(str(config.url))
-        host = parsed_url.netloc.split(':')[0]
-        protocol = parsed_url.scheme or 'jsonrpc'
+        # Create connector and authenticate
+        connector = OdooConnector(config)
         
-        port = 443 if protocol == 'jsonrpc+ssl' else 8069
-        if ':' in parsed_url.netloc:
-            try:
-                port = int(parsed_url.netloc.split(':')[1])
-            except (IndexError, ValueError):
-                pass
+        # Get the specific invoice data with the connector
+        try:
+            invoice_data = connector.get_invoice_by_id(invoice_id)
+        except Exception as e:
+            logger.error(f"Error retrieving invoice from Odoo: {str(e)}")
+            return {"success": False, "error": f"Error retrieving invoice data: {str(e)}"}
+            
+        # Extract data from invoice_data
+        invoice_number = invoice_data.get("invoice_number")
+        if not invoice_number:
+            return {"success": False, "error": "Invoice number not found"}
+            
+        # Extract partner (customer) data
+        partner = invoice_data.get("partner", {})
+        customer_name = partner.get("name", "")
+        customer_tax_id = partner.get("vat")
         
-        # Initialize OdooRPC connection
-        odoo = odoorpc.ODOO(host, protocol=protocol, port=port)
+        # Get invoice date
+        invoice_date = invoice_data.get("invoice_date")
+        if not invoice_date:
+            invoice_date = datetime.utcnow().date()
         
-        # Authenticate with the server
-        password_or_key = (
-            config.password 
-            if config.auth_method == OdooAuthMethod.PASSWORD 
-            else config.api_key
-        )
+        # Get invoice amount
+        amount_total = invoice_data.get("amount_total", 0.0)
+        currency = invoice_data.get("currency", {}).get("name", "NGN")
         
-        # Login to Odoo
-        odoo.login(config.database, config.username, password_or_key)
-        
-        # Fetch the invoice data
-        Invoice = odoo.env['account.move']
-        
-        # Use search_read to avoid frozendict issues
-        invoice_data = Invoice.search_read(
-            [('id', '=', invoice_id)],
-            [
-                'name', 'ref', 'invoice_date', 'amount_total', 'amount_untaxed', 'amount_tax',
-                'partner_id', 'invoice_line_ids', 'state', 'currency_id'
-            ]
-        )
-        
-        if not invoice_data:
-            return {
-                "success": False,
-                "message": f"Invoice with ID {invoice_id} not found",
-                "details": {"error_type": "NotFound"}
-            }
-        
-        invoice = invoice_data[0]
-        
-        # Get partner info
-        partner_id = invoice['partner_id'][0] if invoice.get('partner_id') else None
-        partner_name = invoice['partner_id'][1] if invoice.get('partner_id') else "Unknown"
-        
-        # Get partner details including VAT if available
-        partner_vat = None
-        if partner_id:
-            try:
-                partner_data = odoo.env['res.partner'].search_read(
-                    [('id', '=', partner_id)],
-                    ['vat']
-                )
-                if partner_data and partner_data[0].get('vat'):
-                    partner_vat = partner_data[0]['vat']
-            except Exception as e:
-                logger.warning(f"Could not fetch partner VAT: {str(e)}")
-        
-        # Get currency info
-        currency_id = invoice['currency_id'][0] if invoice.get('currency_id') else None
-        currency_code = invoice['currency_id'][1] if invoice.get('currency_id') else "NGN"
-        
-        # Get invoice lines
-        line_ids = invoice.get('invoice_line_ids', [])
+        # Extract line items
         line_items = []
+        for line in invoice_data.get("lines", []):
+            tax_percentage = sum(tax.get("amount", 0) for tax in line.get("taxes", []))
+            line_data = {
+                "description": line.get("name", ""),
+                "quantity": line.get("quantity", 0),
+                "unit_price": line.get("price_unit", 0.0),
+                "subtotal": line.get("price_subtotal", 0.0),
+                "tax_percentage": tax_percentage,
+                "product_code": line.get("product", {}).get("default_code", None),
+            }
+            line_items.append(line_data)
         
-        if line_ids:
-            try:
-                line_data = odoo.env['account.move.line'].search_read(
-                    [('id', 'in', line_ids), ('display_type', 'in', (None, 'product'))],
-                    ['name', 'quantity', 'price_unit', 'price_subtotal', 'product_id']
-                )
-                
-                for line in line_data:
-                    product_name = line['product_id'][1] if line.get('product_id') else line.get('name', 'Unknown')
-                    line_items.append({
-                        "name": product_name,
-                        "quantity": float(line.get('quantity', 0)),
-                        "price_unit": float(line.get('price_unit', 0)),
-                        "price_subtotal": float(line.get('price_subtotal', 0))
-                    })
-            except Exception as e:
-                logger.warning(f"Error fetching invoice lines: {str(e)}")
+        # Generate hash for the line items
+        line_items_str = json.dumps(line_items, sort_keys=True)
+        line_items_hash = hashlib.sha256(line_items_str.encode()).hexdigest()
         
-        # Generate line items hash for verification
-        line_items_json = json.dumps(line_items, sort_keys=True)
-        line_items_hash = hashlib.sha256(line_items_json.encode()).hexdigest()
+        # Generate a random component to ensure uniqueness
+        random_chars = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
         
-        # Generate hash of invoice data for verification
-        invoice_hash_data = {
-            "invoice_id": invoice_id,
-            "invoice_number": invoice.get('name', ''),
-            "invoice_date": str(invoice.get('invoice_date', '')),
-            "partner_id": partner_id,
-            "partner_name": partner_name,
-            "amount_total": float(invoice.get('amount_total', 0)),
-            "currency_code": currency_code,
-            "line_items_hash": line_items_hash,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        # Combine all components to create the IRN
+        timestamp = datetime.utcnow().strftime("%H%M%S")
+        date_str = datetime.utcnow().strftime("%Y%m%d")
+        irn_base = f"{service_id}{date_str}{timestamp}{invoice_id}{random_chars}"
+        irn_hash = hashlib.sha256(irn_base.encode()).hexdigest()[:10].upper()
+        irn = f"{service_id}-{date_str}-{timestamp}-{irn_hash}"
         
-        invoice_hash_json = json.dumps(invoice_hash_data, sort_keys=True)
-        hash_value = hashlib.sha256(invoice_hash_json.encode()).hexdigest()
-        
-        # Generate verification code
+        # Create verification code (for future validation)
         verification_code = secrets.token_hex(16)
         
-        # Generate timestamp (YYYYMMDD)
-        timestamp = datetime.utcnow().strftime('%Y%m%d')
+        # Prepare hash value for verification
+        data_to_hash = f"{irn}|{invoice_number}|{amount_total}|{invoice_date}"
+        hash_value = hashlib.sha256(data_to_hash.encode()).hexdigest()
         
-        # Create IRN value: service_id + timestamp + 8 chars of hash
-        irn_value = f"{service_id}-{timestamp}-{hash_value[:8]}"
+        # IRN has already been created above
+        irn_value = irn
         
         # Calculate valid until date (30 days by default)
         valid_until = datetime.utcnow() + timedelta(days=30)
@@ -781,6 +519,114 @@ def validate_irn(irn_value: str) -> Dict[str, Any]:
         }
     finally:
         db.close()
+
+
+def search_odoo_invoices(
+    config: OdooConfig,
+    search_term: str,
+    include_attachments: bool = False,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
+    """
+    Search for invoices in Odoo by various criteria.
+    
+    Args:
+        config: Odoo configuration
+        search_term: Text to search for in invoice number, reference, or partner name
+        include_attachments: Whether to include document attachments
+        page: Page number for pagination
+        page_size: Number of records per page
+        
+    Returns:
+        Dictionary with matching invoices and pagination metadata
+    """
+    try:
+        connector = OdooConnector(config)
+        return connector.search_invoices(
+            search_term=search_term,
+            include_attachments=include_attachments,
+            page=page,
+            page_size=page_size
+        )
+    except OdooConnectionError as e:
+        logger.error(f"Odoo connection error: {str(e)}")
+        error_data = {"error": str(e), "error_type": "ConnectionError"}
+        return _create_error_response(page, page_size, error_data)
+    except OdooAuthenticationError as e:
+        logger.error(f"Odoo authentication error: {str(e)}")
+        error_data = {"error": str(e), "error_type": "AuthenticationError"}
+        return _create_error_response(page, page_size, error_data)
+    except OdooDataError as e:
+        logger.error(f"Odoo data error: {str(e)}")
+        error_data = {"error": str(e), "error_type": "DataError"}
+        return _create_error_response(page, page_size, error_data)
+    except Exception as e:
+        logger.exception(f"Error searching Odoo invoices: {str(e)}")
+        error_data = {"error": str(e), "error_type": type(e).__name__}
+        return _create_error_response(page, page_size, error_data)
+
+
+def fetch_odoo_partners(
+    config: OdooConfig,
+    search_term: Optional[str] = None,
+    limit: int = 20
+) -> Dict[str, Any]:
+    """
+    Fetch partners/customers from Odoo.
+    
+    Args:
+        config: Odoo configuration
+        search_term: Optional term to search for in partner name or reference
+        limit: Maximum number of partners to return
+        
+    Returns:
+        Dictionary with partners list
+    """
+    try:
+        connector = OdooConnector(config)
+        partners = connector.get_partners(search_term=search_term, limit=limit)
+        return {
+            "success": True,
+            "partners": partners,
+            "count": len(partners)
+        }
+    except OdooConnectionError as e:
+        logger.error(f"Odoo connection error: {str(e)}")
+        return {
+            "success": False,
+            "partners": [],
+            "count": 0,
+            "error": str(e),
+            "error_type": "ConnectionError"
+        }
+    except OdooAuthenticationError as e:
+        logger.error(f"Odoo authentication error: {str(e)}")
+        return {
+            "success": False,
+            "partners": [],
+            "count": 0,
+            "error": str(e),
+            "error_type": "AuthenticationError"
+        }
+    except OdooDataError as e:
+        logger.error(f"Odoo data error: {str(e)}")
+        return {
+            "success": False,
+            "partners": [],
+            "count": 0,
+            "error": str(e),
+            "error_type": "DataError"
+        }
+    except Exception as e:
+        logger.exception(f"Error fetching Odoo partners: {str(e)}")
+        return {
+            "success": False,
+            "partners": [],
+            "count": 0,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
 
 
 def get_irn_for_odoo_invoice(odoo_invoice_id: int) -> Dict[str, Any]:
