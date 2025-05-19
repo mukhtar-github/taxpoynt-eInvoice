@@ -8,11 +8,12 @@ FIRS API documentation and provides sandbox environment testing for IRN validati
 import requests
 import json
 import base64
-from typing import Dict, Any, Optional, List, Union
+import hashlib
+from typing import Dict, Any, Optional, List, Union, Tuple
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
-from pydantic import BaseModel, Field
-from uuid import UUID
+from pydantic import BaseModel, Field, validator
+from uuid import UUID, uuid4
 
 from app.core.config import settings
 from app.utils.encryption import encrypt_text, decrypt_text
@@ -63,11 +64,39 @@ class FIRSTaxCategory(BaseModel):
     default_percent: float
 
 
+class SubmissionStatus(BaseModel):
+    """Status response model for FIRS API submission."""
+    submission_id: str
+    status: str
+    timestamp: str
+    message: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+
+
+class InvoiceSubmissionResponse(BaseModel):
+    """Response model for FIRS API invoice submission."""
+    success: bool
+    message: str
+    submission_id: Optional[str] = None
+    status: Optional[str] = None
+    errors: Optional[List[Dict[str, Any]]] = None
+    details: Optional[Dict[str, Any]] = None
+
+
 class FIRSService:
-    """Service for interacting with FIRS API.
+    """
+    Service for interacting with FIRS API.
     
     This service implements all required interactions with the FIRS API
     following the official documentation for e-Invoice compliance.
+    
+    Features:
+    - Authentication with FIRS API
+    - Invoice validation and signing
+    - IRN validation
+    - Invoice submission to FIRS
+    - Sandbox environment support for testing
+    - Comprehensive error handling
     """
     
     def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None, api_secret: Optional[str] = None):
@@ -422,6 +451,138 @@ class FIRSService:
         except requests.RequestException as e:
             logger.error(f"FIRS API request failed: {str(e)}")
             return []
+    
+    # === Invoice Submission Endpoints ===
+    
+    async def submit_invoice(self, invoice_data: Dict[str, Any]) -> InvoiceSubmissionResponse:
+        """Submit a single invoice to FIRS.
+        
+        Args:
+            invoice_data: Invoice data in FIRS-compliant format
+            
+        Returns:
+            InvoiceSubmissionResponse with submission details
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}/api/v1/invoice/submit"
+            
+            # Try to ensure the invoice has a proper ID
+            if "id" not in invoice_data and "invoice_id" in invoice_data:
+                invoice_data["id"] = invoice_data["invoice_id"]
+                
+            # Add submission metadata
+            submission_id = str(uuid4())
+            invoice_data.setdefault("metadata", {}).update({
+                "submitted_at": datetime.now().isoformat(),
+                "submission_id": submission_id
+            })
+            
+            response = requests.post(
+                url, 
+                json=invoice_data, 
+                headers=self._get_auth_headers()
+            )
+            
+            if response.status_code in (200, 201, 202):
+                result = response.json()
+                return InvoiceSubmissionResponse(
+                    success=True,
+                    message=result.get("message", "Invoice submitted successfully"),
+                    submission_id=result.get("data", {}).get("submission_id", submission_id),
+                    status=result.get("data", {}).get("status", "SUBMITTED"),
+                    details=result.get("data", {})
+                )
+            else:
+                error_data = response.json() if response.content else {"message": "Unknown error"}
+                logger.error(f"FIRS invoice submission failed: {response.status_code} - {response.text}")
+                
+                return InvoiceSubmissionResponse(
+                    success=False,
+                    message=error_data.get("message", f"Submission failed with status code {response.status_code}"),
+                    errors=error_data.get("errors", []),
+                    details={"status_code": response.status_code}
+                )
+                
+        except Exception as e:
+            logger.error(f"FIRS API submission error: {str(e)}")
+            return InvoiceSubmissionResponse(
+                success=False,
+                message=f"API request failed: {str(e)}",
+                details={"error_type": type(e).__name__}
+            )
+    
+    async def submit_invoices_batch(self, invoices: List[Dict[str, Any]]) -> InvoiceSubmissionResponse:
+        """Submit multiple invoices in a batch.
+        
+        Args:
+            invoices: List of invoice data dictionaries
+            
+        Returns:
+            InvoiceSubmissionResponse with batch submission details
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}/api/v1/invoice/batch/submit"
+            
+            # Add batch metadata
+            batch_id = str(uuid4())
+            timestamp = datetime.now().isoformat()
+            
+            batch_metadata = {
+                "batch_id": batch_id,
+                "submitted_at": timestamp,
+                "invoice_count": len(invoices)
+            }
+            
+            # Add metadata to each invoice
+            for invoice in invoices:
+                invoice.setdefault("metadata", {}).update({
+                    "batch_id": batch_id,
+                    "submitted_at": timestamp,
+                    "submission_id": str(uuid4())
+                })
+            
+            payload = {
+                "invoices": invoices,
+                "metadata": batch_metadata
+            }
+            
+            response = requests.post(
+                url, 
+                json=payload, 
+                headers=self._get_auth_headers()
+            )
+            
+            if response.status_code in (200, 201, 202):
+                result = response.json()
+                return InvoiceSubmissionResponse(
+                    success=True,
+                    message=result.get("message", f"Batch of {len(invoices)} invoices submitted successfully"),
+                    submission_id=result.get("data", {}).get("batch_id", batch_id),
+                    status=result.get("data", {}).get("status", "BATCH_SUBMITTED"),
+                    details=result.get("data", {})
+                )
+            else:
+                error_data = response.json() if response.content else {"message": "Unknown error"}
+                logger.error(f"FIRS batch submission failed: {response.status_code} - {response.text}")
+                
+                return InvoiceSubmissionResponse(
+                    success=False,
+                    message=error_data.get("message", f"Batch submission failed with status code {response.status_code}"),
+                    errors=error_data.get("errors", []),
+                    details={"status_code": response.status_code}
+                )
+                
+        except Exception as e:
+            logger.error(f"FIRS API batch submission error: {str(e)}")
+            return InvoiceSubmissionResponse(
+                success=False,
+                message=f"API batch request failed: {str(e)}",
+                details={"error_type": type(e).__name__}
+            )
 
 
     async def validate_irn(self, irn_value: str, invoice_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -524,6 +685,191 @@ class FIRSService:
                 "timestamp": datetime.utcnow().isoformat()
             }
         }
+
+
+    async def check_submission_status(self, submission_id: str) -> SubmissionStatus:
+        """Check the status of a previously submitted invoice.
+        
+        Args:
+            submission_id: ID of the submission to check
+            
+        Returns:
+            SubmissionStatus with current status details
+            
+        Raises:
+            HTTPException: If the status check fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}/api/v1/invoice/submission/{submission_id}/status"
+            
+            response = requests.get(
+                url,
+                headers=self._get_auth_headers()
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                data = result.get("data", {})
+                
+                return SubmissionStatus(
+                    submission_id=submission_id,
+                    status=data.get("status", "UNKNOWN"),
+                    timestamp=data.get("updated_at", datetime.now().isoformat()),
+                    message=data.get("message", result.get("message", "Status retrieved successfully")),
+                    details=data
+                )
+            elif response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Submission with ID {submission_id} not found"
+                )
+            else:
+                logger.error(f"FIRS status check failed: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to check submission status: {response.status_code}"
+                )
+                
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception as e:
+            logger.error(f"FIRS API status check error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Status check error: {str(e)}"
+            )
+    
+    async def submit_ubl_invoice(self, ubl_xml: str, invoice_type: str = "standard") -> InvoiceSubmissionResponse:
+        """Submit a UBL format invoice to FIRS.
+        
+        This method supports UBL format invoices, specifically for BIS Billing 3.0
+        compatible documents generated from the Odoo UBL mapping system.
+        
+        Args:
+            ubl_xml: UBL XML as a string
+            invoice_type: Type of invoice (standard, credit_note, debit_note, etc.)
+            
+        Returns:
+            InvoiceSubmissionResponse with submission details
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}/api/v1/invoice/ubl/submit"
+            
+            # UBL invoice type mapping
+            invoice_type_codes = {
+                "standard": "380",  # Commercial Invoice
+                "credit_note": "381",  # Credit Note
+                "debit_note": "383",  # Debit Note
+                "proforma": "325",  # Proforma Invoice
+                "self_billed": "389",  # Self-billed Invoice
+            }
+            
+            # Add custom headers for UBL submission
+            headers = self._get_auth_headers()
+            headers["Content-Type"] = "application/xml"  # Override for XML content
+            
+            invoice_type_code = invoice_type_codes.get(invoice_type, "380")
+            headers["X-FIRS-InvoiceType"] = invoice_type_code
+            headers["X-FIRS-Format"] = "UBL2.1"
+            headers["X-FIRS-Profile"] = "BIS3.0"
+            
+            # Generate submission ID
+            submission_id = str(uuid4())
+            headers["X-FIRS-SubmissionID"] = submission_id
+            
+            # Submit the XML directly
+            response = requests.post(url, headers=headers, data=ubl_xml)
+            
+            if response.status_code in (200, 201, 202):
+                result = response.json() if response.content else {"message": "UBL invoice submitted successfully"}
+                return InvoiceSubmissionResponse(
+                    success=True,
+                    message=result.get("message", "UBL invoice submitted successfully"),
+                    submission_id=result.get("data", {}).get("submission_id", submission_id),
+                    status=result.get("data", {}).get("status", "UBL_SUBMITTED"),
+                    details=result.get("data", {})
+                )
+            else:
+                error_data = response.json() if response.content else {"message": "Unknown error"}
+                logger.error(f"FIRS UBL submission failed: {response.status_code} - {response.text}")
+                
+                return InvoiceSubmissionResponse(
+                    success=False,
+                    message=error_data.get("message", f"UBL submission failed with status code {response.status_code}"),
+                    errors=error_data.get("errors", []),
+                    details={"status_code": response.status_code}
+                )
+                
+        except Exception as e:
+            logger.error(f"FIRS API UBL submission error: {str(e)}")
+            return InvoiceSubmissionResponse(
+                success=False,
+                message=f"UBL API request failed: {str(e)}",
+                details={"error_type": type(e).__name__}
+            )
+    
+    async def validate_ubl_invoice(self, ubl_xml: str) -> InvoiceSubmissionResponse:
+        """Validate a UBL format invoice against FIRS requirements.
+        
+        This method checks if the UBL document meets FIRS validation rules
+        without actually submitting it.
+        
+        Args:
+            ubl_xml: UBL XML as a string
+            
+        Returns:
+            InvoiceSubmissionResponse with validation results
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}/api/v1/invoice/ubl/validate"
+            
+            headers = self._get_auth_headers()
+            headers["Content-Type"] = "application/xml"
+            
+            # Submit the XML directly
+            response = requests.post(url, headers=headers, data=ubl_xml)
+            
+            if response.status_code == 200:
+                result = response.json() if response.content else {"message": "UBL invoice is valid"}
+                return InvoiceSubmissionResponse(
+                    success=True,
+                    message=result.get("message", "UBL invoice validation successful"),
+                    details=result.get("data", {})
+                )
+            else:
+                error_data = response.json() if response.content else {"message": "Unknown error"}
+                logger.error(f"FIRS UBL validation failed: {response.status_code} - {response.text}")
+                
+                # Special handling for validation errors
+                if response.status_code == 400:
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message="UBL validation failed",
+                        errors=error_data.get("errors", []),
+                        details={"validation_result": error_data}
+                    )
+                else:
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message=error_data.get("message", f"UBL validation failed with status code {response.status_code}"),
+                        errors=error_data.get("errors", []),
+                        details={"status_code": response.status_code}
+                    )
+                
+        except Exception as e:
+            logger.error(f"FIRS API UBL validation error: {str(e)}")
+            return InvoiceSubmissionResponse(
+                success=False,
+                message=f"UBL validation request failed: {str(e)}",
+                details={"error_type": type(e).__name__}
+            )
 
 
 async def validate_irns_with_firs_sandbox(db, irn_values: List[str], user_id: Optional[UUID] = None) -> Dict[str, Any]:

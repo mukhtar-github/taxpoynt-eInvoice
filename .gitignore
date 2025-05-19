@@ -36,6 +36,22 @@ yarn-error.log
 .yarn/
 .pnp.*
 
+# Ignore signing certificates
+backend/keys/signing_cert_*.crt
+
+# Ignore all private keys
+backend/keys/*.key
+
+# Ignore all public keys (optional, but best practice)
+backend/keys/*.pub
+
+# Ignore other sensitive key/cert formats
+backend/keys/*.pem
+backend/keys/*.der
+backend/keys/*.csr
+backend/keys/*.pfx
+backend/keys/*.p12
+
 # IDE and editors
 .idea/
 .vscode/

@@ -35,24 +35,27 @@ class Settings(BaseSettings):
     MIN_TLS_VERSION: str = os.getenv("MIN_TLS_VERSION", "1.2")
     
     # Database
+    SQLALCHEMY_DATABASE_URI: Optional[str] = os.getenv("DATABASE_URL")
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "postgres")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "taxpoynt")
-    SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
     # Redis Configuration
+    REDIS_URL: Optional[str] = os.getenv("REDIS_URL")
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
-    REDIS_URL: Optional[str] = None
 
     @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
     def assemble_db_connection(cls, v: Optional[str], info: Dict[str, Any]) -> Any:
-        if isinstance(v, str):
+        # If DATABASE_URL is already provided via environment, use it directly
+        # This is useful for Railway integration where the full URL is provided
+        if isinstance(v, str) and v:
             return v
         
+        # Otherwise, build connection URL from individual components
         postgres_dsn = PostgresDsn.build(
             scheme="postgresql",
             username=info.data.get("POSTGRES_USER"),

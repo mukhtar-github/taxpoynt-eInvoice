@@ -128,9 +128,24 @@ This implementation plan focuses on delivering the core functionality required t
 3. **Error Handling**: Implement robust error handling throughout the process
 4. **Deployment**: Ensure the system is accessible via Railway and Vercel for stakeholder testing
 
+## Implementation Strategy with APP Integration
+
+### How to Proceed
+
+1. **Complete your 2-week MVP first** - Focus on delivering the core SI functionality outlined in this plan to ensure a working end-to-end solution for stakeholder presentation.
+
+2. **Incorporate minimal APP elements if time permits** - If you have remaining time within your 2-week window, add simple APP indicators to your UI to show where these features will be integrated:
+   - Add placeholder certificate management card on dashboard
+   - Include simple APP status indicators in the navigation
+   - Add basic APP information in the documentation
+
+3. **Use the APP addendum for planning the next phase** - After completing the MVP, use the [APP Implementation Addendum](app_implementation_addendum.md) to guide the implementation of APP functionality in the subsequent phases.
+
 ## Next Steps After Initial Implementation
 
 - Implement batch processing for B2C invoices
+- Begin implementation of core APP functionality (certificate management, cryptographic stamping)
 - Add advanced reporting features
 - Enhance security features beyond MVP requirements
 - Create admin interface for system management
+- Update business landing page to highlight dual SI/APP capabilities

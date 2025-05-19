@@ -12,6 +12,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any, Union
+from uuid import UUID
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
