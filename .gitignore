@@ -26,6 +26,16 @@ htmlcov/
 venv/
 test_credentials.py
 
+# Environment files
+.env
+.env.*
+.env.development
+.env.production
+.env.local
+.env.test
+*.env
+!.env.example
+
 # Node.js
 node_modules/
 npm-debug.log
@@ -49,6 +59,31 @@ backend/keys/*.pub
 backend/keys/*.pem
 backend/keys/*.der
 backend/keys/*.csr
+backend/crypto/*.pem
+backend/crypto/*.der
+backend/crypto/*.csr
+backend/crypto/*.txt
+backend/crypto/firs*
+
+# Ignore log files
+*.log
+logs/
+*.log.*
+test_firs_*.log
+
+# Ignore local database
+*.db
+*.sqlite
+*.sqlite3
+taxpoynt_dev.db
+
+# FIRS API credentials and test files
+firs_credentials.json
+firs_*.json
+test_firs_*.json
+
+# Ignore API test output files
+test_output/
 backend/keys/*.pfx
 backend/keys/*.p12
 

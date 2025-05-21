@@ -144,6 +144,17 @@ class Settings(BaseSettings):
     ODOO_API_KEY: Optional[str] = os.getenv("ODOO_API_KEY")
     ODOO_AUTH_METHOD: str = os.getenv("ODOO_AUTH_METHOD", "password")
     
+    # FIRS API Configuration
+    FIRS_API_URL: str = os.getenv("FIRS_API_URL", "https://api.firs.gov.ng")
+    FIRS_API_KEY: str = os.getenv("FIRS_API_KEY", "")
+    FIRS_API_SECRET: str = os.getenv("FIRS_API_SECRET", "")
+    
+    # FIRS Sandbox Configuration
+    FIRS_SANDBOX_API_URL: str = os.getenv("FIRS_SANDBOX_API_URL", "https://einvoice.firs.gov.ng/integrator")
+    FIRS_SANDBOX_API_KEY: str = os.getenv("FIRS_SANDBOX_API_KEY", "")
+    FIRS_SANDBOX_API_SECRET: str = os.getenv("FIRS_SANDBOX_API_SECRET", "")
+    FIRS_USE_SANDBOX: bool = os.getenv("FIRS_USE_SANDBOX", "True").lower() in ("true", "1", "t")
+    
     # IRN Service Configuration
     FIRS_SERVICE_ID: str = os.getenv("FIRS_SERVICE_ID", "94ND90NR")
     IRN_EXPIRY_DAYS: int = int(os.getenv("IRN_EXPIRY_DAYS", "30"))

@@ -1,0 +1,90 @@
+{
+  "api_base_url": "https://einvoice.firs.gov.ng/integrator",
+  "api_test_url": "http://206.189.15.119:8080",
+  "endpoints": {
+    "health_check": {
+      "path": "/",
+      "method": "GET",
+      "description": "Check API health and availability"
+    },
+    "authentication": {
+      "path": "/api/v1/utilities/authenticate",
+      "method": "POST",
+      "description": "Authenticate with API credentials",
+      "required_fields": ["email", "password"]
+    },
+    "invoice_management": {
+      "irn_validate": {
+        "path": "/api/v1/invoice/irn/validate",
+        "method": "POST",
+        "description": "Validate an Invoice Reference Number (IRN)",
+        "required_fields": ["invoice_reference", "business_id", "irn", "signature"]
+      },
+      "invoice_validate": {
+        "path": "/api/v1/invoice/validate",
+        "method": "POST",
+        "description": "Validate an invoice before submission"
+      },
+      "invoice_sign": {
+        "path": "/api/v1/invoice/sign",
+        "method": "POST",
+        "description": "Digitally sign an invoice"
+      },
+      "invoice_download": {
+        "path": "/api/v1/invoice/download/{IRN}",
+        "method": "GET",
+        "description": "Download an invoice by IRN"
+      },
+      "invoice_transact": {
+        "path": "/api/v1/invoice/transact/{IRN}",
+        "method": "POST",
+        "description": "Process an invoice transaction"
+      }
+    },
+    "business_management": {
+      "business_search": {
+        "path": "/api/v1/entity",
+        "method": "GET",
+        "description": "Search for business entities",
+        "params": ["limit", "page", "sort_by"]
+      },
+      "business_lookup": {
+        "path": "/api/v1/invoice/party/{BUSINESS_ID}",
+        "method": "GET",
+        "description": "Lookup specific business details"
+      }
+    },
+    "reference_data": {
+      "countries": {
+        "path": "/api/v1/invoice/resources/countries",
+        "method": "GET",
+        "description": "Get list of countries"
+      },
+      "invoice_types": {
+        "path": "/api/v1/invoice/resources/invoice-types",
+        "method": "GET",
+        "description": "Get list of invoice types"
+      },
+      "currencies": {
+        "path": "/api/v1/invoice/resources/currencies",
+        "method": "GET",
+        "description": "Get list of currencies"
+      },
+      "vat_exemptions": {
+        "path": "/api/v1/invoice/resources/vat-exemptions",
+        "method": "GET",
+        "description": "Get list of VAT exemptions"
+      },
+      "service_codes": {
+        "path": "/api/v1/invoice/resources/service-codes",
+        "method": "GET",
+        "description": "Get list of service codes"
+      }
+    }
+  },
+  "metadata": {
+    "last_updated": "2025-05-19",
+    "implementation_status": "In Progress",
+    "notes": "Endpoints discovered through API documentation exploration"
+  }
+}

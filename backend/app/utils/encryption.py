@@ -331,6 +331,48 @@ def rotate_encryption_key() -> Tuple[str, bytes]:
     return key_id, new_key
 
 
+# ======== Text Encryption for FIRS API ========
+
+def encrypt_text(text: str) -> str:
+    """
+    Encrypt text data for FIRS API transmission.
+    
+    This is a convenience wrapper around encrypt_with_gcm that handles
+    string input specifically for the FIRS API requirements.
+    
+    Args:
+        text: Text to encrypt
+        
+    Returns:
+        Encrypted text as base64 string
+    """
+    if not text:
+        return ""
+        
+    key = get_app_encryption_key()
+    return encrypt_with_gcm(text, key)
+
+
+def decrypt_text(encrypted_text: str) -> str:
+    """
+    Decrypt text data received from FIRS API.
+    
+    This is a convenience wrapper around decrypt_with_gcm that handles
+    string output specifically for the FIRS API requirements.
+    
+    Args:
+        encrypted_text: Encrypted text in base64 format
+        
+    Returns:
+        Decrypted text
+    """
+    if not encrypted_text:
+        return ""
+        
+    key = get_app_encryption_key()
+    return decrypt_with_gcm(encrypted_text, key)
+
+
 # ======== Field-level Encryption Utilities ========
 
 def encrypt_field(value: Any, key: Optional[bytes] = None) -> str:

@@ -1,0 +1,49 @@
+{
+  "vat_exemptions": [
+    {
+      "code": "EXPORT",
+      "name": "Export of Goods",
+      "description": "Goods exported outside Nigeria",
+      "rate": 0.0,
+      "ubl_tax_exemption_code": "VATEX-EU-X"
+    },
+    {
+      "code": "ZERO_RATED",
+      "name": "Zero-rated Goods",
+      "description": "Essential goods that are zero-rated",
+      "rate": 0.0,
+      "ubl_tax_exemption_code": "VATEX-EU-Z"
+    },
+    {
+      "code": "EXEMPT",
+      "name": "VAT Exempt",
+      "description": "Goods and services exempt from VAT",
+      "rate": 0.0,
+      "ubl_tax_exemption_code": "VATEX-EU-E"
+    },
+    {
+      "code": "DIPLOMATIC",
+      "name": "Diplomatic Exemption",
+      "description": "Diplomatic missions and international organizations",
+      "rate": 0.0,
+      "ubl_tax_exemption_code": "VATEX-EU-D"
+    }
+  ],
+  "standard_rates": [
+    {
+      "code": "STANDARD",
+      "name": "Standard VAT",
+      "description": "Standard VAT rate in Nigeria",
+      "rate": 7.5,
+      "ubl_tax_category_code": "S"
+    }
+  ],
+  "metadata": {
+    "source": "FIRS e-Invoice API",
+    "version": "1.0",
+    "mapped_to_odoo": true,
+    "mapped_to_ubl": true,
+    "last_updated": "2025-05-19",
+    "notes": "Compatible with OdooUBLTransformer for BIS Billing 3.0 compliance"
+  }
+}

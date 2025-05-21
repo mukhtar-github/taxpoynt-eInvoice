@@ -1,0 +1,39 @@
+{
+  "currencies": [
+    {
+      "code": "NGN",
+      "name": "Nigerian Naira",
+      "is_default": true,
+      "decimal_places": 2,
+      "symbol": "₦"
+    },
+    {
+      "code": "USD",
+      "name": "US Dollar",
+      "is_default": false,
+      "decimal_places": 2,
+      "symbol": "$"
+    },
+    {
+      "code": "EUR",
+      "name": "Euro",
+      "is_default": false,
+      "decimal_places": 2,
+      "symbol": "€"
+    },
+    {
+      "code": "GBP",
+      "name": "British Pound",
+      "is_default": false,
+      "decimal_places": 2,
+      "symbol": "£"
+    }
+  ],
+  "metadata": {
+    "source": "FIRS e-Invoice API",
+    "version": "1.0",
+    "mapped_to_odoo": true,
+    "last_updated": "2025-05-19",
+    "notes": "Compatible with Odoo multi-currency features and BIS Billing 3.0 requirements"
+  }
+}

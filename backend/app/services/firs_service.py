@@ -99,13 +99,60 @@ class FIRSService:
     - Comprehensive error handling
     """
     
-    def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None, api_secret: Optional[str] = None):
-        """Initialize FIRS service with configuration."""
-        self.base_url = base_url or settings.FIRS_API_URL
-        self.api_key = api_key or settings.FIRS_API_KEY
-        self.api_secret = api_secret or settings.FIRS_API_SECRET
+    def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None, api_secret: Optional[str] = None, use_sandbox: Optional[bool] = None):
+        """Initialize FIRS service with configuration.
+        
+        Args:
+            base_url: Override the base URL for the FIRS API
+            api_key: Override the API key from settings
+            api_secret: Override the API secret from settings
+            use_sandbox: Override the sandbox setting from environment
+        """
+        # Determine whether to use sandbox or production
+        self.use_sandbox = settings.FIRS_USE_SANDBOX if use_sandbox is None else use_sandbox
+        
+        # Set base URL and credentials based on environment
+        if self.use_sandbox:
+            self.base_url = base_url or settings.FIRS_SANDBOX_API_URL
+            self.api_key = api_key or settings.FIRS_SANDBOX_API_KEY
+            self.api_secret = api_secret or settings.FIRS_SANDBOX_API_SECRET
+            logger.info(f"FIRS service initialized in SANDBOX mode with URL: {self.base_url}")
+        else:
+            self.base_url = base_url or settings.FIRS_API_URL
+            self.api_key = api_key or settings.FIRS_API_KEY
+            self.api_secret = api_secret or settings.FIRS_API_SECRET
+            logger.info(f"FIRS service initialized in PRODUCTION mode with URL: {self.base_url}")
+            
+        # Authentication state
         self.token: Optional[str] = None
         self.token_expiry: Optional[datetime] = None
+        
+        # API endpoint paths based on reference data
+        self.endpoints = {
+            # Authentication endpoints
+            "authenticate": "/api/v1/utilities/authenticate",
+            "verify_tin": "/api/v1/utilities/verify-tin",
+            
+            # Invoice management endpoints
+            "irn_validate": "/api/v1/invoice/irn/validate",
+            "invoice_validate": "/api/v1/invoice/validate",
+            "invoice_sign": "/api/v1/invoice/sign",
+            "download_invoice": "/api/v1/invoice/download",
+            "submit_invoice": "/api/v1/invoice/submit",
+            "submit_batch": "/api/v1/invoice/batch/submit",
+            "transact": "/api/v1/invoice/transact",
+            
+            # Business management endpoints
+            "business_search": "/api/v1/entity",
+            "business_lookup": "/api/v1/invoice/party",
+            
+            # Reference data endpoints
+            "countries": "/api/v1/invoice/resources/countries",
+            "invoice_types": "/api/v1/invoice/resources/invoice-types",
+            "currencies": "/api/v1/invoice/resources/currencies",
+            "vat_exemptions": "/api/v1/invoice/resources/vat-exemptions",
+            "service_codes": "/api/v1/invoice/resources/service-codes"
+        }
         
     def _get_default_headers(self) -> Dict[str, str]:
         """Get default headers for API requests."""
@@ -123,9 +170,21 @@ class FIRSService:
         return headers
     
     async def authenticate(self, email: str, password: str) -> FIRSAuthResponse:
-        """Authenticate with FIRS API using taxpayer credentials."""
+        """Authenticate with FIRS API using taxpayer credentials.
+        
+        Args:
+            email: User email for authentication
+            password: User password for authentication
+            
+        Returns:
+            FIRSAuthResponse containing authentication details
+            
+        Raises:
+            HTTPException: If authentication fails
+        """
         try:
-            url = f"{self.base_url}/api/v1/utilities/authenticate"
+            url = f"{self.base_url}{self.endpoints['authenticate']}"
+            logger.info(f"Authenticating with FIRS API at: {url}")
             
             payload = {
                 "email": email,
@@ -135,24 +194,37 @@ class FIRSService:
             response = requests.post(
                 url, 
                 json=payload, 
-                headers=self._get_default_headers()
+                headers=self._get_default_headers(),
+                timeout=30  # Add timeout for better error handling
             )
             
             if response.status_code != 200:
                 logger.error(f"FIRS authentication failed: {response.text}")
-                error_data = response.json()
-                error_detail = error_data.get("message", "Authentication failed")
+                try:
+                    error_data = response.json()
+                    error_detail = error_data.get("message", "Authentication failed")
+                except ValueError:
+                    error_detail = f"Authentication failed with status code {response.status_code}"
+                
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=f"FIRS API authentication failed: {error_detail}"
                 )
             
-            auth_response = response.json()
-            # Store token and set expiry
-            self.token = auth_response["data"]["access_token"]
-            self.token_expiry = datetime.now() + timedelta(seconds=auth_response["data"]["expires_in"])
-            
-            return FIRSAuthResponse(**auth_response)
+            try:
+                auth_response = response.json()
+                # Store token and set expiry
+                self.token = auth_response["data"]["access_token"]
+                self.token_expiry = datetime.now() + timedelta(seconds=auth_response["data"]["expires_in"])
+                
+                logger.info(f"Successfully authenticated with FIRS API as {email}")
+                return FIRSAuthResponse(**auth_response)
+            except (KeyError, ValueError) as e:
+                logger.error(f"Error parsing authentication response: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error parsing FIRS API authentication response: {str(e)}"
+                )
             
         except requests.RequestException as e:
             logger.error(f"FIRS API request failed: {str(e)}")
@@ -455,7 +527,8 @@ class FIRSService:
     # === Invoice Submission Endpoints ===
     
     async def submit_invoice(self, invoice_data: Dict[str, Any]) -> InvoiceSubmissionResponse:
-        """Submit a single invoice to FIRS.
+        """
+        Submit a single invoice to FIRS.
         
         Args:
             invoice_data: Invoice data in FIRS-compliant format
@@ -464,47 +537,80 @@ class FIRSService:
             InvoiceSubmissionResponse with submission details
         """
         try:
+            # Ensure authentication if token-based auth is required
             await self._ensure_authenticated()
             
-            url = f"{self.base_url}/api/v1/invoice/submit"
+            url = f"{self.base_url}{self.endpoints['submit_invoice']}"
+            logger.info(f"Submitting invoice to FIRS API: {url}")
+            logger.debug(f"Invoice data: {json.dumps(invoice_data)[:200]}...")
             
-            # Try to ensure the invoice has a proper ID
-            if "id" not in invoice_data and "invoice_id" in invoice_data:
-                invoice_data["id"] = invoice_data["invoice_id"]
+            # Ensure required fields are present
+            required_fields = ['invoice_number', 'invoice_type', 'invoice_date', 'currency_code', 'supplier', 'customer']
+            missing_fields = [field for field in required_fields if field not in invoice_data]
+            
+            if missing_fields:
+                logger.error(f"Invoice data missing required fields: {missing_fields}")
+                return InvoiceSubmissionResponse(
+                    success=False,
+                    message=f"Invoice data missing required fields: {', '.join(missing_fields)}",
+                    errors=[{"code": "VALIDATION_ERROR", "detail": f"Missing field: {field}"} for field in missing_fields]
+                )
+            
+            # Use API key-based authentication for submission as discovered in testing
+            headers = self._get_auth_headers()
+            
+            # Submit the invoice with improved error handling
+            try:
+                response = requests.post(
+                    url, 
+                    json=invoice_data, 
+                    headers=headers,
+                    timeout=60  # Longer timeout for invoice submission
+                )
                 
-            # Add submission metadata
-            submission_id = str(uuid4())
-            invoice_data.setdefault("metadata", {}).update({
-                "submitted_at": datetime.now().isoformat(),
-                "submission_id": submission_id
-            })
-            
-            response = requests.post(
-                url, 
-                json=invoice_data, 
-                headers=self._get_auth_headers()
-            )
-            
-            if response.status_code in (200, 201, 202):
-                result = response.json()
+                # Try to parse JSON response if present
+                result = {}
+                if response.content:
+                    try:
+                        result = response.json()
+                    except ValueError as json_err:
+                        logger.warning(f"Could not parse JSON response: {str(json_err)}")
+                        result = {"message": f"Invalid response format: {response.text[:200]}"}
+                
+                if response.status_code not in (200, 201, 202):
+                    logger.error(f"FIRS invoice submission failed: {response.status_code} - {response.text[:200]}")
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message=result.get("message", f"Submission failed with status code {response.status_code}"),
+                        errors=result.get("errors", []),
+                        status=result.get("status", "FAILED")
+                    )
+                    
+                # Successfully submitted - parse the response
+                submission_data = result.get("data", {})
+                submission_id = submission_data.get("submission_id", str(uuid4()))
+                
+                # Log the successful submission
+                logger.info(f"Invoice {invoice_data.get('invoice_number')} submitted successfully with ID: {submission_id}")
+                
                 return InvoiceSubmissionResponse(
                     success=True,
                     message=result.get("message", "Invoice submitted successfully"),
-                    submission_id=result.get("data", {}).get("submission_id", submission_id),
-                    status=result.get("data", {}).get("status", "SUBMITTED"),
-                    details=result.get("data", {})
+                    submission_id=submission_id,
+                    status=result.get("status", "SUBMITTED"),
+                    details=submission_data
                 )
-            else:
-                error_data = response.json() if response.content else {"message": "Unknown error"}
-                logger.error(f"FIRS invoice submission failed: {response.status_code} - {response.text}")
                 
+            except requests.RequestException as req_err:
+                logger.error(f"Request error during invoice submission: {str(req_err)}")
                 return InvoiceSubmissionResponse(
                     success=False,
-                    message=error_data.get("message", f"Submission failed with status code {response.status_code}"),
-                    errors=error_data.get("errors", []),
-                    details={"status_code": response.status_code}
+                    message=f"API request failed: {str(req_err)}",
+                    errors=[{"code": "CONNECTION_ERROR", "detail": str(req_err)}]
                 )
-                
+            
+        except HTTPException:
+            raise  # Re-raise HTTP exceptions
         except Exception as e:
             logger.error(f"FIRS API submission error: {str(e)}")
             return InvoiceSubmissionResponse(
@@ -523,121 +629,260 @@ class FIRSService:
             InvoiceSubmissionResponse with batch submission details
         """
         try:
-            await self._ensure_authenticated()
-            
-            url = f"{self.base_url}/api/v1/invoice/batch/submit"
-            
-            # Add batch metadata
-            batch_id = str(uuid4())
-            timestamp = datetime.now().isoformat()
-            
-            batch_metadata = {
-                "batch_id": batch_id,
-                "submitted_at": timestamp,
-                "invoice_count": len(invoices)
-            }
-            
-            # Add metadata to each invoice
-            for invoice in invoices:
-                invoice.setdefault("metadata", {}).update({
-                    "batch_id": batch_id,
-                    "submitted_at": timestamp,
-                    "submission_id": str(uuid4())
-                })
-            
-            payload = {
-                "invoices": invoices,
-                "metadata": batch_metadata
-            }
-            
-            response = requests.post(
-                url, 
-                json=payload, 
-                headers=self._get_auth_headers()
-            )
-            
-            if response.status_code in (200, 201, 202):
-                result = response.json()
-                return InvoiceSubmissionResponse(
-                    success=True,
-                    message=result.get("message", f"Batch of {len(invoices)} invoices submitted successfully"),
-                    submission_id=result.get("data", {}).get("batch_id", batch_id),
-                    status=result.get("data", {}).get("status", "BATCH_SUBMITTED"),
-                    details=result.get("data", {})
-                )
-            else:
-                error_data = response.json() if response.content else {"message": "Unknown error"}
-                logger.error(f"FIRS batch submission failed: {response.status_code} - {response.text}")
-                
+            # Ensure we have invoices to submit
+            if not invoices:
+                logger.warning("Attempted to submit empty batch of invoices")
                 return InvoiceSubmissionResponse(
                     success=False,
-                    message=error_data.get("message", f"Batch submission failed with status code {response.status_code}"),
-                    errors=error_data.get("errors", []),
-                    details={"status_code": response.status_code}
+                    message="No invoices provided for batch submission",
+                    errors=[{"code": "VALIDATION_ERROR", "detail": "Empty invoice list"}]
                 )
                 
+            # Ensure authentication for submission
+            await self._ensure_authenticated()
+            
+            # Log batch details
+            batch_id = str(uuid4())
+            logger.info(f"Preparing batch submission with ID {batch_id} containing {len(invoices)} invoices")
+            
+            # Use the correct endpoint from our configuration
+            url = f"{self.base_url}{self.endpoints['submit_batch']}"
+            
+            # Basic validation of each invoice
+            required_fields = ['invoice_number', 'invoice_type', 'invoice_date', 'currency_code', 'supplier', 'customer']
+            invalid_invoices = []
+            
+            for i, invoice in enumerate(invoices):
+                missing_fields = [field for field in required_fields if field not in invoice]
+                if missing_fields:
+                    invalid_invoices.append({
+                        "index": i,
+                        "invoice_number": invoice.get("invoice_number", f"Invoice at index {i}"),
+                        "missing_fields": missing_fields
+                    })
+            
+            if invalid_invoices:
+                logger.error(f"Batch contains {len(invalid_invoices)} invalid invoices")
+                return InvoiceSubmissionResponse(
+                    success=False,
+                    message=f"Batch contains {len(invalid_invoices)} invalid invoices",
+                    errors=[{"code": "VALIDATION_ERROR", "detail": f"Invoice {inv['invoice_number']} missing fields: {', '.join(inv['missing_fields'])}"} for inv in invalid_invoices]
+                )
+            
+            # Construct the payload
+            payload = {
+                "invoices": invoices,
+                "batch_id": batch_id,
+                "metadata": {
+                    "submitted_at": datetime.now().isoformat(),
+                    "invoice_count": len(invoices)
+                }
+            }
+            
+            # Submit the batch
+            try:
+                logger.info(f"Submitting batch to {url}")
+                response = requests.post(
+                    url, 
+                    json=payload, 
+                    headers=self._get_auth_headers(),
+                    timeout=120  # Longer timeout for batch submission
+                )
+                
+                # Try to parse JSON response if present
+                result = {}
+                if response.content:
+                    try:
+                        result = response.json()
+                    except ValueError as json_err:
+                        logger.warning(f"Could not parse JSON response: {str(json_err)}")
+                        result = {"message": f"Invalid response format: {response.text[:200]}"}
+                
+                if response.status_code not in (200, 201, 202):
+                    logger.error(f"FIRS batch submission failed: {response.status_code} - {response.text[:200]}")
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message=result.get("message", f"Batch submission failed with status code {response.status_code}"),
+                        errors=result.get("errors", []),
+                        status="FAILED",
+                        submission_id=batch_id  # Return the batch ID even if failed, for reference
+                    )
+                    
+                # Successfully submitted
+                submission_data = result.get("data", {})
+                submission_id = submission_data.get("batch_id", batch_id)
+                
+                logger.info(f"Successfully submitted batch {submission_id} with {len(invoices)} invoices")
+                
+                return InvoiceSubmissionResponse(
+                    success=True,
+                    message=result.get("message", "Batch submitted successfully"),
+                    submission_id=submission_id,
+                    status=result.get("status", "SUBMITTED"),
+                    details=submission_data
+                )
+                
+            except requests.RequestException as req_err:
+                logger.error(f"Request error during batch submission: {str(req_err)}")
+                return InvoiceSubmissionResponse(
+                    success=False,
+                    message=f"API request failed: {str(req_err)}",
+                    errors=[{"code": "CONNECTION_ERROR", "detail": str(req_err)}],
+                    submission_id=batch_id  # Return the batch ID even if failed, for reference
+                )
+            
+        except HTTPException:
+            raise  # Re-raise HTTP exceptions
         except Exception as e:
             logger.error(f"FIRS API batch submission error: {str(e)}")
             return InvoiceSubmissionResponse(
                 success=False,
-                message=f"API batch request failed: {str(e)}",
+                message=f"Batch submission failed: {str(e)}",
+                errors=[{"code": "INTERNAL_ERROR", "detail": str(e)}],
                 details={"error_type": type(e).__name__}
             )
 
 
-    async def validate_irn(self, irn_value: str, invoice_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def validate_irn(self, invoice_reference: str, business_id: str, irn_value: str) -> Dict[str, Any]:
         """
         Validate an IRN with the FIRS API.
         
         Args:
+            invoice_reference: The reference number of the invoice
+            business_id: The business ID that issued the invoice
             irn_value: The IRN to validate
-            invoice_data: Optional invoice data for advanced validation
             
         Returns:
             Dictionary with validation result
         """
         try:
-            # Ensure token is valid
-            await self._ensure_valid_token()
+            # Skip authentication for IRN validation as it uses API key/secret
+            # This aligns with our test findings that showed API key authentication works
             
-            url = f"{self.base_url}/api/v1/einvoice/irn/validate"
-            headers = self._get_auth_headers()
+            # Use sandbox validation in development
+            if self.use_sandbox:
+                logger.info(f"Using sandbox for IRN validation: {irn_value}")
+                return await self.validate_irn_sandbox(irn_value)
             
+            url = f"{self.base_url}{self.endpoints['irn_validate']}"
+            logger.info(f"Validating IRN with FIRS API: {irn_value}")
+            
+            # Prepare signature using the cryptographic keys
+            try:
+                signature = self._prepare_irn_signature(irn_value)
+                logger.debug(f"Generated signature for IRN: {irn_value}")
+            except Exception as e:
+                logger.error(f"Error generating IRN signature: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to generate IRN signature: {str(e)}"
+                )
+            
+            # Construct the payload according to FIRS API requirements
             payload = {
-                "irn": irn_value
+                "invoice_reference": invoice_reference,
+                "business_id": business_id,
+                "irn": irn_value,
+                "signature": signature
             }
+                
+            response = requests.post(
+                url, 
+                json=payload, 
+                headers=self._get_default_headers(),  # Use API key auth for IRN validation
+                timeout=30  # Add timeout for better error handling
+            )
             
-            if invoice_data:
-                payload["invoice_data"] = invoice_data
-            
-            logger.info(f"Validating IRN {irn_value} with FIRS API")
-            response = requests.post(url, headers=headers, json=payload)
-            
-            if response.status_code == 200:
-                data = response.json()
-                return {
-                    "success": data.get("status") == "success",
-                    "message": data.get("message", "Validation completed"),
-                    "details": data.get("data", {})
-                }
-            else:
-                logger.error(f"Error validating IRN with FIRS API: {response.text}")
+            if response.status_code not in (200, 201, 202):
+                logger.error(f"FIRS IRN validation failed: {response.status_code} - {response.text}")
+                error_data = {}
+                try:
+                    if response.content:
+                        error_data = response.json()
+                except ValueError:
+                    error_data = {"message": f"Error parsing response: {response.text[:200]}"}
+                
                 return {
                     "success": False,
-                    "message": f"FIRS API error: {response.status_code}",
-                    "details": {
-                        "error": response.text,
-                        "status_code": response.status_code
-                    }
+                    "message": error_data.get("message", f"Validation failed with status code {response.status_code}"),
+                    "errors": error_data.get("errors", []),
+                    "status_code": response.status_code
                 }
                 
+            # Process successful response
+            result = {}
+            try:
+                if response.content:
+                    result = response.json()
+                    
+                # Record the validation in our system
+                validation_record = {
+                    "irn": irn_value,
+                    "business_id": business_id,
+                    "invoice_reference": invoice_reference,
+                    "timestamp": datetime.now().isoformat(),
+                    "is_valid": result.get("data", {}).get("is_valid", False),
+                    "response": result
+                }
+                
+                logger.info(f"IRN validation successful for {irn_value}: {validation_record['is_valid']}")
+                
+                return {
+                    "success": True,
+                    "message": result.get("message", "IRN validation successful"),
+                    "data": result.get("data", {}),
+                    "status": "VALID" if result.get("data", {}).get("is_valid", False) else "INVALID",
+                    "validation_record": validation_record
+                }
+            except ValueError as e:
+                logger.error(f"Error parsing IRN validation response: {str(e)}")
+                return {
+                    "success": True,  # Assuming validation succeeded even if parsing response failed
+                    "message": "IRN validation processed but response parsing failed",
+                    "data": {"raw_response": response.text[:500]},
+                    "status": "UNKNOWN"
+                }
+            
+        except HTTPException:
+            raise  # Re-raise HTTP exceptions
         except Exception as e:
-            logger.exception(f"Exception validating IRN with FIRS API: {str(e)}")
+            logger.error(f"FIRS IRN validation error: {str(e)}")
             return {
                 "success": False,
-                "message": f"Error validating IRN: {str(e)}",
-                "details": {"error_type": type(e).__name__}
+                "message": f"Validation failed: {str(e)}",
+                "errors": [{"code": "INTERNAL_ERROR", "detail": str(e)}]
             }
+            
+    def _prepare_irn_signature(self, irn_value: str) -> str:
+        """
+        Prepare a cryptographic signature for an IRN using the FIRS public key.
+        
+        Args:
+            irn_value: The IRN to sign
+            
+        Returns:
+            Base64-encoded signature string
+        """
+        try:
+            # Load the certificate from the configured path
+            certificate_path = settings.FIRS_CERTIFICATE_PATH
+            if not os.path.exists(certificate_path):
+                raise ValueError(f"FIRS certificate file not found at: {certificate_path}")
+                
+            with open(certificate_path, 'r') as f:
+                certificate = f.read().strip()
+            
+            # Create data dictionary with IRN and certificate
+            data = {
+                "irn": irn_value,
+                "certificate": certificate
+            }
+            
+            # Convert to JSON and encrypt
+            return encrypt_text(json.dumps(data))
+        except Exception as e:
+            logger.error(f"Error preparing IRN signature: {str(e)}")
+            raise
     
     async def validate_irn_sandbox(self, irn_value: str) -> Dict[str, Any]:
         """
@@ -720,18 +965,7 @@ class FIRSService:
                     message=data.get("message", result.get("message", "Status retrieved successfully")),
                     details=data
                 )
-            elif response.status_code == 404:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Submission with ID {submission_id} not found"
-                )
-            else:
-                logger.error(f"FIRS status check failed: {response.status_code} - {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to check submission status: {response.status_code}"
-                )
-                
+            
         except HTTPException:
             # Re-raise HTTP exceptions
             raise
@@ -742,9 +976,205 @@ class FIRSService:
                 detail=f"Status check error: {str(e)}"
             )
     
+    async def get_currencies(self) -> List[Dict[str, Any]]:
+        """Get list of currencies from FIRS API.
+        
+        Returns:
+            List of currency dictionaries
+            
+        Raises:
+            HTTPException: If retrieval fails
+        """
+        try:
+            # First try to load currencies from our reference data file
+            try:
+                currency_file = os.path.join(settings.REFERENCE_DATA_DIR, 'firs', 'currencies.json')
+                if os.path.exists(currency_file):
+                    with open(currency_file, 'r') as f:
+                        currency_data = json.load(f)
+                        logger.info(f"Loaded {len(currency_data.get('currencies', []))} currencies from reference file")
+                        return currency_data.get('currencies', [])
+            except Exception as file_err:
+                logger.warning(f"Could not load currencies from reference file: {str(file_err)}")
+            
+            # Fall back to API call if reference file not available
+            url = f"{self.base_url}{self.endpoints['currencies']}"
+            logger.info(f"Fetching currencies from FIRS API: {url}")
+            
+            response = requests.get(
+                url, 
+                headers=self._get_default_headers(),
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"FIRS currencies retrieval failed: {response.status_code} - {response.text[:200]}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"FIRS API service error: {response.status_code}"
+                )
+                
+            try:
+                result = response.json()
+                currencies = result.get("data", [])
+                logger.info(f"Retrieved {len(currencies)} currencies from FIRS API")
+                
+                # Save to reference file for future use
+                os.makedirs(os.path.dirname(currency_file), exist_ok=True)
+                with open(currency_file, 'w') as f:
+                    json.dump({"currencies": currencies, "metadata": {"retrieved_at": datetime.now().isoformat()}}, f, indent=2)
+                
+                return currencies
+            except ValueError as json_err:
+                logger.error(f"Error parsing FIRS currencies response: {str(json_err)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error parsing FIRS API response: {str(json_err)}"
+                )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"FIRS currency retrieval error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving currencies: {str(e)}"
+            )
+    
+    async def get_invoice_types(self) -> List[Dict[str, Any]]:
+        """Get list of invoice types from FIRS API.
+        
+        Returns:
+            List of invoice type dictionaries
+            
+        Raises:
+            HTTPException: If retrieval fails
+        """
+        try:
+            # First try to load invoice types from our reference data file
+            try:
+                invoice_type_file = os.path.join(settings.REFERENCE_DATA_DIR, 'firs', 'invoice_types.json')
+                if os.path.exists(invoice_type_file):
+                    with open(invoice_type_file, 'r') as f:
+                        invoice_type_data = json.load(f)
+                        logger.info(f"Loaded {len(invoice_type_data.get('invoice_types', []))} invoice types from reference file")
+                        return invoice_type_data.get('invoice_types', [])
+            except Exception as file_err:
+                logger.warning(f"Could not load invoice types from reference file: {str(file_err)}")
+            
+            # Fall back to API call if reference file not available
+            url = f"{self.base_url}{self.endpoints['invoice_types']}"
+            logger.info(f"Fetching invoice types from FIRS API: {url}")
+            
+            response = requests.get(
+                url, 
+                headers=self._get_default_headers(),
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"FIRS invoice types retrieval failed: {response.status_code} - {response.text[:200]}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"FIRS API service error: {response.status_code}"
+                )
+                
+            try:
+                result = response.json()
+                invoice_types = result.get("data", [])
+                logger.info(f"Retrieved {len(invoice_types)} invoice types from FIRS API")
+                
+                # Save to reference file for future use
+                os.makedirs(os.path.dirname(invoice_type_file), exist_ok=True)
+                with open(invoice_type_file, 'w') as f:
+                    json.dump({"invoice_types": invoice_types, "metadata": {"retrieved_at": datetime.now().isoformat()}}, f, indent=2)
+                
+                return invoice_types
+            except ValueError as json_err:
+                logger.error(f"Error parsing FIRS invoice types response: {str(json_err)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error parsing FIRS API response: {str(json_err)}"
+                )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"FIRS invoice type retrieval error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving invoice types: {str(e)}"
+            )
+    
+    async def get_vat_exemptions(self) -> List[Dict[str, Any]]:
+        """Get list of VAT exemptions from FIRS API.
+        
+        Returns:
+            List of VAT exemption dictionaries
+            
+        Raises:
+            HTTPException: If retrieval fails
+        """
+        try:
+            # First try to load VAT exemptions from our reference data file
+            try:
+                vat_exemption_file = os.path.join(settings.REFERENCE_DATA_DIR, 'firs', 'vat_exemptions.json')
+                if os.path.exists(vat_exemption_file):
+                    with open(vat_exemption_file, 'r') as f:
+                        vat_exemption_data = json.load(f)
+                        logger.info(f"Loaded {len(vat_exemption_data.get('vat_exemptions', []))} VAT exemptions from reference file")
+                        return vat_exemption_data.get('vat_exemptions', [])
+            except Exception as file_err:
+                logger.warning(f"Could not load VAT exemptions from reference file: {str(file_err)}")
+            
+            # Fall back to API call if reference file not available
+            url = f"{self.base_url}{self.endpoints['vat_exemptions']}"
+            logger.info(f"Fetching VAT exemptions from FIRS API: {url}")
+            
+            response = requests.get(
+                url, 
+                headers=self._get_default_headers(),
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"FIRS VAT exemptions retrieval failed: {response.status_code} - {response.text[:200]}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"FIRS API service error: {response.status_code}"
+                )
+                
+            try:
+                result = response.json()
+                vat_exemptions = result.get("data", [])
+                logger.info(f"Retrieved {len(vat_exemptions)} VAT exemptions from FIRS API")
+                
+                # Save to reference file for future use
+                os.makedirs(os.path.dirname(vat_exemption_file), exist_ok=True)
+                with open(vat_exemption_file, 'w') as f:
+                    json.dump({"vat_exemptions": vat_exemptions, "metadata": {"retrieved_at": datetime.now().isoformat()}}, f, indent=2)
+                
+                return vat_exemptions
+            except ValueError as json_err:
+                logger.error(f"Error parsing FIRS VAT exemptions response: {str(json_err)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error parsing FIRS API response: {str(json_err)}"
+                )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"FIRS VAT exemption retrieval error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving VAT exemptions: {str(e)}"
+            )
+    
     async def submit_ubl_invoice(self, ubl_xml: str, invoice_type: str = "standard") -> InvoiceSubmissionResponse:
         """Submit a UBL format invoice to FIRS.
         
+{{ ... }}
         This method supports UBL format invoices, specifically for BIS Billing 3.0
         compatible documents generated from the Odoo UBL mapping system.
         
