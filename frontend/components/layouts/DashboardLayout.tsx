@@ -2,7 +2,7 @@ import React, { ReactNode, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { 
-  FiHome, FiTrendingUp, FiList, FiSettings, FiMenu, FiBell, FiUser, FiX
+  FiHome, FiTrendingUp, FiList, FiSettings, FiMenu, FiBell, FiUser, FiX, FiBarChart2
 } from 'react-icons/fi';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
@@ -29,6 +29,7 @@ const NavItems = [
   { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
   { name: 'Integrations', icon: FiTrendingUp, href: '/integrations' },
   { name: 'IRN Management', icon: FiList, href: '/irn' },
+  { name: 'Submission Dashboard', icon: FiBarChart2, href: '/submission-dashboard' },
   { name: 'Settings', icon: FiSettings, href: '/settings' },
 ];
 

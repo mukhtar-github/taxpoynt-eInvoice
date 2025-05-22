@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
 
 from app.routers import crypto
-from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn, validation_management, dashboard, odoo_ubl, firs_submission, submission_webhook, retry_management
+from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn, validation_management, dashboard, odoo_ubl, firs_submission, submission_webhook, retry_management, submission_dashboard
 from app.core.config import settings
 from app.core.config_retry import retry_settings
 from app.services.background_tasks import start_background_tasks
@@ -84,6 +84,7 @@ app.include_router(api_credentials.router, prefix=settings.API_V1_STR, tags=["ap
 app.include_router(bulk_irn.router, prefix=f"{settings.API_V1_STR}/bulk-irn", tags=["bulk-irn"])
 app.include_router(validation_management.router, prefix=f"{settings.API_V1_STR}/validation-management", tags=["validation-management"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+app.include_router(submission_dashboard.router, prefix=settings.API_V1_STR, tags=["submission-dashboard"])
 app.include_router(odoo_ubl.router, prefix=settings.API_V1_STR, tags=["odoo-ubl"])
 app.include_router(firs_submission.router)
 app.include_router(submission_webhook.router, tags=["webhooks"])
