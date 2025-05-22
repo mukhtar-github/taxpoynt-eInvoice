@@ -49,19 +49,12 @@ def generate_irn(invoice_number: str, service_id: str, timestamp: str) -> str:
         str: Generated IRN in the format InvoiceNumber-ServiceID-YYYYMMDD
         
     Raises:
-        HTTPException: If any component is invalid
+        ValueError: If any component is invalid
     """
-    try:
-        return utils_generate_irn(invoice_number, service_id, timestamp)
-    except HTTPException as e:
-        # Re-raise the HTTPException
-        raise e
-    except Exception as e:
-        logger.error(f"Error generating IRN: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error generating IRN: {str(e)}"
-        )
+    if not validate_irn_format(invoice_number, service_id, timestamp):
+        raise ValueError("Invalid IRN components")
+        
+    return utils_generate_irn(invoice_number, service_id, timestamp)
 
 
 def create_irn(
@@ -87,32 +80,45 @@ def create_irn(
     Raises:
         HTTPException: If IRN generation fails or if a duplicate IRN already exists
     """
-    timestamp = request.timestamp or datetime.now().strftime("%Y%m%d")
+    # Use current date if timestamp not provided
+    timestamp = request.timestamp
+    if not timestamp:
+        timestamp = datetime.now().strftime("%Y%m%d")
     
     try:
-        # Generate IRN
+        # Generate the IRN
         irn_value = generate_irn(request.invoice_number, service_id, timestamp)
         
         # Check if IRN already exists
         existing_irn = get_irn_by_value(db, irn_value)
         if existing_irn:
-            raise HTTPException(
-                status_code=409,
-                detail=f"IRN '{irn_value}' already exists"
-            )
+            # If the existing IRN belongs to the same integration and invoice number,
+            # we can return it without error (idempotent behavior)
+            if (
+                existing_irn.integration_id == request.integration_id and 
+                existing_irn.invoice_number == request.invoice_number
+            ):
+                return existing_irn
+            else:
+                # Otherwise, this is a collision - very unlikely but possible
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"IRN collision detected: {irn_value} already exists for a different invoice"
+                )
         
-        # Calculate validity
+        # Calculate expiration date
         valid_until = datetime.now() + timedelta(days=valid_days)
         
-        # Create IRN record
+        # Create the IRN record
         irn_record = IRNRecord(
             irn=irn_value,
-            integration_id=str(request.integration_id),
+            integration_id=request.integration_id,
             invoice_number=request.invoice_number,
             service_id=service_id,
             timestamp=timestamp,
-            valid_until=valid_until,
             status="unused",
+            generated_at=datetime.now(),
+            valid_until=valid_until,
             meta_data=metadata or {}
         )
         
@@ -120,18 +126,21 @@ def create_irn(
         db.commit()
         db.refresh(irn_record)
         
-        logger.info(f"Created IRN: {irn_value}")
         return irn_record
         
-    except HTTPException as e:
-        # Re-raise the HTTPException
-        raise e
+    except ValueError as e:
+        # Validation error
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to generate IRN: {str(e)}"
+        )
     except Exception as e:
+        # Other errors
+        logger.error(f"IRN generation error: {str(e)}")
         db.rollback()
-        logger.error(f"Error creating IRN record: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error creating IRN record: {str(e)}"
+            detail=f"Failed to generate IRN: Internal server error"
         )
 
 
@@ -157,72 +166,81 @@ def create_batch_irn(
     Returns:
         Tuple[List[IRNRecord], List[Dict[str, str]]]: Tuple of (successful IRN records, failed invoice details)
     """
-    if timestamp is None:
+    # Use current date if timestamp not provided
+    if not timestamp:
         timestamp = datetime.now().strftime("%Y%m%d")
     
     successful_records = []
-    failed_invoices = []
+    failed_records = []
+    
+    # Calculate expiration date (same for all IRNs in batch)
+    valid_until = datetime.now() + timedelta(days=valid_days)
     
     for invoice_number in invoice_numbers:
         try:
-            if not validate_invoice_number(invoice_number):
-                failed_invoices.append({
-                    "invoice_number": invoice_number,
-                    "error": "Invalid invoice number format"
-                })
-                continue
-                
-            # Generate IRN
+            # Generate the IRN
             irn_value = generate_irn(invoice_number, service_id, timestamp)
             
             # Check if IRN already exists
             existing_irn = get_irn_by_value(db, irn_value)
             if existing_irn:
-                failed_invoices.append({
-                    "invoice_number": invoice_number,
-                    "error": "IRN already exists"
-                })
-                continue
+                # If the existing IRN belongs to the same integration and invoice number,
+                # we can include it in the results without error
+                if (
+                    existing_irn.integration_id == integration_id and 
+                    existing_irn.invoice_number == invoice_number
+                ):
+                    successful_records.append(existing_irn)
+                    continue
+                else:
+                    # IRN collision
+                    failed_records.append({
+                        "invoice_number": invoice_number,
+                        "error": f"IRN collision: {irn_value} already exists for a different invoice"
+                    })
+                    continue
             
-            # Calculate validity
-            valid_until = datetime.now() + timedelta(days=valid_days)
-            
-            # Create IRN record
+            # Create the IRN record
             irn_record = IRNRecord(
                 irn=irn_value,
-                integration_id=str(integration_id),
+                integration_id=integration_id,
                 invoice_number=invoice_number,
                 service_id=service_id,
                 timestamp=timestamp,
-                valid_until=valid_until,
-                status="unused"
+                status="unused",
+                generated_at=datetime.now(),
+                valid_until=valid_until
             )
             
             db.add(irn_record)
             successful_records.append(irn_record)
             
         except Exception as e:
-            logger.error(f"Error generating IRN for invoice {invoice_number}: {str(e)}")
-            failed_invoices.append({
+            # Log the failure and continue with other invoice numbers
+            logger.error(f"Failed to generate IRN for invoice {invoice_number}: {str(e)}")
+            failed_records.append({
                 "invoice_number": invoice_number,
                 "error": str(e)
             })
     
+    # Commit all successful records at once
     if successful_records:
         try:
             db.commit()
-            # Refresh all records
+            # Refresh all records to get their IDs
             for record in successful_records:
                 db.refresh(record)
         except Exception as e:
+            # If commit fails, roll back and treat all as failures
             db.rollback()
-            logger.error(f"Error committing batch IRN records: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error committing batch IRN records: {str(e)}"
-            )
+            logger.error(f"Failed to commit batch IRN generation: {str(e)}")
+            failed_records.extend([
+                {"invoice_number": record.invoice_number, "error": "Database commit failed"}
+                for record in successful_records
+            ])
+            successful_records = []
     
-    return successful_records, failed_invoices
+    return successful_records, failed_records
 
 
 def get_irn_by_value(db: Session, irn_value: str) -> Optional[IRNRecord]:
@@ -253,7 +271,7 @@ def get_irn_by_invoice_number(db: Session, integration_id: UUID, invoice_number:
     """
     return db.query(IRNRecord).filter(
         and_(
-            IRNRecord.integration_id == str(integration_id),
+            IRNRecord.integration_id == integration_id,
             IRNRecord.invoice_number == invoice_number
         )
     ).first()
@@ -273,8 +291,8 @@ def get_irns_by_integration(db: Session, integration_id: UUID, skip: int = 0, li
         List[IRNRecord]: List of IRN records
     """
     return db.query(IRNRecord).filter(
-        IRNRecord.integration_id == str(integration_id)
-    ).order_by(IRNRecord.generated_at.desc()).offset(skip).limit(limit).all()
+        IRNRecord.integration_id == integration_id
+    ).offset(skip).limit(limit).all()
 
 
 def update_irn_status(
@@ -298,39 +316,54 @@ def update_irn_status(
     Raises:
         HTTPException: If status is invalid or IRN not found
     """
+    # Validate status
     valid_statuses = ["used", "unused", "expired"]
     if status not in valid_statuses:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            detail=f"Invalid status: {status}. Must be one of {valid_statuses}"
         )
-        
+    
+    # Retrieve the IRN record
     irn_record = get_irn_by_value(db, irn_value)
     if not irn_record:
         raise HTTPException(
-            status_code=404, 
-            detail="IRN not found"
+            status_code=404,
+            detail=f"IRN not found: {irn_value}"
+        )
+    
+    # Update status
+    irn_record.status = status
+    
+    # Update used_at and invoice_id if status is "used"
+    if status == "used":
+        irn_record.used_at = datetime.now()
+        if invoice_id:
+            irn_record.invoice_id = invoice_id
+    
+    # Reset used_at and invoice_id if status is changing back to "unused"
+    elif status == "unused" and irn_record.status != "unused":
+        irn_record.used_at = None
+        irn_record.invoice_id = None
+    
+    # Check if IRN has expired and force status if needed
+    if irn_record.valid_until and irn_record.valid_until < datetime.now() and status != "expired":
+        # Cannot change to "used" or "unused" if expired
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot change status to {status} for expired IRN. IRN expired on {irn_record.valid_until}"
         )
     
     try:
-        irn_record.status = status
-        
-        if status == "used" and not irn_record.used_at:
-            irn_record.used_at = datetime.now()
-        
-        if invoice_id:
-            irn_record.invoice_id = invoice_id
-        
         db.commit()
         db.refresh(irn_record)
-        
         return irn_record
     except Exception as e:
         db.rollback()
-        logger.error(f"Error updating IRN status: {str(e)}")
+        logger.error(f"Failed to update IRN status: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error updating IRN status: {str(e)}"
+            detail=f"Failed to update IRN status: Internal server error"
         )
 
 
@@ -348,34 +381,27 @@ def get_irn_metrics(
     Returns:
         IRNMetricsResponse: Metrics about IRN usage
     """
-    try:
-        query = db.query(IRNRecord)
-        
-        if integration_id:
-            query = query.filter(IRNRecord.integration_id == str(integration_id))
-        
-        # Get counts by status
-        used_count = query.filter(IRNRecord.status == "used").count()
-        unused_count = query.filter(IRNRecord.status == "unused").count()
-        expired_count = query.filter(IRNRecord.status == "expired").count()
-        total_count = used_count + unused_count + expired_count
-        
-        # Get recent IRNs
-        recent_irns = query.order_by(IRNRecord.generated_at.desc()).limit(10).all()
-        
-        return IRNMetricsResponse(
-            used_count=used_count,
-            unused_count=unused_count,
-            expired_count=expired_count,
-            total_count=total_count,
-            recent_irns=recent_irns
-        )
-    except Exception as e:
-        logger.error(f"Error getting IRN metrics: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error getting IRN metrics: {str(e)}"
-        )
+    # Base query with optional integration filter
+    base_query = db.query(IRNRecord)
+    if integration_id:
+        base_query = base_query.filter(IRNRecord.integration_id == integration_id)
+    
+    # Count IRNs by status
+    used_count = base_query.filter(IRNRecord.status == "used").count()
+    unused_count = base_query.filter(IRNRecord.status == "unused").count()
+    expired_count = base_query.filter(IRNRecord.status == "expired").count()
+    total_count = used_count + unused_count + expired_count
+    
+    # Get recent IRNs
+    recent_irns = base_query.order_by(IRNRecord.generated_at.desc()).limit(10).all()
+    
+    return IRNMetricsResponse(
+        used_count=used_count,
+        unused_count=unused_count,
+        expired_count=expired_count,
+        total_count=total_count,
+        recent_irns=recent_irns
+    )
 
 
 def expire_outdated_irns(db: Session) -> int:
@@ -389,24 +415,131 @@ def expire_outdated_irns(db: Session) -> int:
         int: Number of IRNs updated
     """
     try:
-        # Find IRNs that are past their valid_until date and not already expired
-        now = datetime.now()
-        result = db.query(IRNRecord).filter(
+        # Find unused IRNs that have expired
+        expired_irns = db.query(IRNRecord).filter(
             and_(
-                IRNRecord.valid_until < now,
-                IRNRecord.status != "expired"
+                IRNRecord.status == "unused",
+                IRNRecord.valid_until < datetime.now()
             )
-        ).update(
-            {"status": "expired"},
-            synchronize_session=False
-        )
+        ).all()
         
-        db.commit()
-        return result
+        # Update their status
+        count = 0
+        for irn in expired_irns:
+            irn.status = "expired"
+            count += 1
+        
+        # Commit changes
+        if count > 0:
+            db.commit()
+            
+        return count
     except Exception as e:
         db.rollback()
-        logger.error(f"Error expiring outdated IRNs: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error expiring outdated IRNs: {str(e)}"
-        )
+        logger.error(f"Failed to expire outdated IRNs: {str(e)}")
+        return 0
+
+
+# Add the missing functions needed by the routes
+def get_irn(db: Session, irn_id: UUID) -> Optional[IRNRecord]:
+    """
+    Retrieve an IRN record by its ID.
+    
+    Args:
+        db: Database session
+        irn_id: UUID of the IRN record
+        
+    Returns:
+        Optional[IRNRecord]: Found IRN record or None
+    """
+    return db.query(IRNRecord).filter(IRNRecord.id == irn_id).first()
+
+
+def get_irns_by_organization(db: Session, organization_id: UUID, skip: int = 0, limit: int = 100, status: Optional[str] = None) -> List[IRNRecord]:
+    """
+    Retrieve IRN records for a specific organization.
+    
+    Args:
+        db: Database session
+        organization_id: Organization ID
+        skip: Records to skip
+        limit: Maximum records to return
+        status: Optional status filter
+        
+    Returns:
+        List[IRNRecord]: List of IRN records
+    """
+    # Base query with organization filter
+    # This assumes IRNRecord has a relationship to Organization through Integration
+    query = db.query(IRNRecord).join(
+        IRNRecord.integration
+    ).filter(
+        IRNRecord.integration.has(organization_id=organization_id)
+    )
+    
+    # Add status filter if provided
+    if status:
+        query = query.filter(IRNRecord.status == status)
+    
+    # Apply pagination
+    return query.order_by(IRNRecord.generated_at.desc()).offset(skip).limit(limit).all()
+
+
+def validate_irn(db: Session, irn_value: str) -> Dict[str, Any]:
+    """
+    Validate an IRN.
+    
+    Args:
+        db: Database session
+        irn_value: IRN to validate
+        
+    Returns:
+        Dict[str, Any]: Validation result with status and details
+        
+    """
+    # Get the IRN record
+    irn_record = get_irn_by_value(db, irn_value)
+    
+    # Check if IRN exists
+    if not irn_record:
+        return {
+            "success": False,
+            "message": "IRN not found",
+            "details": {}
+        }
+    
+    # Check if IRN has expired
+    if irn_record.valid_until and irn_record.valid_until < datetime.now():
+        return {
+            "success": False,
+            "message": "IRN has expired",
+            "details": {
+                "status": "expired",
+                "invoice_number": irn_record.invoice_number,
+                "valid_until": irn_record.valid_until.isoformat()
+            }
+        }
+    
+    # Check if IRN has been used
+    if irn_record.status == "used":
+        return {
+            "success": True,
+            "message": "IRN is valid but has been used",
+            "details": {
+                "status": "used",
+                "invoice_number": irn_record.invoice_number,
+                "used_at": irn_record.used_at.isoformat() if irn_record.used_at else None,
+                "invoice_id": irn_record.invoice_id
+            }
+        }
+    
+    # IRN is valid and unused
+    return {
+        "success": True,
+        "message": "IRN is valid and unused",
+        "details": {
+            "status": "unused",
+            "invoice_number": irn_record.invoice_number,
+            "valid_until": irn_record.valid_until.isoformat()
+        }
+    }
