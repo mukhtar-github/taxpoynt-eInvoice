@@ -284,6 +284,53 @@ def decrypt_integration_config(integration: Any) -> Any:
     return Integration(**integration_dict)
 
 
+def test_integration(
+    db: Session,
+    integration: Integration
+) -> IntegrationTestResult:
+    """
+    Test the connection for an integration using the integration object.
+    
+    Args:
+        db: Database session
+        integration: The integration object to test
+        
+    Returns:
+        Test result with success status, message, and details
+    """
+    # Get the integration type from config
+    integration_type = integration.config.get("type", "").lower()
+    
+    # Update last_tested timestamp
+    now = datetime.utcnow()
+    crud.integration.update(
+        db=db, 
+        db_obj=crud.integration.get(db=db, id=integration.id),
+        obj_in=IntegrationUpdate(last_tested=now),
+        user_id=None
+    )
+    
+    # Test based on integration type
+    if integration_type == "rest_api":
+        return _test_rest_api_connection(integration)
+    elif integration_type == "soap":
+        return _test_soap_connection(integration)
+    elif integration_type == "database":
+        return _test_database_connection(integration)
+    elif integration_type == "file_system":
+        return _test_file_system_connection(integration)
+    elif integration_type == "erp":
+        return _test_erp_connection(integration)
+    elif integration_type == "odoo":
+        return test_integration_odoo_connection(integration)
+    else:
+        return IntegrationTestResult(
+            success=False,
+            message=f"Unsupported integration type: {integration_type}",
+            details={"error": "unsupported_integration_type"}
+        )
+
+
 def test_integration_connection(
     db: Session,
     integration_id: UUID

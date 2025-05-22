@@ -150,7 +150,7 @@ class Settings(BaseSettings):
     FIRS_API_SECRET: str = os.getenv("FIRS_API_SECRET", "")
     
     # FIRS Sandbox Configuration
-    FIRS_SANDBOX_API_URL: str = os.getenv("FIRS_SANDBOX_API_URL", "https://einvoice.firs.gov.ng/integrator")
+    FIRS_SANDBOX_API_URL: str = os.getenv("FIRS_SANDBOX_API_URL", "https://eivc-k6z6d.ondigitalocean.app")
     FIRS_SANDBOX_API_KEY: str = os.getenv("FIRS_SANDBOX_API_KEY", "")
     FIRS_SANDBOX_API_SECRET: str = os.getenv("FIRS_SANDBOX_API_SECRET", "")
     FIRS_USE_SANDBOX: bool = os.getenv("FIRS_USE_SANDBOX", "True").lower() in ("true", "1", "t")
