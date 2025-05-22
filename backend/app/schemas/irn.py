@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List, Union # type: ignore
 from datetime import datetime
 import re
 from uuid import UUID
+from enum import Enum
 
 
 class IRNGenerateRequest(BaseModel):
@@ -402,5 +403,118 @@ class IRNValidationBatchResponse(BaseModel):
                         "message": "IRN not found"
                     }
                 ]
+            }
+        }
+
+
+
+class IRNStatus(str, Enum):
+    """Enum for IRN status values"""
+    ACTIVE = "active"
+    USED = "used"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+
+
+class IRNCreate(BaseModel):
+    """
+    Schema for creating a new IRN
+    
+    This is used by the API when generating a new IRN through the standard endpoint.
+    """
+    invoice_number: str = Field(
+        ..., 
+        description="Invoice number to generate IRN for",
+        example="INV-2025-001"
+    )
+    invoice_date: datetime = Field(
+        ...,
+        description="Date of the invoice"
+    )
+    total_amount: float = Field(
+        ...,
+        description="Total invoice amount",
+        gt=0
+    )
+    currency_code: str = Field(
+        ...,
+        description="Currency code (e.g., NGN)",
+        min_length=3,
+        max_length=3
+    )
+    customer_name: str = Field(
+        ...,
+        description="Name of the customer"
+    )
+    customer_tin: Optional[str] = Field(
+        None,
+        description="Tax Identification Number of the customer"
+    )
+    invoice_meta: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Additional invoice metadata"
+    )
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "invoice_number": "INV-2025-001",
+                "invoice_date": "2025-05-22T10:00:00",
+                "total_amount": 15000.0,
+                "currency_code": "NGN",
+                "customer_name": "ABC Corporation Ltd",
+                "customer_tin": "12345678-0001",
+                "invoice_meta": {
+                    "po_number": "PO-2025-123",
+                    "department": "Finance"
+                }
+            }
+        }
+
+
+class IRNList(BaseModel):
+    """
+    Schema for listing IRNs
+    
+    Used for paginated responses when listing IRNs.
+    """
+    items: List[IRNResponse] = Field(..., description="List of IRNs")
+    total: int = Field(..., description="Total number of IRNs matching the query")
+    page: int = Field(..., description="Current page number")
+    size: int = Field(..., description="Page size")
+    pages: int = Field(..., description="Total number of pages")
+    
+    class Config:
+        orm_mode = True
+
+
+class IRNValidationRequest(BaseModel):
+    """
+    Schema for IRN validation request
+    
+    Used to validate an existing IRN.
+    """
+    irn: str = Field(
+        ...,
+        description="IRN to validate",
+        example="INV2025001-12345678-20250522"
+    )
+    
+    @validator('irn')
+    def validate_irn_format(cls, v):
+        # Basic format validation for IRN
+        if not v or not isinstance(v, str):
+            raise ValueError("IRN must be a non-empty string")
+            
+        # Check if the IRN follows the expected format (can be customized)
+        if not re.match(r'^[A-Za-z0-9]+-[A-Za-z0-9]+-\d{8}$', v):
+            raise ValueError("IRN format is invalid. Expected format: InvoiceNumber-ServiceID-YYYYMMDD")
+            
+        return v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "irn": "INV2025001-12345678-20250522"
             }
         }
