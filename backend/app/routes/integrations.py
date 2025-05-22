@@ -24,7 +24,7 @@ from app.services.integration_monitor import (
     start_integration_monitoring, stop_integration_monitoring, run_integration_health_check
 )
 from app.dependencies.auth import get_current_user
-from app.services.api_credential_service import get_credentials_for_integration
+from app.services.api_credential_service import record_credential_usage
 from app.templates.odoo_integration import get_odoo_templates, get_odoo_template, validate_odoo_config
 from app.services.integration_credential_connector import create_credentials_from_integration_config, get_credentials_for_integration, migrate_integration_credentials_to_secure_storage
 
