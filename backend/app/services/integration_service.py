@@ -11,6 +11,7 @@ import time
 from sqlalchemy.orm import Session # type: ignore
 import threading
 from datetime import datetime, timedelta
+from fastapi.encoders import jsonable_encoder # For update_integration and object serialization
 
 from app import crud
 from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration, IntegrationTestResult, OdooIntegrationCreate, OdooConnectionTestRequest, IntegrationExport, IntegrationImport, FIRSEnvironment # type: ignore
@@ -30,7 +31,6 @@ SENSITIVE_CONFIG_FIELDS = [
     "refresh_token",
     "private_key"
 ]
-
 
 def encrypt_sensitive_config_fields(config: Dict[str, Any]) -> Dict[str, Any]:
     """
