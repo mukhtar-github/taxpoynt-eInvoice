@@ -1,0 +1,17 @@
+{
+  "name": "taxpoynt-einvoice-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end testing suite for TaxPoynt eInvoice deployed environment",
+  "main": "run_all_tests.js",
+  "scripts": {
+    "test": "node run_all_tests.js",
+    "test:odoo": "node odoo_integration_test.js",
+    "test:irn": "node irn_generation_test.js",
+    "test:firs": "node firs_submission_test.js",
+    "report": "node -e \"require('./generate_report.js').generateReport()\""
+  },
+  "dependencies": {
+    "axios": "^0.27.2",
+    "dotenv": "^16.0.1"
+  }
+}
