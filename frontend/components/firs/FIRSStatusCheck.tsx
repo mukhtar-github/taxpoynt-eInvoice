@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Typography, Badge } from '../ui';
+import { Card, CardHeader, CardContent, Button, Typography, Badge } from '../ui';
 import firsApiService from '../../services/firsApiService';
 import { SubmissionStatusResponse, SubmissionStatus } from '../../types/firs/api-types';
 
@@ -28,11 +28,11 @@ const FIRSStatusCheck: React.FC<FIRSStatusCheckProps> = ({
   const getStatusColor = (status: string): string => {
     const statusMap: Record<string, string> = {
       'COMPLETED': 'success',
-      'PROCESSING': 'info',
+      'PROCESSING': 'default',
       'PENDING': 'warning',
-      'REJECTED': 'error',
-      'FAILED': 'error',
-      'ERROR': 'error'
+      'REJECTED': 'destructive',
+      'FAILED': 'destructive',
+      'ERROR': 'destructive'
     };
     
     return statusMap[status] || 'secondary';
@@ -83,12 +83,12 @@ const FIRSStatusCheck: React.FC<FIRSStatusCheckProps> = ({
   return (
     <>
       <Card className="mb-6">
-        <Card.Header className="bg-warning text-dark">
+        <CardHeader className="bg-warning text-dark">
           <Typography.Heading level="h3">
             Check Submission Status
           </Typography.Heading>
-        </Card.Header>
-        <Card.Body>
+        </CardHeader>
+        <CardContent>
           <div className="mb-4">
             <label htmlFor="submissionId" className="block mb-2">
               Submission ID
@@ -108,15 +108,15 @@ const FIRSStatusCheck: React.FC<FIRSStatusCheckProps> = ({
             <div>
               {status ? (
                 <Badge 
-                  color={getStatusColor(status) as any}
-                  size="lg"
+                  variant={getStatusColor(status) as any}
+                  className="px-3 py-1 text-sm"
                 >
                   {status}
                 </Badge>
               ) : (
                 <Badge 
-                  color="secondary"
-                  size="lg"
+                  variant="secondary"
+                  className="px-3 py-1 text-sm"
                 >
                   Unknown
                 </Badge>
@@ -127,30 +127,30 @@ const FIRSStatusCheck: React.FC<FIRSStatusCheckProps> = ({
           <Button onClick={checkStatus} disabled={loading}>
             {loading ? 'Checking...' : 'Check Status'}
           </Button>
-        </Card.Body>
+        </CardContent>
       </Card>
 
       {error && (
         <Card className="mb-6 border-red-500">
-          <Card.Header className="bg-red-500 text-white">
+          <CardHeader className="bg-red-500 text-white">
             <Typography.Heading level="h3" className="text-white">Error</Typography.Heading>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <Typography.Text>{error}</Typography.Text>
-          </Card.Body>
+          </CardContent>
         </Card>
       )}
 
       {response && (
         <Card className="mb-6">
-          <Card.Header>
+          <CardHeader>
             <Typography.Heading level="h3">Response</Typography.Heading>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
               {JSON.stringify(response, null, 2)}
             </pre>
-          </Card.Body>
+          </CardContent>
         </Card>
       )}
     </>
