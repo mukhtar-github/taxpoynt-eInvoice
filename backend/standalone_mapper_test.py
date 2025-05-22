@@ -1,162 +1,57 @@
+#!/usr/bin/env python3
 """
-Odoo to FIRS UBL Mapping Utility
+Standalone test script for Odoo to FIRS mapping logic.
 
-This module provides utilities for mapping Odoo invoice data to the FIRS e-Invoice
-format using the UBL (Universal Business Language) standard. It ensures that all
-required fields for FIRS compliance are correctly mapped and validated.
+This script implements a simplified version of the OdooFIRSMapper class to test
+the mapping logic independently from the full application stack.
 """
+
 import os
 import json
 import logging
 from uuid import uuid4
-from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional
+from pprint import pprint
 
-from app.core.config import settings
-from app.utils.logger import get_logger
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()]
+)
 
-logger = get_logger(__name__)
+logger = logging.getLogger("standalone_mapper_test")
 
-class OdooFIRSMapper:
-    """
-    Maps Odoo invoice data to FIRS-compliant format.
-    
-    This class handles the transformation of Odoo invoice data to the
-    format required by the FIRS e-Invoice API, ensuring that all required
-    fields are present and correctly formatted.
-    """
-    
-    def __init__(self):
-        """Initialize the mapper with reference data."""
-        self.reference_data_dir = os.path.join(settings.REFERENCE_DATA_DIR, 'firs')
-        self._load_reference_data()
-    
-    def _load_reference_data(self):
-        """Load reference data from JSON files."""
-        try:
-            # Load invoice types
-            invoice_types_path = os.path.join(self.reference_data_dir, 'invoice_types.json')
-            with open(invoice_types_path, 'r') as f:
-                self.invoice_types = json.load(f).get('invoice_types', [])
-            logger.info(f"Loaded {len(self.invoice_types)} invoice types from reference data")
-            
-            # Load currencies
-            currencies_path = os.path.join(self.reference_data_dir, 'currencies.json')
-            with open(currencies_path, 'r') as f:
-                self.currencies = json.load(f).get('currencies', [])
-            logger.info(f"Loaded {len(self.currencies)} currencies from reference data")
-            
-            # Load VAT exemptions
-            vat_exemptions_path = os.path.join(self.reference_data_dir, 'vat_exemptions.json')
-            with open(vat_exemptions_path, 'r') as f:
-                self.vat_exemptions = json.load(f).get('vat_exemptions', [])
-            logger.info(f"Loaded {len(self.vat_exemptions)} VAT exemptions from reference data")
-            
-        except Exception as e:
-            logger.error(f"Error loading reference data: {str(e)}")
-            # Initialize with empty lists if loading fails
-            self.invoice_types = []
-            self.currencies = []
-            self.vat_exemptions = []
-    
-    def get_invoice_type_code(self, odoo_type: str) -> str:
-        """
-        Map Odoo invoice type to FIRS invoice type code.
-        
-        Args:
-            odoo_type: Odoo invoice type ('out_invoice', 'out_refund', etc.)
-            
-        Returns:
-            FIRS invoice type code
-        """
-        # Default mapping
-        type_mapping = {
-            'out_invoice': 'standard',
-            'out_refund': 'credit_note',
-            'in_invoice': 'standard',
-            'in_refund': 'credit_note',
-            'entry': 'standard'
-        }
-        
-        firs_type = type_mapping.get(odoo_type, 'standard')
-        
-        # Validate against reference data if available
-        if self.invoice_types:
-            valid_types = [t.get('code') for t in self.invoice_types]
-            if firs_type not in valid_types:
-                logger.warning(f"Invoice type {firs_type} not found in reference data. Using 'standard' as fallback.")
-                firs_type = 'standard'
-        
-        return firs_type
+class StandaloneOdooFIRSMapper:
+    """Simplified standalone version of the OdooFIRSMapper class."""
     
     def get_currency_code(self, odoo_currency: str) -> str:
-        """
-        Map Odoo currency to FIRS currency code.
-        
-        Args:
-            odoo_currency: Odoo currency code
-            
-        Returns:
-            FIRS currency code
-        """
-        # Default is NGN if not found
-        default_currency = 'NGN'
-        
-        if not odoo_currency:
-            return default_currency
-            
-        # If we have reference data, validate against it
-        if self.currencies:
-            valid_codes = [c.get('code') for c in self.currencies]
-            if odoo_currency.upper() in valid_codes:
-                return odoo_currency.upper()
-            logger.warning(f"Currency {odoo_currency} not found in reference data. Using {default_currency} as fallback.")
-        
-        return default_currency
+        """Map Odoo currency to FIRS currency code."""
+        # Common currency mappings
+        currency_map = {
+            "NGN": "NGN",
+            "USD": "USD",
+            "EUR": "EUR",
+            "GBP": "GBP",
+            "Naira": "NGN",
+            "Dollar": "USD",
+            "Euro": "EUR",
+            "Pound": "GBP"
+        }
+        return currency_map.get(odoo_currency, "NGN")
     
     def get_vat_exemption_code(self, odoo_tax_id: Optional[str], tax_rate: float) -> Optional[str]:
-        """
-        Map Odoo tax to FIRS VAT exemption code.
-        
-        Args:
-            odoo_tax_id: Odoo tax ID
-            tax_rate: Tax rate percentage
-            
-        Returns:
-            FIRS VAT exemption code or None if not exempt
-        """
-        # If tax rate is 0, we need an exemption code
+        """Map Odoo tax to FIRS VAT exemption code."""
         if tax_rate == 0:
-            # Default exemption code
-            default_exemption = 'VAT-EXEMPT-1'
-            
-            # If we have reference data, find a suitable exemption
-            if self.vat_exemptions:
-                # First try to match by code if odoo_tax_id looks like an exemption code
-                for exemption in self.vat_exemptions:
-                    if exemption.get('code') == odoo_tax_id:
-                        return exemption.get('code')
-                
-                # If not found, use the first exemption as default
-                if self.vat_exemptions:
-                    return self.vat_exemptions[0].get('code', default_exemption)
-            
-            return default_exemption
-        
-        # Not exempt
+            # Map common zero-rate exemption codes
+            if odoo_tax_id and "exempt" in str(odoo_tax_id).lower():
+                return "VATEX-EU-O"
+            return "VATEX-NG-GDS"
         return None
     
     def map_partner_to_party(self, partner_data: Dict[str, Any], is_supplier: bool = False) -> Dict[str, Any]:
-        """
-        Map Odoo partner data to FIRS party format.
-        
-        Args:
-            partner_data: Odoo partner data
-            is_supplier: Whether this partner is a supplier (for field naming)
-            
-        Returns:
-            FIRS party data in the format required by FIRS API
-        """
+        """Map Odoo partner data to FIRS party format."""
         # Extract TIN from VAT number if available
         tin = partner_data.get('vat', '').strip()
         # If TIN starts with "NG", remove it
@@ -227,12 +122,6 @@ class OdooFIRSMapper:
         # Get postal code
         postal_zone = address.get('zip', '')
         
-        # Format for FIRS API structure
-        if is_supplier:
-            party_type = "accounting_supplier_party"
-        else:
-            party_type = "accounting_customer_party"
-        
         # Build party data according to FIRS API specifications
         party_data = {
             "party_name": partner_data.get('name', ''),
@@ -253,18 +142,14 @@ class OdooFIRSMapper:
             "country": country_code
         }
         
+        # Add additional street name if available
+        if address.get('street2'):
+            party_data["postal_address"]["additional_street_name"] = address.get('street2')
+        
         return party_data
     
     def map_line_item(self, line_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Map Odoo invoice line to FIRS line item according to BIS Billing 3.0 format.
-        
-        Args:
-            line_data: Odoo invoice line data
-            
-        Returns:
-            FIRS invoice line item formatted for API submission
-        """
+        """Map Odoo invoice line to FIRS line item according to BIS Billing 3.0 format."""
         # Extract line identification
         line_id = line_data.get('id', str(uuid4()))
         if isinstance(line_id, (int, float)):
@@ -332,7 +217,10 @@ class OdooFIRSMapper:
             "line_extension_amount": line_extension_amount,
             "item": {
                 "name": description,
-                "description": description
+                "description": description,
+                "sellers_item_identification": {
+                    "id": line_data.get('product_id', {}).get('default_code', f"PROD-{line_id}") if isinstance(line_data.get('product_id'), dict) else f"PROD-{line_id}"
+                }
             },
             "price": {
                 "price_amount": unit_price,
@@ -370,15 +258,7 @@ class OdooFIRSMapper:
         return invoice_line
     
     def map_odoo_invoice_to_firs(self, odoo_invoice: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Map Odoo invoice to FIRS invoice format according to API specification.
-        
-        Args:
-            odoo_invoice: Odoo invoice data
-            
-        Returns:
-            FIRS-compliant invoice data ready for API submission
-        """
+        """Map Odoo invoice to FIRS invoice format according to API specification."""
         # Extract basic invoice information
         invoice_number = odoo_invoice.get('name', '') or odoo_invoice.get('number', '')
         invoice_date = odoo_invoice.get('invoice_date', '') or odoo_invoice.get('date_invoice', '')
@@ -442,7 +322,11 @@ class OdooFIRSMapper:
         # Calculate monetary totals
         total_line_extension = sum(float(line.get('line_extension_amount', 0)) for line in invoice_lines)
         total_tax_exclusive = total_line_extension
-        total_tax_amount = sum(float(line.get('tax_amount', 0)) for line in invoice_lines)
+        total_tax_amount = sum(
+            float(line.get('tax_total', {}).get('tax_amount', 0)) 
+            for line in invoice_lines 
+            if 'tax_total' in line
+        )
         total_tax_inclusive = total_tax_exclusive + total_tax_amount
         
         # Build tax totals
@@ -456,7 +340,10 @@ class OdooFIRSMapper:
                         "tax_amount": total_tax_amount,
                         "tax_category": {
                             "id": "VAT",
-                            "percent": (total_tax_amount / total_tax_exclusive * 100) if total_tax_exclusive > 0 else 0
+                            "percent": (total_tax_amount / total_tax_exclusive * 100) if total_tax_exclusive > 0 else 0,
+                            "tax_scheme": {
+                                "id": "FIRS"
+                            }
                         }
                     }
                 ]
@@ -482,6 +369,7 @@ class OdooFIRSMapper:
             "due_date": due_date,
             "issue_time": issue_time,
             "invoice_type_code": invoice_type_code,
+            "profile_id": "urn:firs.gov.ng:einvoicing:01:01",
             "payment_status": "PENDING",
             "document_currency_code": currency_code,
             "tax_currency_code": currency_code,
@@ -514,86 +402,120 @@ class OdooFIRSMapper:
         if notes:
             firs_invoice["note"] = notes
         
-        # Validate invoice has all required fields for FIRS
-        self._validate_firs_invoice(firs_invoice)
-        
         return firs_invoice
-    
-    def _validate_firs_invoice(self, invoice: Dict[str, Any]) -> None:
-        """
-        Validate that the FIRS invoice has all required fields according to FIRS API specification.
-        
-        Args:
-            invoice: FIRS invoice data
-            
-        Raises:
-            ValueError: If any required fields are missing
-        """
-        # List of required top-level fields for FIRS invoice
-        required_fields = [
-            'business_id', 
-            'irn', 
-            'issue_date', 
-            'issue_time',
-            'invoice_type_code',
-            'document_currency_code',
-            'accounting_supplier_party',
-            'accounting_customer_party',
-            'legal_monetary_total',
-            'invoice_line'
-        ]
-        
-        missing_fields = [field for field in required_fields if field not in invoice]
-        
-        if missing_fields:
-            raise ValueError(f"FIRS invoice missing required fields: {', '.join(missing_fields)}")
-        
-        # Validate party information has required fields
-        for party_type in ['accounting_supplier_party', 'accounting_customer_party']:
-            party = invoice.get(party_type, {})
-            party_required_fields = ['party_name', 'tin', 'email', 'postal_address']
-            party_missing_fields = [field for field in party_required_fields if field not in party]
-            
-            if party_missing_fields:
-                raise ValueError(f"{party_type.replace('_', ' ').title()} missing required fields: {', '.join(party_missing_fields)}")
-            
-            # Validate postal address has required fields
-            address = party.get('postal_address', {})
-            address_required_fields = ['street_name', 'city_name', 'country']
-            address_missing_fields = [field for field in address_required_fields if field not in address]
-            
-            if address_missing_fields:
-                raise ValueError(f"{party_type.replace('_', ' ').title()} postal address missing required fields: {', '.join(address_missing_fields)}")
-        
-        # Validate monetary totals
-        monetary_total = invoice.get('legal_monetary_total', {})
-        monetary_required_fields = ['line_extension_amount', 'tax_exclusive_amount', 'tax_inclusive_amount', 'payable_amount']
-        monetary_missing_fields = [field for field in monetary_required_fields if field not in monetary_total]
-        
-        if monetary_missing_fields:
-            raise ValueError(f"Legal monetary total missing required fields: {', '.join(monetary_missing_fields)}")
-        
-        # Validate invoice lines
-        invoice_lines = invoice.get('invoice_line', [])
-        if not invoice_lines:
-            raise ValueError("Invoice must have at least one line item")
-        
-        for i, line in enumerate(invoice_lines):
-            line_required_fields = ['id', 'invoiced_quantity', 'line_extension_amount', 'item', 'price']
-            line_missing_fields = [field for field in line_required_fields if field not in line]
-            
-            if line_missing_fields:
-                raise ValueError(f"Invoice line {i+1} missing required fields: {', '.join(line_missing_fields)}")
-            
-            # Validate item has required fields
-            item = line.get('item', {})
-            if not item.get('name'):
-                raise ValueError(f"Invoice line {i+1} item missing required 'name' field")
-            
-            # Validate price has required fields
-            price = line.get('price', {})
-            if not isinstance(price.get('price_amount'), (int, float)):
-                raise ValueError(f"Invoice line {i+1} price missing required 'price_amount' field")
 
-# Create a default instance for easy importing
-odoo_firs_mapper = OdooFIRSMapper()
+def test_mapper():
+    """Run tests on the standalone mapper implementation."""
+    logger.info("Starting mapper tests...")
+    
+    # Create mapper instance
+    mapper = StandaloneOdooFIRSMapper()
+    
+    # Create mock Odoo invoice data
+    odoo_invoice = {
+        "id": 12345,
+        "name": "INV/2023/00001",
+        "invoice_date": "2023-05-01",
+        "date_due": "2023-06-01",
+        "type": "out_invoice",
+        "currency": "NGN",
+        "partner": {
+            "name": "Test Customer",
+            "vat": "12345678-0001",
+            "email": "customer@example.com",
+            "phone": "08087654321",
+            "street": "456 Test Avenue",
+            "city": "Abuja",
+            "country_code": "NG"
+        },
+        "company": {
+            "name": "Test Company Ltd",
+            "vat": "NG87654321-0001",
+            "email": "company@example.com",
+            "phone": "08012345678",
+            "street": "123 Company Street",
+            "city": "Lagos",
+            "zip": "100001",
+            "country_code": "NG"
+        },
+        "lines": [
+            {
+                "id": 1,
+                "name": "Product A",
+                "quantity": 2,
+                "price_unit": 100.0,
+                "discount": 10.0,
+                "tax_ids": [{"id": "vat15", "amount": 15.0}],
+                "uom": "Unit"
+            },
+            {
+                "id": 2,
+                "name": "Product B",
+                "quantity": 1,
+                "price_unit": 50.0,
+                "discount": 0.0,
+                "tax_ids": [{"id": "vat0", "amount": 0.0}],
+                "uom": "EA"
+            }
+        ],
+        "payment_terms": "30 Days",
+        "comment": "Test invoice for mapping validation"
+    }
+    
+    # Test partner mapping
+    logger.info("Testing partner mapping...")
+    supplier_party = mapper.map_partner_to_party(odoo_invoice["company"], is_supplier=True)
+    customer_party = mapper.map_partner_to_party(odoo_invoice["partner"], is_supplier=False)
+    
+    logger.info(f"Supplier party: {supplier_party['party_name']}, TIN: {supplier_party['tin']}")
+    logger.info(f"Customer party: {customer_party['party_name']}, TIN: {customer_party['tin']}")
+    
+    # Test line item mapping
+    logger.info("Testing line item mapping...")
+    line_items = [mapper.map_line_item(line) for line in odoo_invoice["lines"]]
+    for i, line in enumerate(line_items):
+        logger.info(f"Line item {i+1}: {line['item']['name']}, Quantity: {line['invoiced_quantity']}, Amount: {line['line_extension_amount']}")
+    
+    # Test full invoice mapping
+    logger.info("Testing full invoice mapping...")
+    firs_invoice = mapper.map_odoo_invoice_to_firs(odoo_invoice)
+    
+    # Validate the output
+    assert "business_id" in firs_invoice, "Business ID is missing"
+    assert "irn" in firs_invoice, "IRN is missing"
+    assert "issue_date" in firs_invoice, "Issue date is missing"
+    assert "accounting_supplier_party" in firs_invoice, "Supplier party is missing"
+    assert "accounting_customer_party" in firs_invoice, "Customer party is missing"
+    assert "invoice_line" in firs_invoice, "Invoice lines are missing"
+    assert "legal_monetary_total" in firs_invoice, "Monetary totals are missing"
+    
+    logger.info(f"Generated IRN: {firs_invoice['irn']}")
+    logger.info(f"Generated invoice with {len(firs_invoice['invoice_line'])} line items")
+    logger.info(f"Total amount: {firs_invoice['legal_monetary_total']['payable_amount']}")
+    
+    # Write the mapped invoice to a file for inspection
+    output_file = "firs_invoice_example.json"
+    with open(output_file, "w") as f:
+        json.dump(firs_invoice, f, indent=2)
+    
+    logger.info(f"Mapped invoice written to {output_file}")
+    
+    # Print summary structure
+    logger.info("Invoice structure summary:")
+    for key in firs_invoice.keys():
+        if isinstance(firs_invoice[key], dict):
+            logger.info(f"  {key}: {{{', '.join(firs_invoice[key].keys())}}}")
+        elif isinstance(firs_invoice[key], list):
+            logger.info(f"  {key}: [{len(firs_invoice[key])} items]")
+        else:
+            logger.info(f"  {key}: {firs_invoice[key]}")
+    
+    return True
+
+if __name__ == "__main__":
+    if test_mapper():
+        logger.info("All mapper tests PASSED! ✓")
+        exit(0)
+    else:
+        logger.error("Mapper tests FAILED! ✗")
+        exit(1)

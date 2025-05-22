@@ -84,6 +84,11 @@ app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", 
 app.include_router(odoo_ubl.router, prefix=settings.API_V1_STR, tags=["odoo-ubl"])
 app.include_router(firs_submission.router)
 
+# Import and include the new FIRS API router
+from app.routers.firs import router as firs_api_router
+app.include_router(firs_api_router, tags=["firs-api"])
+logger.info("FIRS API router initialized")
+
 if __name__ == "__main__":
     import uvicorn # type: ignore
     import ssl

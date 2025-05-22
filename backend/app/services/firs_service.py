@@ -122,13 +122,36 @@ class FIRSService:
             self.api_key = api_key or settings.FIRS_API_KEY
             self.api_secret = api_secret or settings.FIRS_API_SECRET
             logger.info(f"FIRS service initialized in PRODUCTION mode with URL: {self.base_url}")
+        
+        # Verify configuration
+        missing_config = []
+        if not self.base_url:
+            missing_config.append("API URL")
+        if not self.api_key:
+            missing_config.append("API Key")
+        if not self.api_secret:
+            missing_config.append("API Secret")
+            
+        if missing_config:
+            logger.warning(f"FIRS service initialized with missing configuration: {', '.join(missing_config)}")
             
         # Authentication state
         self.token: Optional[str] = None
         self.token_expiry: Optional[datetime] = None
         
+        # Session configuration for consistent connection handling
+        self.session = requests.Session()
+        self.session.headers.update(self._get_default_headers())
+        
+        # Connection settings
+        self.default_timeout = 30  # Default timeout in seconds
+        self.submission_timeout = 60  # Longer timeout for submissions
+        
         # API endpoint paths based on reference data
         self.endpoints = {
+            # Health check endpoint
+            "health_check": "/api",
+            
             # Authentication endpoints
             "authenticate": "/api/v1/utilities/authenticate",
             "verify_tin": "/api/v1/utilities/verify-tin",
@@ -137,14 +160,19 @@ class FIRSService:
             "irn_validate": "/api/v1/invoice/irn/validate",
             "invoice_validate": "/api/v1/invoice/validate",
             "invoice_sign": "/api/v1/invoice/sign",
-            "download_invoice": "/api/v1/invoice/download",
+            "download_invoice": "/api/v1/invoice/download/{IRN}",  # IRN as path parameter
+            "confirm_invoice": "/api/v1/invoice/confirm/{IRN}",  # IRN as path parameter
             "submit_invoice": "/api/v1/invoice/submit",
             "submit_batch": "/api/v1/invoice/batch/submit",
+            "update_invoice": "/api/v1/invoice/update/{IRN}",  # IRN as path parameter
+            "search_invoice": "/api/v1/invoice/{BUSINESS_ID}",  # BUSINESS_ID as path parameter
             "transact": "/api/v1/invoice/transact",
             
-            # Business management endpoints
-            "business_search": "/api/v1/entity",
-            "business_lookup": "/api/v1/invoice/party",
+            # Entity/Party management endpoints
+            "entity_search": "/api/v1/entity",
+            "entity_get": "/api/v1/entity/{ENTITY_ID}",  # ENTITY_ID as path parameter
+            "create_party": "/api/v1/invoice/party",
+            "get_party": "/api/v1/invoice/party/{PARTY_ID}",  # PARTY_ID as path parameter
             
             # Reference data endpoints
             "countries": "/api/v1/invoice/resources/countries",
@@ -159,7 +187,9 @@ class FIRSService:
         return {
             "x-api-key": self.api_key,
             "x-api-secret": self.api_secret,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "TaxPoynt-eInvoice/1.0"
         }
     
     def _get_auth_headers(self) -> Dict[str, str]:
@@ -168,6 +198,125 @@ class FIRSService:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
+        
+    def _handle_api_response(self, response: requests.Response, operation_name: str, success_codes: List[int] = None) -> Dict[str, Any]:
+        """
+        Handle API responses consistently with proper error management.
+        
+        Args:
+            response: The HTTP response from the FIRS API
+            operation_name: Name of the operation for logging
+            success_codes: List of status codes considered successful (defaults to [200, 201, 202])
+            
+        Returns:
+            Parsed JSON response data
+            
+        Raises:
+            HTTPException: If the response indicates an error
+        """
+        if success_codes is None:
+            success_codes = [200, 201, 202]
+        
+        # Log detailed response info in sandbox mode
+        if self.use_sandbox:
+            logger.debug(f"FIRS {operation_name} response status: {response.status_code}")
+            logger.debug(f"FIRS {operation_name} response headers: {dict(response.headers)}")
+            if response.content and len(response.content) < 1000:
+                logger.debug(f"FIRS {operation_name} response body: {response.text}")
+            else:
+                logger.debug(f"FIRS {operation_name} response body preview: {response.text[:500]}...")
+        
+        # Try to parse JSON response if present
+        result = {}
+        content_type = response.headers.get('content-type', '')
+        
+        if response.content:
+            try:
+                if 'application/json' in content_type:
+                    result = response.json()
+                elif response.content.strip().startswith(b'{') and response.content.strip().endswith(b'}'): 
+                    # Some APIs return JSON without proper content type
+                    try:
+                        result = json.loads(response.content)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Content looks like JSON but failed to parse: {response.text[:200]}")
+                        result = {"message": response.text[:200]}
+                else:
+                    # Handle non-JSON responses
+                    logger.warning(f"Non-JSON response: {content_type} - {response.text[:200]}")
+                    result = {"message": response.text[:200], "content_type": content_type}
+            except ValueError as e:
+                logger.warning(f"Failed to parse response: {str(e)}")
+                result = {"message": f"Invalid response format: {response.text[:200]}"}
+        
+        # Check if the response is successful
+        if response.status_code in success_codes:
+            return result
+        
+        # Handle various error conditions
+        error_detail = result.get("message", f"Operation failed with status {response.status_code}")
+        errors = result.get("errors", [])
+        
+        if response.status_code == 400:
+            # Bad request - likely validation errors
+            error_msg = f"FIRS {operation_name} validation failed: {error_detail}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": error_msg,
+                    "errors": errors,
+                    "environment": "sandbox" if self.use_sandbox else "production"
+                }
+            )
+        elif response.status_code == 401 or response.status_code == 403:
+            # Authentication or authorization failure
+            error_msg = f"FIRS {operation_name} authorization failed: {error_detail}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "message": error_msg,
+                    "environment": "sandbox" if self.use_sandbox else "production"
+                }
+            )
+        elif response.status_code == 404:
+            # Resource not found
+            error_msg = f"FIRS {operation_name} resource not found: {error_detail}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "message": error_msg,
+                    "environment": "sandbox" if self.use_sandbox else "production"
+                }
+            )
+        elif response.status_code == 429:
+            # Rate limiting
+            retry_after = response.headers.get('Retry-After', '60')
+            error_msg = f"FIRS {operation_name} rate limited. Retry after {retry_after} seconds."
+            logger.warning(error_msg)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "message": error_msg,
+                    "retry_after": retry_after,
+                    "environment": "sandbox" if self.use_sandbox else "production"
+                }
+            )
+        else:
+            # Other unexpected errors
+            error_msg = f"FIRS {operation_name} failed: {error_detail}"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "message": error_msg,
+                    "status_code": response.status_code,
+                    "errors": errors,
+                    "environment": "sandbox" if self.use_sandbox else "production"
+                }
+            )
     
     async def authenticate(self, email: str, password: str) -> FIRSAuthResponse:
         """Authenticate with FIRS API using taxpayer credentials.
@@ -191,33 +340,51 @@ class FIRSService:
                 "password": password
             }
             
-            response = requests.post(
+            # Use session for consistency
+            response = self.session.post(
                 url, 
-                json=payload, 
-                headers=self._get_default_headers(),
-                timeout=30  # Add timeout for better error handling
+                json=payload,
+                timeout=self.default_timeout
             )
+            
+            # Log additional details in sandbox mode
+            if self.use_sandbox:
+                logger.debug(f"FIRS sandbox auth response status: {response.status_code}")
+                if response.headers.get('content-type', '').startswith('application/json'):
+                    logger.debug(f"FIRS sandbox auth response preview: {response.text[:200]}")
             
             if response.status_code != 200:
                 logger.error(f"FIRS authentication failed: {response.text}")
                 try:
                     error_data = response.json()
                     error_detail = error_data.get("message", "Authentication failed")
+                    error_code = error_data.get("code", response.status_code)
                 except ValueError:
                     error_detail = f"Authentication failed with status code {response.status_code}"
+                    error_code = response.status_code
                 
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"FIRS API authentication failed: {error_detail}"
+                    detail={
+                        "message": f"FIRS API authentication failed: {error_detail}",
+                        "code": error_code,
+                        "environment": "sandbox" if self.use_sandbox else "production"
+                    }
                 )
             
             try:
                 auth_response = response.json()
+                
                 # Store token and set expiry
                 self.token = auth_response["data"]["access_token"]
                 self.token_expiry = datetime.now() + timedelta(seconds=auth_response["data"]["expires_in"])
                 
+                # Update session headers with the new token
+                self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+                
                 logger.info(f"Successfully authenticated with FIRS API as {email}")
+                logger.info(f"Token will expire at {self.token_expiry.isoformat()}")
+                
                 return FIRSAuthResponse(**auth_response)
             except (KeyError, ValueError) as e:
                 logger.error(f"Error parsing authentication response: {str(e)}")
@@ -230,7 +397,10 @@ class FIRSService:
             logger.error(f"FIRS API request failed: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"FIRS API service unavailable: {str(e)}"
+                detail={
+                    "message": f"FIRS API service unavailable: {str(e)}",
+                    "environment": "sandbox" if self.use_sandbox else "production"
+                }
             )
     
     async def _ensure_authenticated(self) -> None:
@@ -241,6 +411,9 @@ class FIRSService:
         it will raise an exception.
         """
         if not self.token or not self.token_expiry or datetime.now() >= self.token_expiry:
+            # In a production environment, this would attempt to refresh the token
+            # rather than immediately failing
+            logger.warning("Authentication token missing or expired")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="No valid authentication token. Please authenticate first."
@@ -260,7 +433,7 @@ class FIRSService:
         try:
             await self._ensure_authenticated()
             
-            url = f"{self.base_url}/api/v1/invoice/irn/validate"
+            url = f"{self.base_url}{self.endpoints['irn_validate']}"
             
             payload = {
                 "invoice_reference": invoice_reference,
@@ -405,36 +578,39 @@ class FIRSService:
         """Download a signed invoice PDF from FIRS API.
         
         Args:
-            irn: Invoice Reference Number
+            irn: Invoice Reference Number (IRN) as path parameter
             
         Returns:
-            Dictionary with invoice PDF data
+            Dictionary with invoice PDF data containing base64-encoded PDF
+            
+        Raises:
+            HTTPException: If the download fails
         """
         try:
             await self._ensure_authenticated()
             
-            url = f"{self.base_url}/api/v1/invoice/download/{irn}"
+            url = f"{self.base_url}{self.endpoints['download_invoice'].replace('{IRN}', irn)}"
             
             response = requests.get(
-                url,
-                headers=self._get_auth_headers()
+                url, 
+                headers=self._get_auth_headers(),
+                timeout=60  # Longer timeout for potentially large PDF downloads
             )
             
-            # Handle response based on status code
             if response.status_code == 200:
                 return response.json()
             elif response.status_code == 404:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Invoice not found"
+                    detail=f"Invoice with IRN {irn} not found"
                 )
             else:
                 logger.error(f"Invoice download failed: {response.text}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="FIRS API invoice download failed with unexpected status code"
+                    detail="FIRS API invoice download failed"
                 )
-            
+                
         except requests.RequestException as e:
             logger.error(f"FIRS API request failed: {str(e)}")
             raise HTTPException(
@@ -442,6 +618,379 @@ class FIRSService:
                 detail=f"FIRS API service unavailable: {str(e)}"
             )
     
+    async def check_health(self) -> Dict[str, Any]:
+        """Check the health status of the FIRS API.
+        
+        Returns:
+            Dictionary with health status information
+        
+        Raises:
+            HTTPException: If the health check fails
+        """
+        try:
+            url = f"{self.base_url}{self.endpoints['health_check']}"
+            
+            response = requests.get(
+                url,
+                headers=self._get_default_headers(),
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Health check failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="FIRS API health check failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API health check failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API health check failed: {str(e)}"
+            )
+    
+    async def get_entity(self, entity_id: str) -> Dict[str, Any]:
+        """Get entity details by ID from FIRS API.
+        
+        Args:
+            entity_id: The entity ID to look up
+            
+        Returns:
+            Dictionary with entity details
+            
+        Raises:
+            HTTPException: If the entity lookup fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['entity_get'].replace('{ENTITY_ID}', entity_id)}"
+            
+            response = requests.get(
+                url, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Entity with ID {entity_id} not found"
+                )
+            else:
+                logger.error(f"Entity lookup failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API entity lookup failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+    
+    async def search_entities(self, search_params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Search for entities using provided parameters.
+        
+        Args:
+            search_params: Dictionary of search parameters such as:
+                - size: Number of items per page
+                - page: Page number
+                - sort_by: Field to sort by
+                - sort_direction_desc: Whether to sort descending
+                - reference: Search by reference
+                
+        Returns:
+            Dictionary with search results
+            
+        Raises:
+            HTTPException: If the search fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['entity_search']}"
+            
+            # Add search parameters to URL
+            if search_params:
+                query_params = "&".join([f"{key}={value}" for key, value in search_params.items()])
+                url = f"{url}?{query_params}"
+            
+            response = requests.get(
+                url, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Entity search failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API entity search failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+    
+    async def create_party(self, party_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new party in the FIRS system.
+        
+        Args:
+            party_data: Complete party data following FIRS specification
+            
+        Returns:
+            Dictionary with the created party details
+            
+        Raises:
+            HTTPException: If the party creation fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['create_party']}"
+            
+            response = requests.post(
+                url, 
+                json=party_data, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                return response.json()
+            elif response.status_code == 400:
+                error_data = response.json()
+                error_detail = error_data.get("message", "Party creation failed")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "message": error_detail,
+                        "errors": error_data.get("errors", [])
+                    }
+                )
+            else:
+                logger.error(f"Party creation failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API party creation failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+    
+    async def get_party(self, party_id: str) -> Dict[str, Any]:
+        """Get party details by ID from FIRS API.
+        
+        Args:
+            party_id: The party ID to look up
+            
+        Returns:
+            Dictionary with party details
+            
+        Raises:
+            HTTPException: If the party lookup fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['get_party'].replace('{PARTY_ID}', party_id)}"
+            
+            response = requests.get(
+                url, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Party with ID {party_id} not found"
+                )
+            else:
+                logger.error(f"Party lookup failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API party lookup failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+    
+    async def confirm_invoice(self, irn: str) -> Dict[str, Any]:
+        """Confirm an invoice in the FIRS system.
+        
+        Args:
+            irn: The Invoice Reference Number (IRN) to confirm
+            
+        Returns:
+            Dictionary with confirmation result
+            
+        Raises:
+            HTTPException: If the confirmation fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['confirm_invoice'].replace('{IRN}', irn)}"
+            
+            response = requests.get(
+                url, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Invoice with IRN {irn} not found"
+                )
+            else:
+                logger.error(f"Invoice confirmation failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API invoice confirmation failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+    
+    async def search_invoices(self, business_id: str, search_params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Search for invoices for a specific business.
+        
+        Args:
+            business_id: The business ID to search invoices for
+            search_params: Dictionary of search parameters such as:
+                - size: Number of items per page
+                - page: Page number
+                - sort_by: Field to sort by
+                - sort_direction_desc: Whether to sort descending
+                - irn: Search by IRN
+                - payment_status: Filter by payment status
+                - invoice_type_code: Filter by invoice type
+                
+        Returns:
+            Dictionary with search results
+            
+        Raises:
+            HTTPException: If the search fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['search_invoice'].replace('{BUSINESS_ID}', business_id)}"
+            
+            # Add search parameters to URL
+            if search_params:
+                query_params = "&".join([f"{key}={value}" for key, value in search_params.items()])
+                url = f"{url}?{query_params}"
+            
+            response = requests.get(
+                url, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Invoice search failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API invoice search failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+    
+    async def update_invoice(self, irn: str, invoice_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing invoice in the FIRS system.
+        
+        Args:
+            irn: The Invoice Reference Number (IRN) to update
+            invoice_data: Updated invoice data following FIRS specification
+            
+        Returns:
+            Dictionary with the updated invoice details
+            
+        Raises:
+            HTTPException: If the update fails
+        """
+        try:
+            await self._ensure_authenticated()
+            
+            url = f"{self.base_url}{self.endpoints['update_invoice'].replace('{IRN}', irn)}"
+            
+            response = requests.patch(
+                url, 
+                json=invoice_data, 
+                headers=self._get_auth_headers(),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 400:
+                error_data = response.json()
+                error_detail = error_data.get("message", "Invoice update failed")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "message": error_detail,
+                        "errors": error_data.get("errors", [])
+                    }
+                )
+            elif response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Invoice with IRN {irn} not found"
+                )
+            else:
+                logger.error(f"Invoice update failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="FIRS API invoice update failed"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+            
     # Resource endpoints - these do not require authentication
     
     async def get_countries(self) -> List[FIRSResourceItem]:
@@ -528,94 +1077,169 @@ class FIRSService:
     
     async def submit_invoice(self, invoice_data: Dict[str, Any]) -> InvoiceSubmissionResponse:
         """
-        Submit a single invoice to FIRS.
+        Submit a single invoice to FIRS API.
         
         Args:
-            invoice_data: Invoice data in FIRS-compliant format
+            invoice_data: Invoice data in FIRS-compliant format (BIS Billing 3.0 / UBL)
             
         Returns:
             InvoiceSubmissionResponse with submission details
         """
+        invoice_reference = invoice_data.get('irn', '') or invoice_data.get('invoice_number', 'Unknown')
+        
         try:
-            # Ensure authentication if token-based auth is required
-            await self._ensure_authenticated()
+            # Ensure authentication token is available and valid
+            try:
+                await self._ensure_authenticated()
+            except HTTPException as auth_err:
+                logger.warning(f"Authentication error during invoice submission for {invoice_reference}: {str(auth_err)}")
+                # For sandbox, we might still try to submit with just API key authentication
+                if not self.use_sandbox:
+                    raise
+                logger.info("Proceeding with API key authentication for sandbox environment")
             
             url = f"{self.base_url}{self.endpoints['submit_invoice']}"
-            logger.info(f"Submitting invoice to FIRS API: {url}")
-            logger.debug(f"Invoice data: {json.dumps(invoice_data)[:200]}...")
+            logger.info(f"Submitting invoice {invoice_reference} to FIRS API: {url}")
             
-            # Ensure required fields are present
-            required_fields = ['invoice_number', 'invoice_type', 'invoice_date', 'currency_code', 'supplier', 'customer']
+            # Log more details in sandbox mode
+            if self.use_sandbox:
+                logger.debug(f"Sandbox submission for invoice: {invoice_reference}")
+                # Truncate large payloads to avoid excessive logging
+                logger.debug(f"Invoice data sample: {json.dumps(invoice_data)[:500]}...")
+            
+            # Validate invoice against required fields for FIRS API
+            # Updated required fields based on BIS Billing 3.0 / UBL standard
+            required_fields = [
+                'business_id', 'irn', 'issue_date', 'invoice_type_code', 
+                'document_currency_code', 'accounting_supplier_party', 
+                'accounting_customer_party', 'legal_monetary_total', 'invoice_line'
+            ]
             missing_fields = [field for field in required_fields if field not in invoice_data]
             
             if missing_fields:
-                logger.error(f"Invoice data missing required fields: {missing_fields}")
+                logger.error(f"Invoice {invoice_reference} missing required fields: {missing_fields}")
                 return InvoiceSubmissionResponse(
                     success=False,
                     message=f"Invoice data missing required fields: {', '.join(missing_fields)}",
                     errors=[{"code": "VALIDATION_ERROR", "detail": f"Missing field: {field}"} for field in missing_fields]
                 )
             
-            # Use API key-based authentication for submission as discovered in testing
+            # Prepare request with proper headers
             headers = self._get_auth_headers()
             
-            # Submit the invoice with improved error handling
+            # Track submission start time for performance monitoring
+            start_time = datetime.now()
+            
+            # Submit the invoice with comprehensive error handling
             try:
-                response = requests.post(
+                # Use session for consistent connection handling
+                response = self.session.post(
                     url, 
                     json=invoice_data, 
                     headers=headers,
-                    timeout=60  # Longer timeout for invoice submission
+                    timeout=self.submission_timeout
                 )
                 
-                # Try to parse JSON response if present
+                # Calculate response time for monitoring
+                response_time = (datetime.now() - start_time).total_seconds()
+                logger.info(f"FIRS API response time: {response_time:.2f} seconds")
+                
+                # Enhanced logging for sandbox environment
+                if self.use_sandbox:
+                    logger.debug(f"Sandbox response status: {response.status_code}")
+                    logger.debug(f"Sandbox response headers: {dict(response.headers)}")
+                
+                # Try to parse JSON response with fallback handling
                 result = {}
                 if response.content:
-                    try:
-                        result = response.json()
-                    except ValueError as json_err:
-                        logger.warning(f"Could not parse JSON response: {str(json_err)}")
-                        result = {"message": f"Invalid response format: {response.text[:200]}"}
+                    content_type = response.headers.get('content-type', '')
+                    if 'application/json' in content_type:
+                        try:
+                            result = response.json()
+                        except ValueError as json_err:
+                            logger.warning(f"Could not parse JSON response: {str(json_err)}")
+                            result = {"message": f"Invalid JSON response: {response.text[:200]}"}
+                    else:
+                        logger.warning(f"Unexpected content type: {content_type}")
+                        result = {"message": f"Unexpected response format: {response.text[:200]}"}
                 
-                if response.status_code not in (200, 201, 202):
-                    logger.error(f"FIRS invoice submission failed: {response.status_code} - {response.text[:200]}")
+                # Handle various response status codes
+                if response.status_code in (200, 201, 202):
+                    # Successfully submitted - parse the response
+                    submission_data = result.get("data", {})
+                    submission_id = submission_data.get("submission_id", None)
+                    
+                    # Generate a submission ID if none provided (especially in sandbox)
+                    if submission_id is None:
+                        submission_id = str(uuid4())
+                        logger.info(f"Generated submission ID for tracking: {submission_id}")
+                    
+                    # Log the successful submission
+                    logger.info(f"Invoice {invoice_reference} submitted successfully with ID: {submission_id}")
+                    
+                    return InvoiceSubmissionResponse(
+                        success=True,
+                        message=result.get("message", "Invoice submitted successfully"),
+                        submission_id=submission_id,
+                        status=result.get("status", "SUBMITTED"),
+                        details=submission_data
+                    )
+                elif response.status_code == 400:
+                    # Handle validation errors
+                    logger.error(f"FIRS invoice validation failed: {response.text[:500]}")
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message=result.get("message", "Validation failed"),
+                        errors=result.get("errors", [{"code": "VALIDATION_ERROR", "detail": response.text[:200]}]),
+                        status="VALIDATION_FAILED"
+                    )
+                elif response.status_code == 401:
+                    # Authentication issue
+                    logger.error("FIRS API authentication failed during submission")
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message="Authentication failed. Please re-authenticate.",
+                        errors=[{"code": "AUTH_ERROR", "detail": result.get("message", "Unauthorized")}],
+                        status="AUTH_FAILED"
+                    )
+                elif response.status_code == 429:
+                    # Rate limiting
+                    retry_after = response.headers.get('Retry-After', '60')
+                    logger.warning(f"FIRS API rate limit exceeded. Retry after {retry_after} seconds")
+                    return InvoiceSubmissionResponse(
+                        success=False,
+                        message=f"Rate limit exceeded. Please retry after {retry_after} seconds.",
+                        errors=[{"code": "RATE_LIMIT", "detail": "Too many requests"}],
+                        status="RATE_LIMITED"
+                    )
+                else:
+                    # Other error conditions
+                    logger.error(f"FIRS invoice submission failed with status {response.status_code}: {response.text[:500]}")
                     return InvoiceSubmissionResponse(
                         success=False,
                         message=result.get("message", f"Submission failed with status code {response.status_code}"),
-                        errors=result.get("errors", []),
-                        status=result.get("status", "FAILED")
+                        errors=result.get("errors", [{"code": f"HTTP_{response.status_code}", "detail": "Unexpected error"}]),
+                        status="FAILED"
                     )
                     
-                # Successfully submitted - parse the response
-                submission_data = result.get("data", {})
-                submission_id = submission_data.get("submission_id", str(uuid4()))
-                
-                # Log the successful submission
-                logger.info(f"Invoice {invoice_data.get('invoice_number')} submitted successfully with ID: {submission_id}")
-                
-                return InvoiceSubmissionResponse(
-                    success=True,
-                    message=result.get("message", "Invoice submitted successfully"),
-                    submission_id=submission_id,
-                    status=result.get("status", "SUBMITTED"),
-                    details=submission_data
-                )
-                
             except requests.RequestException as req_err:
-                logger.error(f"Request error during invoice submission: {str(req_err)}")
+                logger.error(f"Request error during invoice submission for {invoice_reference}: {str(req_err)}")
                 return InvoiceSubmissionResponse(
                     success=False,
-                    message=f"API request failed: {str(req_err)}",
-                    errors=[{"code": "CONNECTION_ERROR", "detail": str(req_err)}]
+                    message=f"API connection failed: {str(req_err)}",
+                    errors=[{"code": "CONNECTION_ERROR", "detail": str(req_err)}],
+                    status="CONNECTION_FAILED"
                 )
             
         except HTTPException:
             raise  # Re-raise HTTP exceptions
         except Exception as e:
-            logger.error(f"FIRS API submission error: {str(e)}")
+            logger.error(f"FIRS API submission error for {invoice_reference}: {str(e)}", exc_info=True)
             return InvoiceSubmissionResponse(
                 success=False,
                 message=f"API request failed: {str(e)}",
+                errors=[{"code": "INTERNAL_ERROR", "detail": str(e)}],
+                status="ERROR",
                 details={"error_type": type(e).__name__}
             )
     
@@ -933,6 +1557,166 @@ class FIRSService:
 
 
     async def check_submission_status(self, submission_id: str) -> SubmissionStatus:
+        """
+        Check the status of a submitted invoice.
+        
+        Args:
+            submission_id: The ID of the submission to check
+            
+        Returns:
+            SubmissionStatus object with current status details
+        """
+        try:
+            # Ensure we have authentication
+            try:
+                await self._ensure_authenticated()
+            except HTTPException as auth_err:
+                logger.warning(f"Authentication error during status check for {submission_id}: {str(auth_err)}")
+                # For sandbox, continue with API key authentication
+                if not self.use_sandbox:
+                    raise
+                logger.info("Proceeding with API key authentication for sandbox status check")
+            
+            # Construct the status check URL
+            url = f"{self.base_url}/api/v1/invoice/submission/{submission_id}"
+            logger.info(f"Checking submission status for ID: {submission_id} at {url}")
+            
+            # Make the request with session for consistency
+            response = self.session.get(
+                url,
+                headers=self._get_auth_headers(),
+                timeout=self.default_timeout
+            )
+            
+            # Log detailed response in sandbox mode
+            if self.use_sandbox:
+                logger.debug(f"Sandbox status check response code: {response.status_code}")
+                if response.content:
+                    logger.debug(f"Sandbox status response preview: {response.text[:200]}")
+            
+            # Process the response based on status code
+            if response.status_code == 200:
+                # Successfully retrieved status
+                try:
+                    result = response.json()
+                    status_data = result.get("data", {})
+                    
+                    # Extract status information
+                    status_code = status_data.get("status", "UNKNOWN")
+                    status_message = status_data.get("message", "Status check completed")
+                    timestamp = status_data.get("timestamp", datetime.now().isoformat())
+                    details = status_data.get("details", {})
+                    
+                    logger.info(f"Submission {submission_id} status: {status_code}")
+                    
+                    return SubmissionStatus(
+                        submission_id=submission_id,
+                        status=status_code,
+                        timestamp=timestamp,
+                        message=status_message,
+                        details=details
+                    )
+                except (ValueError, KeyError) as parse_err:
+                    logger.error(f"Error parsing status response: {str(parse_err)}")
+                    # For sandbox environment, create a simulated response if parsing fails
+                    if self.use_sandbox:
+                        logger.info(f"Creating simulated status response for sandbox submission {submission_id}")
+                        return SubmissionStatus(
+                            submission_id=submission_id,
+                            status="PROCESSING",
+                            timestamp=datetime.now().isoformat(),
+                            message="Sandbox simulated status",
+                            details={"environment": "sandbox", "simulated": True}
+                        )
+                    
+                    # For production, raise the error
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Error parsing FIRS API status response: {str(parse_err)}"
+                    )
+            elif response.status_code == 404:
+                # Submission not found
+                logger.warning(f"Submission {submission_id} not found")
+                
+                # In sandbox, we might want to simulate a status even if not found
+                if self.use_sandbox:
+                    return SubmissionStatus(
+                        submission_id=submission_id,
+                        status="NOT_FOUND",
+                        timestamp=datetime.now().isoformat(),
+                        message="Submission ID not found in sandbox environment",
+                        details={"environment": "sandbox", "simulated": True}
+                    )
+                
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Submission ID {submission_id} not found"
+                )
+            elif response.status_code == 401:
+                # Authentication failed
+                logger.error("Authentication failed during status check")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication failed. Please re-authenticate."
+                )
+            else:
+                # Other error conditions
+                logger.error(f"Status check failed with code {response.status_code}: {response.text[:200]}")
+                
+                # For sandbox, provide a fallback response
+                if self.use_sandbox:
+                    return SubmissionStatus(
+                        submission_id=submission_id,
+                        status="ERROR",
+                        timestamp=datetime.now().isoformat(),
+                        message=f"Sandbox status check failed with code {response.status_code}",
+                        details={"error": response.text[:200], "environment": "sandbox"}
+                    )
+                
+                # For production, raise an error
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"FIRS API status check failed with status code {response.status_code}"
+                )
+                
+        except requests.RequestException as e:
+            logger.error(f"FIRS API request failed during status check: {str(e)}")
+            
+            # For sandbox, provide a fallback response
+            if self.use_sandbox:
+                return SubmissionStatus(
+                    submission_id=submission_id,
+                    status="CONNECTION_ERROR",
+                    timestamp=datetime.now().isoformat(),
+                    message=f"Error connecting to sandbox API: {str(e)}",
+                    details={"error_type": "connection", "environment": "sandbox"}
+                )
+            
+            # For production, raise the error
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"FIRS API service unavailable: {str(e)}"
+            )
+        except HTTPException:
+            raise  # Re-raise HTTP exceptions
+        except Exception as e:
+            logger.error(f"Unexpected error during status check: {str(e)}", exc_info=True)
+            
+            # For sandbox, provide a fallback response
+            if self.use_sandbox:
+                return SubmissionStatus(
+                    submission_id=submission_id,
+                    status="ERROR",
+                    timestamp=datetime.now().isoformat(),
+                    message=f"Unexpected error in sandbox environment: {str(e)}",
+                    details={"error_type": type(e).__name__, "environment": "sandbox"}
+                )
+            
+            # For production, raise the error
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Status check failed: {str(e)}"
+            )
         """Check the status of a previously submitted invoice.
         
         Args:
