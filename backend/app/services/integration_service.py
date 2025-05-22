@@ -163,6 +163,40 @@ def update_integration(
     return decrypt_integration_config(integration)
 
 
+def delete_integration(
+    db: Session,
+    integration_id: UUID
+) -> None:
+    """
+    Delete an integration by ID.
+    
+    Args:
+        db: Database session
+        integration_id: ID of the integration to delete
+        
+    Returns:
+        None
+    """
+    # First, stop any monitoring if it exists
+    if integration_id in _monitoring_threads:
+        stop_integration_monitoring(db, integration_id)
+    
+    # Get the integration from the database
+    integration = crud.integration.get(db, id=integration_id)
+    if not integration:
+        return None
+    
+    # Delete the integration
+    db.delete(integration)
+    db.commit()
+    
+    # Clean up any cached status
+    if integration_id in _status_cache:
+        del _status_cache[integration_id]
+    
+    return None
+
+
 def get_integration(
     db: Session,
     integration_id: UUID
