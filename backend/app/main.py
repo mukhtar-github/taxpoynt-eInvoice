@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
 
 from app.routers import crypto
-from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn, validation_management, dashboard, odoo_ubl, firs_submission, submission_webhook, retry_management, submission_dashboard
+from app.routes import auth, api_keys, irn, validation, firs, integrations, api_credentials, bulk_irn, validation_management, dashboard, odoo_ubl, firs_submission, submission_webhook, retry_management, submission_dashboard, integration_status
 from app.core.config import settings
 from app.core.config_retry import retry_settings
 from app.services.background_tasks import start_background_tasks
