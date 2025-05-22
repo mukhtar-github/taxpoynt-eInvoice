@@ -36,6 +36,7 @@ class Integration(Base):
     client = relationship("Client", back_populates="integrations")
     history = relationship("IntegrationHistory", back_populates="integration")
     irn_records = relationship("IRNRecord", back_populates="integration")
+    submission_records = relationship("SubmissionRecord", back_populates="integration")
     encryption_key = relationship("EncryptionKey")
 
 

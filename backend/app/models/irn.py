@@ -42,6 +42,7 @@ class IRNRecord(Base):
     integration = relationship("Integration", back_populates="irn_records")
     invoice_data = relationship("InvoiceData", back_populates="irn_record", uselist=False)
     validation_records = relationship("IRNValidationRecord", back_populates="irn_record")
+    submission_records = relationship("SubmissionRecord", back_populates="irn_record")
     
     @classmethod
     def create_with_expiry(cls, **kwargs):
