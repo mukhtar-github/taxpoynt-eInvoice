@@ -1,5 +1,3 @@
-"""Routes for interacting with FIRS API."""
-
 from fastapi import APIRouter, Depends, HTTPException, status, Body # type: ignore
 from sqlalchemy.orm import Session # type: ignore
 from typing import Any, Dict
@@ -8,7 +6,7 @@ from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.services.firs_service import firs_service
-from app.services.user_service import get_current_user # type: ignore
+from app.dependencies.auth import get_current_user # Import from the correct module
 
 router = APIRouter(prefix="/firs", tags=["firs"])
 
