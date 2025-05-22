@@ -85,6 +85,7 @@ app.include_router(bulk_irn.router, prefix=f"{settings.API_V1_STR}/bulk-irn", ta
 app.include_router(validation_management.router, prefix=f"{settings.API_V1_STR}/validation-management", tags=["validation-management"])
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(submission_dashboard.router, prefix=settings.API_V1_STR, tags=["submission-dashboard"])
+app.include_router(integration_status.router, prefix=f"{settings.API_V1_STR}", tags=["integration-status"])
 app.include_router(odoo_ubl.router, prefix=settings.API_V1_STR, tags=["odoo-ubl"])
 app.include_router(firs_submission.router)
 app.include_router(submission_webhook.router, tags=["webhooks"])

@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/layouts/DashboardLayout';
 import SubmissionMetricsCard from '../components/dashboard/SubmissionMetricsCard';
 import RetryMetricsCard from '../components/dashboard/RetryMetricsCard';
+import ApiStatusOverview from '../components/dashboard/ApiStatusOverview';
 import {
   fetchSubmissionMetrics,
   fetchRetryMetrics,
@@ -166,10 +167,11 @@ const SubmissionDashboard: NextPage = () => {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-3 max-w-md mx-auto mb-6">
+            <TabsList className="grid grid-cols-4 max-w-md mx-auto mb-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="odoo">Odoo Integration</TabsTrigger>
-              <TabsTrigger value="retries">Retry Analysis</TabsTrigger>
+              <TabsTrigger value="odoo">Odoo</TabsTrigger>
+              <TabsTrigger value="integrations">API Status</TabsTrigger>
+              <TabsTrigger value="retries">Retries</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -296,6 +298,10 @@ const SubmissionDashboard: NextPage = () => {
                   <p>No data available. Try changing the filters or refreshing the page.</p>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="integrations" className="space-y-6">
+              <ApiStatusOverview />
             </TabsContent>
 
             <TabsContent value="odoo" className="space-y-6">
