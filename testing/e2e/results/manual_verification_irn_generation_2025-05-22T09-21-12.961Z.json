@@ -1,0 +1,12 @@
+{
+  "component": "IRN Generation",
+  "timestamp": "2025-05-22T09:21:12.961Z",
+  "status": "PASS",
+  "notes": {
+    "singleIrnSuccess": true,
+    "validationSuccess": true,
+    "batchSupported": true,
+    "batchSuccess": true,
+    "notes": "okay"
+  }
+}

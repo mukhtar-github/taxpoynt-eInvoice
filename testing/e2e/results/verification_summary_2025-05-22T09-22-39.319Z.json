@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-05-22T09:22:39.318Z",
+  "components": {
+    "odooIntegration": true,
+    "irnGeneration": true,
+    "firsSubmission": true,
+    "endToEndWorkflow": true
+  },
+  "overallStatus": "PASS"
+}

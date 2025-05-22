@@ -49,6 +49,10 @@ yarn-error.log
 # Ignore signing certificates
 backend/keys/signing_cert_*.crt
 
+# Ignore testing environment setup scripts with sensitive data
+testing/e2e/local_test.sh
+testing/e2e/setup_env.sh
+
 # Ignore all private keys
 backend/keys/*.key
 

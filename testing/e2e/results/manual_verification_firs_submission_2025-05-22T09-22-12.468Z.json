@@ -1,0 +1,11 @@
+{
+  "component": "FIRS Submission",
+  "timestamp": "2025-05-22T09:22:12.468Z",
+  "status": "PASS",
+  "notes": {
+    "apiConnectivity": true,
+    "sandboxSubmission": true,
+    "statusCheck": true,
+    "notes": "okay"
+  }
+}

@@ -11,7 +11,9 @@
     "report": "node -e \"require('./generate_report.js').generateReport()\""
   },
   "dependencies": {
+    "@playwright/test": "^1.52.0",
     "axios": "^0.27.2",
-    "dotenv": "^16.0.1"
+    "dotenv": "^16.5.0",
+    "playwright": "^1.52.0"
   }
 }
