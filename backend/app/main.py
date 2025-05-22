@@ -15,6 +15,23 @@ from typing import List
 import logging
 import traceback
 
+# Configure logging first - before any imports that might use it
+logging.basicConfig(
+    level=logging.DEBUG,  # Use DEBUG level to capture more information
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Ensure logs go to stdout for Railway
+    ]
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Log startup information
+logger.info(f"Starting TaxPoynt eInvoice backend application")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Current working directory: {os.getcwd()}")
+
 from fastapi import FastAPI, Request, HTTPException, Depends # type: ignore
 from fastapi.responses import JSONResponse # type: ignore
 from fastapi.staticfiles import StaticFiles # type: ignore
@@ -73,23 +90,6 @@ from app.core.config_retry import retry_settings
 from app.services.background_tasks import start_background_tasks
 from app.dependencies.auth import get_current_user_from_token # type: ignore
 from app.middleware import setup_middleware
-
-# Configure logging - enhanced for deployment debugging
-logging.basicConfig(
-    level=logging.DEBUG,  # Use DEBUG level to capture more information
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),  # Ensure logs go to stdout for Railway
-    ]
-)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-# Log startup information
-logger.info(f"Starting TaxPoynt eInvoice backend application")
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Current working directory: {os.getcwd()}")
 
 # Log critical environment variables (without sensitive values)
 try:
