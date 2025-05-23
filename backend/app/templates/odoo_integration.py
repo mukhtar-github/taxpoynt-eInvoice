@@ -166,7 +166,7 @@ ODOO_18_EINVOICE_TEMPLATE = {
                         "type": "boolean",
                         "title": "Auto-Submit E-Invoices",
                         "description": "Automatically submit e-invoices to tax authority",
-                        "default": false
+                        "default": False
                     },
                     "sync_interval": {
                         "type": "string",
@@ -233,7 +233,7 @@ ODOO_18_EINVOICE_TEMPLATE = {
         "auth_method": "password",
         "timeout": 30,
         "einvoice_settings": {
-            "auto_submit": false,
+            "auto_submit": False,
             "sync_interval": "hourly",
             "invoice_types": ["out_invoice"],
             "irn_field": "l10n_ng_irn"
@@ -290,7 +290,7 @@ ODOO_18_REST_API_TEMPLATE = {
                         "type": "boolean",
                         "title": "Auto-Submit E-Invoices",
                         "description": "Automatically submit e-invoices to tax authority",
-                        "default": false
+                        "default": False
                     },
                     "sync_interval": {
                         "type": "string",
@@ -333,7 +333,7 @@ ODOO_18_REST_API_TEMPLATE = {
     "default_values": {
         "timeout": 30,
         "einvoice_settings": {
-            "auto_submit": false,
+            "auto_submit": False,
             "sync_interval": "hourly",
             "invoice_types": ["out_invoice"],
             "irn_field": "l10n_ng_irn"
