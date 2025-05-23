@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import get_current_active_superuser, get_current_active_user
-from app.dependencies.db import get_db
+from app.db.session import get_db
 from app.schemas.user import User
 from app.services.metrics_service import MetricsService
 from app.schemas.dashboard import (
