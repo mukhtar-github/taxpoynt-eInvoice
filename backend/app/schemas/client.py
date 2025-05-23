@@ -39,7 +39,7 @@ class ClientInDBBase(ClientBase):
     status: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return to client

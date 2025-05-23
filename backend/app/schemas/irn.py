@@ -184,8 +184,8 @@ class IRNResponse(BaseModel):
     )
 
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        validate_by_name = True
 
 
 class IRNBatchResponse(BaseModel):
@@ -300,7 +300,7 @@ class IRNValidationResponse(BaseModel):
     )
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "IRN is valid",
@@ -372,7 +372,7 @@ class IRNValidationBatchResponse(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "total": 3,
                 "validated": 3,
@@ -456,7 +456,7 @@ class IRNCreate(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "invoice_number": "INV-2025-001",
                 "invoice_date": "2025-05-22T10:00:00",
@@ -485,7 +485,7 @@ class IRNList(BaseModel):
     pages: int = Field(..., description="Total number of pages")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class IRNValidationRequest(BaseModel):
@@ -513,7 +513,7 @@ class IRNValidationRequest(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "irn": "INV2025001-12345678-20250522"
             }

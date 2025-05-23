@@ -76,7 +76,7 @@ class CertificateInDBBase(CertificateBase):
     last_used_at: Optional[datetime] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Schema for returning certificate to API consumers

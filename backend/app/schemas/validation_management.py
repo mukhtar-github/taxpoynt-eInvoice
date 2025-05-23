@@ -110,7 +110,7 @@ class ValidationRuleResponse(BaseModel):
     active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ValidationRuleList(BaseModel):
@@ -152,7 +152,7 @@ class ValidatorPresetResponse(BaseModel):
     active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ValidationRuleTesting(BaseModel):

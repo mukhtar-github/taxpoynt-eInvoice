@@ -13,7 +13,7 @@ class APIKeyBase(BaseModel):
     rate_limit_per_day: Optional[int] = Field(10000, ge=100, le=100000, description="Rate limit per day")
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class APIKeyCreate(APIKeyBase):

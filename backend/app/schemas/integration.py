@@ -112,7 +112,7 @@ class IntegrationInDBBase(IntegrationBase):
     status: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return to client
@@ -143,7 +143,7 @@ class IntegrationHistoryInDBBase(IntegrationHistoryBase):
     changed_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class IntegrationHistory(IntegrationHistoryInDBBase):
@@ -192,7 +192,7 @@ class IntegrationMonitoringStatus(BaseModel):
     is_being_monitored: bool = False
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Odoo Invoice Fetch Parameters
