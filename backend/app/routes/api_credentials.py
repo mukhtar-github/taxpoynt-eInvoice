@@ -17,8 +17,7 @@ from app.services.api_credential_service import (
     create_firs_credential, create_odoo_credential,
     get_firs_credentials, get_odoo_credentials
 )
-from app.services.user_service import get_current_user
-from app.dependencies.auth import get_current_active_user
+from app.dependencies.auth import get_current_user, get_current_active_user
 
 router = APIRouter(prefix="/api-credentials", tags=["api-credentials"])
 
