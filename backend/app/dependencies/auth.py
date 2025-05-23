@@ -95,6 +95,22 @@ async def get_current_active_user(
         )
     return current_user
 
+async def get_current_active_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    Get current active superuser.
+    Checks if the user is active and has administrative privileges (OWNER or ADMIN role).
+    """
+    from app.models.user import UserRole
+    
+    if current_user.role not in [UserRole.OWNER, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User does not have sufficient privileges"
+        )
+    return current_user
+
 async def get_current_organization(
     current_user: User = Depends(get_current_user),
     organization_id: Optional[UUID] = None,
