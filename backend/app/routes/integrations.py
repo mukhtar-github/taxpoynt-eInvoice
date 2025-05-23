@@ -131,12 +131,12 @@ async def update_integration_by_id(
     return updated_integration
 
 
-@router.delete("/{integration_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{integration_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
 async def delete_integration_by_id(
     integration_id: UUID,
     db: Session = Depends(get_db),
     current_user: Any = Depends(get_current_user)
-) -> Any:
+):
     """
     Delete an integration.
     """
@@ -148,7 +148,6 @@ async def delete_integration_by_id(
         )
     
     delete_integration(db=db, integration_id=integration_id)
-    return None
 
 
 @router.post("/{integration_id}/test", response_model=IntegrationTestResult)
