@@ -5,6 +5,11 @@ from sqlalchemy.sql import func # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 import uuid
 
+# Import models to avoid circular import issues
+# These are forward references to break the circular dependencies
+from app.models.certificate import Certificate as CertificateModel
+from app.models.encryption import EncryptionKey, EncryptionConfig
+
 
 class UserRole(str, enum.Enum):
     OWNER = "owner"
