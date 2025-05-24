@@ -148,6 +148,9 @@ class Settings(BaseSettings):
     FIRS_API_URL: str = os.getenv("FIRS_API_URL", "https://api.firs.gov.ng")
     FIRS_API_KEY: str = os.getenv("FIRS_API_KEY", "")
     FIRS_API_SECRET: str = os.getenv("FIRS_API_SECRET", "")
+    FIRS_SUBMISSION_TIMEOUT: int = int(os.getenv("FIRS_SUBMISSION_TIMEOUT", "30"))
+    FIRS_RETRY_ATTEMPTS: int = int(os.getenv("FIRS_RETRY_ATTEMPTS", "3"))
+    FIRS_MAX_BATCH_SIZE: int = int(os.getenv("FIRS_MAX_BATCH_SIZE", "100"))
     
     # FIRS Sandbox Configuration
     FIRS_SANDBOX_API_URL: str = os.getenv("FIRS_SANDBOX_API_URL", "https://eivc-k6z6d.ondigitalocean.app")
