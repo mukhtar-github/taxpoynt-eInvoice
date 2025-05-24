@@ -65,15 +65,25 @@ class IntegrationStatusService:
         for integration in integrations:
             try:
                 # Try to connect to Odoo
-                odoo_service = OdooService(
+                from app.schemas.integration import OdooConfig
+                
+                # Create OdooConfig object from integration configuration
+                odoo_config = OdooConfig(
                     url=integration.config.get("url"),
-                    db=integration.config.get("database"),
+                    database=integration.config.get("database"),
                     username=integration.config.get("username"),
                     password=integration.config.get("password")
                 )
                 
-                # Test connection by getting version info
-                version_info = await odoo_service.get_version()
+                # Initialize the OdooConnector with the config
+                connector = OdooConnector(config=odoo_config)
+                
+                # Test connection by connecting and authenticating
+                connector.connect()
+                connector.authenticate()
+                
+                # Get version info
+                version_info = connector.version_info
                 
                 # Get recent submission statistics
                 now = datetime.utcnow()
