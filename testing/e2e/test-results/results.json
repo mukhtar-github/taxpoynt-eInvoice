@@ -60,16 +60,16 @@
   },
   "suites": [
     {
-      "title": "end-to-end-workflow.spec.js",
-      "file": "end-to-end-workflow.spec.js",
+      "title": "odoo-to-firs-workflow.spec.js",
+      "file": "odoo-to-firs-workflow.spec.js",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Complete E2E Workflow Tests",
-          "file": "end-to-end-workflow.spec.js",
-          "line": 33,
+          "title": "Odoo to FIRS Complete Workflow",
+          "file": "odoo-to-firs-workflow.spec.js",
+          "line": 79,
           "column": 6,
           "specs": [
             {
@@ -88,24 +88,61 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 95,
+                      "duration": 5,
                       "error": {
-                        "message": "AxiosError: Request failed with status code 429",
-                        "stack": "AxiosError: Request failed with status code 429"
+                        "message": "AxiosError: Request failed with status code 502",
+                        "stack": "AxiosError: Request failed with status code 502"
                       },
                       "errors": [
                         {
-                          "message": "AxiosError: Request failed with status code 429"
+                          "message": "AxiosError: Request failed with status code 502"
                         }
                       ],
-                      "stdout": [],
+                      "stdout": [
+                        {
+                          "text": "Authenticating with API at https://taxpoynt-einvoice-production.up.railway.app/api/v1...\n"
+                        },
+                        {
+                          "text": "Making request to: https://taxpoynt-einvoice-production.up.railway.app/api/v1/auth/login\n"
+                        },
+                        {
+                          "text": "Adding delay of 1000ms to avoid rate limiting...\n"
+                        },
+                        {
+                          "text": "Making request to: https://taxpoynt-einvoice-production.up.railway.app/api/v1/auth/login\n"
+                        },
+                        {
+                          "text": "Adding delay of 1000ms to avoid rate limiting...\n"
+                        },
+                        {
+                          "text": "Making request to: https://taxpoynt-einvoice-production.up.railway.app/api/v1/auth/login\n"
+                        },
+                        {
+                          "text": "Adding delay of 1000ms to avoid rate limiting...\n"
+                        },
+                        {
+                          "text": "Making request to: https://taxpoynt-einvoice-production.up.railway.app/api/v1/auth/login\n"
+                        }
+                      ],
                       "stderr": [
                         {
-                          "text": "Authentication failed: Request failed with status code 429\n"
+                          "text": "Rate limit exceeded, retrying after delay...\n"
+                        },
+                        {
+                          "text": "Rate limit exceeded, retrying after delay...\n"
+                        },
+                        {
+                          "text": "Rate limit exceeded, retrying after delay...\n"
+                        },
+                        {
+                          "text": "Authentication failed: Request failed with status code 502\n"
+                        },
+                        {
+                          "text": "Response: {\n  status: \u001b[32m'error'\u001b[39m,\n  code: \u001b[33m502\u001b[39m,\n  message: \u001b[32m'Application failed to respond'\u001b[39m,\n  request_id: \u001b[32m'r2JbXJkDQ_augG-_0-QtfA'\u001b[39m\n}\n"
                         }
                       ],
                       "retry": 0,
-                      "startTime": "2025-05-24T11:41:59.076Z",
+                      "startTime": "2025-05-24T12:17:10.472Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -113,13 +150,13 @@
                   "status": "unexpected"
                 }
               ],
-              "id": "45fef7fb9da410dc78dd-e4a964f4a44b079e2ecb",
-              "file": "end-to-end-workflow.spec.js",
-              "line": 58,
+              "id": "bbb73c43673437aa7afe-25ae0ee1aa6626b798a4",
+              "file": "odoo-to-firs-workflow.spec.js",
+              "line": 110,
               "column": 3
             },
             {
-              "title": "Step 2: Transform invoice to UBL",
+              "title": "Step 2: Transform invoice to UBL with BIS Billing 3.0 mapping",
               "ok": true,
               "tags": [],
               "tests": [
@@ -139,7 +176,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-05-24T11:42:29.183Z",
+                      "startTime": "2025-05-24T12:17:31.045Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -147,9 +184,9 @@
                   "status": "skipped"
                 }
               ],
-              "id": "45fef7fb9da410dc78dd-eb058b65d2b3dd3d0eaa",
-              "file": "end-to-end-workflow.spec.js",
-              "line": 90,
+              "id": "bbb73c43673437aa7afe-7220996859da131617b9",
+              "file": "odoo-to-firs-workflow.spec.js",
+              "line": 149,
               "column": 3
             },
             {
@@ -173,7 +210,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-05-24T11:42:29.232Z",
+                      "startTime": "2025-05-24T12:17:31.074Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -181,13 +218,13 @@
                   "status": "skipped"
                 }
               ],
-              "id": "45fef7fb9da410dc78dd-3ec0d1a5b17c8feb4e0f",
-              "file": "end-to-end-workflow.spec.js",
-              "line": 131,
+              "id": "bbb73c43673437aa7afe-50c9ca870f58697fda9e",
+              "file": "odoo-to-firs-workflow.spec.js",
+              "line": 193,
               "column": 3
             },
             {
-              "title": "Step 4: Submit invoice with IRN to FIRS",
+              "title": "Step 4: Submit invoice with IRN to FIRS sandbox",
               "ok": true,
               "tags": [],
               "tests": [
@@ -207,7 +244,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-05-24T11:42:29.263Z",
+                      "startTime": "2025-05-24T12:17:31.092Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -215,9 +252,9 @@
                   "status": "skipped"
                 }
               ],
-              "id": "45fef7fb9da410dc78dd-7ca3407ae67546adeea2",
-              "file": "end-to-end-workflow.spec.js",
-              "line": 161,
+              "id": "bbb73c43673437aa7afe-d223de13383d3f25cfe4",
+              "file": "odoo-to-firs-workflow.spec.js",
+              "line": 226,
               "column": 3
             },
             {
@@ -241,7 +278,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-05-24T11:42:29.283Z",
+                      "startTime": "2025-05-24T12:17:31.111Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -249,9 +286,9 @@
                   "status": "skipped"
                 }
               ],
-              "id": "45fef7fb9da410dc78dd-750f852362785d63fe1d",
-              "file": "end-to-end-workflow.spec.js",
-              "line": 205,
+              "id": "bbb73c43673437aa7afe-461a34698711c724fbfd",
+              "file": "odoo-to-firs-workflow.spec.js",
+              "line": 272,
               "column": 3
             }
           ]
@@ -261,8 +298,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-05-24T11:41:39.163Z",
-    "duration": 56047.591,
+    "startTime": "2025-05-24T12:17:04.899Z",
+    "duration": 26314.064,
     "expected": 0,
     "skipped": 4,
     "unexpected": 1,
