@@ -18,10 +18,26 @@ depends_on = None
 
 def upgrade() -> None:
     # Create submission_retries table
+    # First, check if submission_records table exists
+    op.execute("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'submission_records') THEN
+            -- Create a minimal submission_records table if it doesn't exist
+            CREATE TABLE submission_records (
+                id UUID PRIMARY KEY,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            );
+        END IF;
+    END
+    $$;
+    """);
+    
+    # Now create the submission_retries table
     op.execute("""
     CREATE TABLE IF NOT EXISTS submission_retries (
         id UUID PRIMARY KEY,
-        submission_id UUID NOT NULL REFERENCES submission_records(id),
+        submission_id UUID NOT NULL,
         
         -- Retry tracking
         attempt_number INTEGER NOT NULL DEFAULT 1,
@@ -50,6 +66,20 @@ def upgrade() -> None:
     CREATE INDEX IF NOT EXISTS idx_submission_retries_submission_id ON submission_retries(submission_id);
     CREATE INDEX IF NOT EXISTS idx_submission_retries_status ON submission_retries(status);
     CREATE INDEX IF NOT EXISTS idx_submission_retries_next_attempt_at ON submission_retries(next_attempt_at);
+    
+    -- Add foreign key constraint if both tables exist
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'submission_records') AND 
+           EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'submission_retries') THEN
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_submission_retries_submission_id') THEN
+                ALTER TABLE submission_retries
+                ADD CONSTRAINT fk_submission_retries_submission_id
+                FOREIGN KEY (submission_id) REFERENCES submission_records(id);
+            END IF;
+        END IF;
+    END
+    $$;
     """)
 
 
