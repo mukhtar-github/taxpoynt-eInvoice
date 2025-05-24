@@ -14,6 +14,7 @@ from typing import Dict, Any, List, Optional, Tuple, Union, Type
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import text
 from uuid import UUID
 
 from app.models.submission import SubmissionRecord, SubmissionStatus
@@ -516,7 +517,7 @@ async def process_pending_retries(db: Session) -> int:
         # Check if table exists by making a low-impact query
         try:
             # Just check if the table exists without doing a full query
-            db.execute("SELECT 1 FROM submission_retries LIMIT 1")
+            db.execute(text("SELECT 1 FROM submission_retries LIMIT 1"))
         except Exception as table_error:
             # If table doesn't exist, log and return early
             if "relation \"submission_retries\" does not exist" in str(table_error):
