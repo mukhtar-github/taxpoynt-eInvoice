@@ -6,7 +6,7 @@ to the Federal Inland Revenue Service (FIRS) API, allowing for comprehensive
 status history and notification tracking.
 """
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, JSON, Enum as SQLEnum, Text, Boolean # type: ignore
+from sqlalchemy import Column, String, DateTime, ForeignKey, JSON, Enum as SQLEnum, Text, Boolean, Integer # type: ignore
 from sqlalchemy.sql import func # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 from sqlalchemy.dialects.postgresql import UUID # type: ignore
