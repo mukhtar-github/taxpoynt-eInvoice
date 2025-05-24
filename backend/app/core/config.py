@@ -55,16 +55,26 @@ class Settings(BaseSettings):
         if isinstance(v, str) and v:
             return v
         
-        # Otherwise, build connection URL from individual components
-        postgres_dsn = PostgresDsn.build(
-            scheme="postgresql",
-            username=info.data.get("POSTGRES_USER"),
-            password=info.data.get("POSTGRES_PASSWORD"),
-            host=info.data.get("POSTGRES_SERVER"),
-            path=f"{info.data.get('POSTGRES_DB') or ''}",
-        )
-        # Convert PostgresDsn to string to avoid validation errors
-        return str(postgres_dsn)
+        # For testing/development mode, we can use SQLite instead of PostgreSQL
+        if os.getenv("APP_ENV") == "development" or os.getenv("TESTING") == "true":
+            # Use SQLite for development/testing
+            return "sqlite:///./test.db"
+        
+        try:
+            # Otherwise, build connection URL from individual components
+            postgres_dsn = PostgresDsn.build(
+                scheme="postgresql",
+                username=info.data.get("POSTGRES_USER") or "postgres",
+                password=info.data.get("POSTGRES_PASSWORD") or "postgres",
+                host=info.data.get("POSTGRES_SERVER") or "localhost",
+                path=f"{info.data.get('POSTGRES_DB') or 'taxpoynt'}",
+            )
+            # Convert PostgresDsn to string to avoid validation errors
+            return str(postgres_dsn)
+        except Exception as e:
+            print(f"Warning: Failed to build PostgreSQL DSN: {e}")
+            # Fallback to SQLite
+            return "sqlite:///./fallback.db"
 
     @field_validator("REDIS_URL", mode="before")
     def assemble_redis_connection(cls, v: Optional[str], info: Dict[str, Any]) -> Any:
@@ -103,6 +113,14 @@ class Settings(BaseSettings):
         "https://taxpoynt.com",      # Production frontend (apex domain)
         "https://taxpoynte-invoice.vercel.app"  # Vercel deployment
     ]
+    
+    # Frontend/Backend URLs (optional fields)
+    FRONTEND_URL: Optional[str] = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    BACKEND_URL: Optional[str] = os.getenv("BACKEND_URL", "http://localhost:8000")
+    NEXT_PUBLIC_FRONTEND_URL: Optional[str] = os.getenv("NEXT_PUBLIC_FRONTEND_URL", "https://taxpoynte-invoice.vercel.app/")
+    NEXT_PUBLIC_BACKEND_URL: Optional[str] = os.getenv("NEXT_PUBLIC_BACKEND_URL", "https://taxpoynt-einvoice-production.up.railway.app/api/v1")
+    ALLOWED_ORIGINS: Optional[str] = os.getenv("ALLOWED_ORIGINS", "https://taxpoynte-invoice.vercel.app/")
+    
 
     @validator("CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
