@@ -187,8 +187,11 @@ const DashboardHub: NextPage = () => {
           {/* Hero section with logo and navigation */}
           <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-lg p-6 text-white">
             <div className="flex items-center">
-              <div className="mr-4 bg-white p-2 rounded-lg shadow-md">
-                <img src="/logo.png" alt="TaxPoynt Logo" className="h-10 w-auto" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder-logo.svg"; }} />
+              <div className="mr-4 bg-white p-2 rounded-lg shadow-md flex items-center justify-center" style={{ width: '44px', height: '44px' }}>
+                {/* Using SVG directly instead of external image to prevent shakiness */}
+                <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M32 0C14.327 0 0 14.327 0 32C0 49.673 14.327 64 32 64C49.673 64 64 49.673 64 32C64 14.327 49.673 0 32 0ZM32 12C38.627 12 44 17.373 44 24C44 30.627 38.627 36 32 36C25.373 36 20 30.627 20 24C20 17.373 25.373 12 32 12ZM32 56C24.36 56 17.56 52.36 13.6 46.64C13.8 39.32 27.2 35.2 32 35.2C36.76 35.2 50.2 39.32 50.4 46.64C46.44 52.36 39.64 56 32 56Z" fill="#4F46E5"/>
+                </svg>
               </div>
               <div>
                 <Typography.Heading level="h1" className="text-white">TaxPoynt Dashboard</Typography.Heading>
@@ -196,11 +199,17 @@ const DashboardHub: NextPage = () => {
               </div>
             </div>
             <div className="flex space-x-3">
-              <Link href="/firs-test">
+              <Link href="/firs-test?dev=true" passHref>
                 <Button 
                   variant="secondary" 
                   size="sm" 
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                  onClick={() => {
+                    // Set dev mode in local storage to ensure persistence
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('dev_mode', 'true');
+                    }
+                  }}
                 >
                   <FileBarChart size={16} />
                   FIRS Testing Dashboard

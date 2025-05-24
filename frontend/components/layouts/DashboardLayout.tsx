@@ -35,16 +35,20 @@ const NavItems = [
 
 // Sidebar Navigation Item
 const NavItem = ({ icon: Icon, children, href, className }: NavItemProps) => {
+  const router = useRouter();
+  const isActive = router.pathname === href || router.pathname.startsWith(`${href}/`);
+  
   return (
     <Link href={href} className={cn(
-      "flex items-center p-4 mx-4 rounded-lg cursor-pointer transition-colors",
-      "hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900 dark:hover:text-primary-400",
+      "flex items-center p-3 mx-3 my-1 rounded-lg cursor-pointer transition-all duration-200",
+      "hover:bg-indigo-800/60 hover:shadow-md",
+      isActive ? "bg-indigo-800/50 border-l-4 border-white shadow-md" : "border-l-4 border-transparent",
       className
     )}>
       {Icon && (
-        <Icon className="mr-4 h-4 w-4" />
+        <Icon className={cn("ml-1 mr-3 h-5 w-5", isActive ? "text-white" : "text-indigo-200")} />
       )}
-      <span>{children}</span>
+      <span className={isActive ? "font-medium" : "font-normal"}>{children}</span>
     </Link>
   );
 };
@@ -53,17 +57,25 @@ const NavItem = ({ icon: Icon, children, href, className }: NavItemProps) => {
 const Sidebar = ({ onClose, className }: SidebarProps) => {
   return (
     <div className={cn(
-      "transition-all duration-300 ease-in-out bg-white dark:bg-gray-800",
-      "border-r border-gray-200 dark:border-gray-700",
-      "w-full md:w-60 fixed h-full",
+      "transition-all duration-300 ease-in-out bg-gradient-to-b from-indigo-900 to-blue-800 text-white",
+      "border-r border-indigo-700",
+      "w-full md:w-64 fixed h-full shadow-xl z-20",
       className
     )}>
-      <div className="h-20 flex items-center mx-8 justify-between">
-        <Typography.Heading level="h1">
-          TaxPoynt
-        </Typography.Heading>
+      <div className="h-24 flex items-center px-6 justify-between border-b border-indigo-700/50">
+        <div className="flex items-center">
+          <div className="bg-white p-2 rounded-lg shadow-md flex items-center justify-center mr-3" style={{ width: '40px', height: '40px' }}>
+            {/* Embedded logo SVG */}
+            <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32 0C14.327 0 0 14.327 0 32C0 49.673 14.327 64 32 64C49.673 64 64 49.673 64 32C64 14.327 49.673 0 32 0ZM32 12C38.627 12 44 17.373 44 24C44 30.627 38.627 36 32 36C25.373 36 20 30.627 20 24C20 17.373 25.373 12 32 12ZM32 56C24.36 56 17.56 52.36 13.6 46.64C13.8 39.32 27.2 35.2 32 35.2C36.76 35.2 50.2 39.32 50.4 46.64C46.44 52.36 39.64 56 32 56Z" fill="#4F46E5"/>
+            </svg>
+          </div>
+          <Typography.Heading level="h1" className="text-white text-xl">
+            TaxPoynt
+          </Typography.Heading>
+        </div>
         <button 
-          className="md:hidden flex items-center justify-center rounded-md p-2"
+          className="md:hidden flex items-center justify-center rounded-md p-2 bg-indigo-800 hover:bg-indigo-700 transition-colors"
           onClick={onClose}
           aria-label="Close menu"
         >
@@ -86,17 +98,17 @@ const Sidebar = ({ onClose, className }: SidebarProps) => {
 const Header = ({ onOpen }: { onOpen: () => void }) => {
   return (
     <header className="
-      ml-0 md:ml-60 px-4 h-20 flex items-center
-      bg-white dark:bg-gray-800
-      border-b border-gray-200 dark:border-gray-700
-      justify-between md:justify-end
+      ml-0 md:ml-64 px-4 h-16 flex items-center
+      bg-white shadow-sm
+      border-b border-gray-200
+      justify-between sticky top-0 z-10
     ">
       <button
-        className="flex md:hidden items-center justify-center p-2 rounded-md border border-gray-300 dark:border-gray-600"
+        className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
         onClick={onOpen}
-        aria-label="open menu"
+        aria-label="Toggle menu"
       >
-        <FiMenu className="h-5 w-5" />
+        <FiMenu className="h-6 w-6" />
       </button>
       
       <div className="flex md:hidden">
@@ -141,68 +153,76 @@ const DashboardLayout = ({ children, title = 'Dashboard | Taxpoynt eInvoice', de
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   
-  const onOpen = () => setIsOpen(true);
-  const onClose = () => setIsOpen(false);
-  
-  // Redirect to login if not authenticated
+  // Handle authentication status
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login?redirect=' + encodeURIComponent(router.pathname));
+      router.push('/auth/login?returnUrl=' + encodeURIComponent(router.pathname));
     }
   }, [isAuthenticated, isLoading, router]);
   
-  // Show loading state while checking auth
+  // Handle sidebar for mobile - auto-close on route change
+  useEffect(() => {
+    // Close sidebar on mobile when route changes
+    const handleRouteChange = () => {
+      if (window.innerWidth < 768) {
+        setIsOpen(false);
+      }
+    };
+    
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+  
+  // Handle sidebar toggle
+  const toggleSidebar = () => setIsOpen(!isOpen);
+  const closeSidebar = () => setIsOpen(false);
+  
+  // If still checking auth, show loading
   if (isLoading) {
     return (
-      <MainLayout title={title} showNav={false}>
-        <div className="flex items-center justify-center min-h-screen">
-          <Spinner size="lg" />
-          <Typography.Text className="ml-3">Loading dashboard...</Typography.Text>
-        </div>
-      </MainLayout>
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="lg" />
+        <span className="ml-2">Loading dashboard...</span>
+      </div>
     );
   }
   
-  // If not authenticated, don't render dashboard content
+  // If not authenticated, don't render anything (will redirect)
   if (!isAuthenticated) {
-    return null; // Will redirect via the useEffect
+    return null;
   }
   
   return (
-    <MainLayout title={title} description={description} showNav={false}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Desktop Sidebar - always visible on md and above */}
-        <Sidebar
-          onClose={onClose}
-          className="hidden md:block"
-        />
-        
-        {/* Mobile Sidebar - only visible when isOpen is true */}
+    <MainLayout title={title} description={description}>
+      <div className="flex min-h-screen bg-gray-50">
+        {/* Mobile Sidebar Backdrop */}
         {isOpen && (
-          <div className="fixed inset-0 z-40 md:hidden">
-            {/* Overlay */}
-            <div 
-              className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity"
-              onClick={onClose}
-              aria-hidden="true"
-            />
-            
-            {/* Drawer */}
-            <div className="fixed inset-0 flex z-40">
-              <div className="relative flex-1 flex flex-col w-full max-w-xs bg-white dark:bg-gray-800">
-                <Sidebar onClose={onClose} />
-              </div>
-            </div>
-          </div>
+          <div 
+            className="fixed inset-0 bg-gray-900 bg-opacity-50 z-10 md:hidden"
+            onClick={closeSidebar}
+            aria-hidden="true"
+          />
         )}
         
-        {/* Header */}
-        <Header onOpen={onOpen} />
+        {/* Sidebar */}
+        <Sidebar
+          onClose={closeSidebar}
+          className={cn(
+            "md:translate-x-0 transform transition-transform duration-200 ease-in-out z-20",
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        />
         
         {/* Main Content */}
-        <main className="ml-0 md:ml-60 p-4">
-          {children}
-        </main>
+        <div className="flex-1 transition-all duration-200 ease-in-out ml-0 md:ml-64">
+          <Header onOpen={toggleSidebar} />
+          <main className="min-h-[calc(100vh-4rem)] bg-gray-50 p-4">
+            {children}
+          </main>
+        </div>
       </div>
     </MainLayout>
   );
