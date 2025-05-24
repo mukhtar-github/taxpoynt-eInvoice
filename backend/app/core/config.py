@@ -99,6 +99,9 @@ class Settings(BaseSettings):
         "https://localhost:3000",
         "http://localhost:8000",  # Backend dev server
         "https://localhost:8000",
+        "https://www.taxpoynt.com",  # Production frontend
+        "https://taxpoynt.com",      # Production frontend (apex domain)
+        "https://taxpoynte-invoice.vercel.app"  # Vercel deployment
     ]
 
     @validator("CORS_ORIGINS", pre=True)

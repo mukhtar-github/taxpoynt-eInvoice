@@ -50,31 +50,82 @@ const SubmissionDashboard: NextPage = () => {
   const [retryMetrics, setRetryMetrics] = useState<RetryMetrics | null>(null);
   const [odooMetrics, setOdooMetrics] = useState<SubmissionMetrics | null>(null);
 
-  // Fetch data based on selected filters
+  // Create safe default data to prevent undefined errors
+  const defaultSubmissionMetrics: SubmissionMetrics = {
+    timestamp: new Date().toISOString(),
+    summary: {
+      total_submissions: 0,
+      success_count: 0,
+      failed_count: 0,
+      pending_count: 0,
+      success_rate: 0,
+      avg_processing_time: 0,
+      common_errors: []
+    },
+    status_breakdown: [],
+    hourly_submissions: [],
+    daily_submissions: [],
+    common_errors: [],
+    time_range: timeRange
+  };
+  
+  const defaultRetryMetrics: RetryMetrics = {
+    timestamp: new Date().toISOString(),
+    metrics: {
+      total_retries: 0,
+      success_count: 0,
+      failed_count: 0,
+      pending_count: 0,
+      success_rate: 0,
+      avg_attempts: 0,
+      max_attempts_reached_count: 0
+    },
+    retry_breakdown_by_status: [],
+    retry_breakdown_by_severity: [],
+    time_range: timeRange
+  };
+
+
+
+  // Create a function to fetch all dashboard data
   const fetchDashboardData = async () => {
     setIsDataLoading(true);
     setError(null);
     
     try {
-      // Fetch all data in parallel
-      const [submissions, retries, odoo] = await Promise.all([
-        fetchSubmissionMetrics(timeRange),
-        fetchRetryMetrics(timeRange),
-        fetchOdooSubmissionMetrics(timeRange)
-      ]);
+      // Safely fetch each metric with proper error handling
+      try {
+        const submissionData = await fetchSubmissionMetrics(timeRange);
+        setSubmissionMetrics(submissionData || defaultSubmissionMetrics);
+      } catch (submissionErr) {
+        console.log('Submission metrics error:', submissionErr);
+        setSubmissionMetrics(defaultSubmissionMetrics);
+      }
       
-      setSubmissionMetrics(submissions);
-      setRetryMetrics(retries);
-      setOdooMetrics(odoo);
+      try {
+        const retryData = await fetchRetryMetrics(timeRange);
+        setRetryMetrics(retryData || defaultRetryMetrics);
+      } catch (retryErr) {
+        console.log('Retry metrics error:', retryErr);
+        setRetryMetrics(defaultRetryMetrics);
+      }
+      
+      try {
+        const odooData = await fetchOdooSubmissionMetrics(timeRange);
+        setOdooMetrics(odooData || defaultSubmissionMetrics);
+      } catch (odooErr) {
+        console.log('Odoo integration error:', odooErr);
+        setOdooMetrics(defaultSubmissionMetrics);
+      }
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      console.error('API Error: ', err);
       setError('Failed to load dashboard data. Please try again later.');
     } finally {
       setIsDataLoading(false);
     }
   };
 
-  // Fetch data on initial load and when filters change
+  // Fetch all metrics data based on the timeRange
   useEffect(() => {
     fetchDashboardData();
   }, [timeRange]);

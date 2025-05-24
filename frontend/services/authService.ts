@@ -9,11 +9,20 @@
  * @returns Promise with authorization headers
  */
 export const getAuthHeader = async (): Promise<Record<string, string>> => {
-  // Get token from localStorage
-  const token = localStorage.getItem('auth_token');
+  // Get token from localStorage - safely handle server-side rendering
+  let token = "";
+  
+  try {
+    // Check if we're in browser environment
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("auth_token") || "";
+    }
+  } catch (error) {
+    console.error("Error accessing token", error);
+  }
   
   if (!token) {
-    console.warn('No authentication token found');
+    // Instead of warning (which fills console), just return empty headers
     return {};
   }
   
