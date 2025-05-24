@@ -151,7 +151,16 @@ except Exception as e:
     logger.warning(f"Error initializing encryption utilities: {str(e)}")
 
 # Static files - for serving QR codes or other assets
-app.mount("/static", StaticFiles(directory=Path("static")), name="static")
+# Static files have been moved to the frontend React application
+# Only mount the static directory if it exists (for backward compatibility)
+static_path = Path("static")
+if static_path.exists() and static_path.is_dir():
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
+else:
+    logger.info("Static files directory not found - static file serving is disabled")
+    # Create an empty static directory to prevent the error
+    os.makedirs("static", exist_ok=True)
+    app.mount("/static", StaticFiles(directory=Path("static")), name="static")
 
 # Health check endpoint
 @app.get("/health")
