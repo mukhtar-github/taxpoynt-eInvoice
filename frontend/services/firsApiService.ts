@@ -3,6 +3,31 @@
  * Provides consistent API interactions with comprehensive error handling
  */
 import axios, { AxiosError, AxiosResponse } from 'axios';
+
+// For FIRS testing, use local backend which has whitelisted IP
+// In development mode (localhost), use relative paths which go to the same origin
+// In production, explicitly target the local development server if in test mode
+const getApiBaseUrl = () => {
+  // Check if we're in development mode (running on localhost)
+  const isDevelopment = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  
+  // In development, use relative paths
+  if (isDevelopment) {
+    return '';
+  }
+  
+  // In FIRS test mode, use the local backend even in production
+  const isFirsTestMode = typeof window !== 'undefined' && 
+    window.location.pathname.includes('/firs-test');
+    
+  if (isFirsTestMode) {
+    return 'http://localhost:8000';
+  }
+  
+  // Default - use environment variable or empty string (relative URL)
+  return process.env.NEXT_PUBLIC_API_URL || '';
+};
 import { 
   ApiResponse, 
   ApiErrorResponse, 
@@ -117,9 +142,18 @@ const firsApiService = {
     invoiceData: InvoiceSubmitRequest,
     options?: FirsApiRequestOptions
   ): Promise<ApiResponse<InvoiceSubmissionResponse>> => {
+    // Log the request for debugging purposes
+    console.log('Submitting invoice to FIRS API:', JSON.stringify(invoiceData, null, 2));
+    
+    // Get the correct API base URL based on environment
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}/api/firs/submit-invoice`;
+    
+    console.log('Submission URL:', url);
+    
     return apiRequest<InvoiceSubmissionResponse>(
       'post',
-      '/api/firs/submit-invoice',
+      url,
       invoiceData,
       options
     );
@@ -133,10 +167,19 @@ const firsApiService = {
     useSandbox?: boolean,
     options?: FirsApiRequestOptions
   ): Promise<ApiResponse<SubmissionStatusResponse>> => {
+    // Log the request for debugging
+    console.log('Checking FIRS submission status for ID:', submissionId);
+    
+    // Get the correct API base URL based on environment
+    const baseUrl = getApiBaseUrl();
     const params = useSandbox !== undefined ? `?use_sandbox=${useSandbox}` : '';
+    const url = `${baseUrl}/api/firs/submission-status/${submissionId}${params}`;
+    
+    console.log('Status check URL:', url);
+    
     return apiRequest<SubmissionStatusResponse>(
       'get',
-      `/api/firs/submission-status/${submissionId}${params}`,
+      url,
       undefined,
       options
     );
@@ -167,9 +210,15 @@ const firsApiService = {
    * Test connection to the API server
    */
   testConnection: async (): Promise<ApiResponse<{status: string}>> => {
+    // Get the correct API base URL based on environment
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}/health`;
+    
+    console.log('Testing connection to:', url);
+    
     return apiRequest<{status: string}>(
       'get',
-      '/health',
+      url,
       undefined,
       { timeout: 5000 } // Short timeout for health check
     );

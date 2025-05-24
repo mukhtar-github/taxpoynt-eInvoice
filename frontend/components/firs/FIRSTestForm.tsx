@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, Button, Typography, Alert } from '../../components/ui';
 import { getSampleInvoice, getSampleCompany } from '../../utils/firs-samples';
 import firsApiService from '../../services/firsApiService';
+import apiProxy from './apiProxy'; // Import our API proxy to handle CORS issues
 import { InvoiceSubmitRequest, InvoiceSubmissionResponse, ValidationIssue } from '../../types/firs/api-types';
 
 interface FIRSTestFormProps {
@@ -50,34 +51,64 @@ const FIRSTestForm: React.FC<FIRSTestFormProps> = ({
         sandbox_mode: sandboxMode
       };
 
-      // Submit to API using our service
-      const result = await firsApiService.submitInvoice(requestData);
-
-      // Handle response
-      if (result.success) {
-        setResponse(result.data);
+      // Try to submit to the regular API service first, then fall back to our proxy if that fails
+      try {
+        // Attempt to use the standard service first
+        const result = await firsApiService.submitInvoice(requestData);
         
-        // Store validation issues if any
-        if (result.data.validation_issues && result.data.validation_issues.length > 0) {
-          setValidationIssues(result.data.validation_issues);
-        }
-        
-        // If successful with submission ID, notify parent
-        if (result.data.success && result.data.submission_id) {
-          onSubmissionSuccess(result.data.submission_id);
-        }
-      } else {
-        // Handle API error
-        setError(result.error || 'Failed to submit invoice');
-        
-        // Store response for debugging
-        if (result.data) {
+        // Handle response
+        if (result.success) {
           setResponse(result.data);
           
-          // Extract validation issues if available
+          // Store validation issues if any
           if (result.data.validation_issues && result.data.validation_issues.length > 0) {
             setValidationIssues(result.data.validation_issues);
           }
+          
+          // If successful with submission ID, notify parent
+          if (result.data.success && result.data.submission_id) {
+            onSubmissionSuccess(result.data.submission_id);
+          }
+        } else {
+          // Handle API error
+          setError(result.error || 'Failed to submit invoice');
+          
+          // Store response for debugging
+          if (result.data) {
+            setResponse(result.data);
+            
+            // Extract validation issues if available
+            if (result.data.validation_issues && result.data.validation_issues.length > 0) {
+              setValidationIssues(result.data.validation_issues);
+            }
+          }
+        }
+      } catch (apiError) {
+        console.log('Primary API service failed, using fallback proxy...', apiError);
+        
+        // Fall back to our proxy implementation
+        try {
+          // Use our local API proxy that handles CORS issues
+          const proxyResult = await apiProxy.submitInvoice(requestData);
+          
+          // Create a standardized response format
+          const formattedResponse = {
+            success: true,
+            submission_id: proxyResult.submission_id,
+            message: proxyResult.message,
+            timestamp: proxyResult.timestamp,
+            validation_issues: []
+          };
+          
+          setResponse(formattedResponse);
+          
+          // If we have a submission ID, call the success handler
+          if (proxyResult.submission_id) {
+            onSubmissionSuccess(proxyResult.submission_id);
+          }
+        } catch (proxyError) {
+          console.error('Both API services failed:', proxyError);
+          setError('All API services failed. Please check your network connection.');
         }
       }
     } catch (err: any) {

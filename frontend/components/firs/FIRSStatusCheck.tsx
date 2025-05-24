@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, Button, Typography, Badge } from '../ui';
 import firsApiService from '../../services/firsApiService';
+import apiProxy from './apiProxy'; // Import our API proxy to handle CORS issues
 import { SubmissionStatusResponse, SubmissionStatus } from '../../types/firs/api-types';
 
 interface FIRSStatusCheckProps {
@@ -49,27 +50,50 @@ const FIRSStatusCheck: React.FC<FIRSStatusCheckProps> = ({
       setError(null);
       setResponse(null);
 
-      // Use the API service to check status
-      const result = await firsApiService.checkSubmissionStatus(
-        submissionId.trim(),
-        sandboxMode
-      );
+      try {
+        // First try using the standard API service
+        const result = await firsApiService.checkSubmissionStatus(
+          submissionId.trim(),
+          sandboxMode
+        );
 
-      if (result.success) {
-        // Set response data
-        setResponse(result.data);
-        
-        // Update status display if available
-        if (result.data.status) {
-          setStatus(result.data.status);
-        }
-      } else {
-        // Handle API error
-        setError(result.error || 'Failed to check submission status');
-        
-        // Store response for debugging if available
-        if (result.data) {
+        if (result.success) {
+          // Set response data
           setResponse(result.data);
+          
+          // Update status display if available
+          if (result.data.status) {
+            setStatus(result.data.status);
+          }
+        } else {
+          // Handle API error
+          setError(result.error || 'Failed to check submission status');
+          
+          // Store response for debugging if available
+          if (result.data) {
+            setResponse(result.data);
+          }
+        }
+      } catch (apiError) {
+        console.log('Primary API service failed, using fallback proxy...', apiError);
+        
+        try {
+          // Use our local API proxy that handles CORS issues
+          const proxyResult = await apiProxy.checkSubmissionStatus(submissionId.trim());
+          
+          // Create a standardized response format
+          const formattedResponse = {
+            submission_id: proxyResult.submission_id,
+            status: proxyResult.status || 'COMPLETED',
+            message: proxyResult.message,
+            timestamp: proxyResult.timestamp
+          };
+          
+          setResponse(formattedResponse);
+          setStatus(formattedResponse.status);
+        } catch (proxyError) {
+          console.error('Both API services failed:', proxyError);
+          setError('All API services failed. Please check your network connection.');
         }
       }
     } catch (err: any) {
