@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.submission import SubmissionRecord, SubmissionStatus
 from app.models.integration import Integration, IntegrationType
-from app.services.odoo_service import OdooService
+from app.services.odoo_connector import OdooConnector
 from app.services.firs_service import FIRSService
 from app.utils.logger import get_logger
 
