@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, Body, HTTPException, status, Query, Uplo
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.database.session import get_db
-from app.auth.jwt import get_current_active_user
+from app.db.session import get_db
+from app.dependencies.auth import get_current_active_user
 from app.models.user import User
 from app.services.firs_service import firs_service, InvoiceSubmissionResponse, SubmissionStatus
 from app.utils.logger import get_logger

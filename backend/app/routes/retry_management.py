@@ -14,8 +14,8 @@ from sqlalchemy import desc, asc
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from app.database.session import get_db
-from app.auth.jwt import get_current_active_user, get_current_admin_user
+from app.db.session import get_db
+from app.dependencies.auth import get_current_active_user, get_current_active_superuser
 from app.models.user import User
 from app.models.submission import SubmissionRecord, SubmissionStatus
 from app.models.submission_retry import SubmissionRetry, RetryStatus, FailureSeverity
@@ -37,7 +37,7 @@ async def get_failed_submissions(
     severity: Optional[str] = Query(None, description="Filter by severity"),
     time_period: int = Query(24, description="Time period in hours to look back"),
     limit: int = Query(50, description="Maximum number of records to return"),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: Session = Depends(get_db),
 ):
     """
@@ -108,7 +108,7 @@ async def get_failed_submissions(
 @router.get("/retry/{retry_id}", response_model=Dict[str, Any])
 async def get_retry_details(
     retry_id: UUID = Path(..., description="UUID of the retry record"),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: Session = Depends(get_db),
 ):
     """
@@ -175,7 +175,7 @@ async def get_retry_details(
 @router.post("/retry/{retry_id}/trigger", response_model=Dict[str, Any])
 async def trigger_retry(
     retry_id: UUID = Path(..., description="UUID of the retry record"),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: Session = Depends(get_db),
 ):
     """
@@ -230,7 +230,7 @@ async def trigger_retry(
 @router.post("/submission/{submission_id}/retry", response_model=Dict[str, Any])
 async def create_manual_retry(
     submission_id: str = Path(..., description="FIRS submission ID"),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: Session = Depends(get_db),
 ):
     """

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 import hmac
 import hashlib
 
-from app.database.session import get_db
+from app.db.session import get_db
 from app.models.submission import SubmissionRecord, SubmissionStatus
 from app.services.submission_service import process_status_update_from_firs
 from app.core.config import settings
