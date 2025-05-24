@@ -512,29 +512,45 @@ async def process_pending_retries(db: Session) -> int:
     Returns:
         Number of retries processed
     """
-    # Find pending retries that are due
-    now = datetime.utcnow()
-    pending_retries = db.query(SubmissionRetry).filter(
-        SubmissionRetry.status == RetryStatus.PENDING,
-        SubmissionRetry.next_attempt_at <= now
-    ).all()
-    
-    if not pending_retries:
-        return 0
-    
-    logger.info(f"Processing {len(pending_retries)} pending submission retries")
-    
-    # Process each retry
-    processed_count = 0
-    for retry in pending_retries:
+    try:
+        # Check if table exists by making a low-impact query
         try:
-            # Process the retry in the background
-            asyncio.create_task(process_submission_retry(db, retry.id))
-            processed_count += 1
-        except Exception as e:
-            logger.exception(f"Error scheduling retry {retry.id}: {str(e)}")
-    
-    return processed_count
+            # Just check if the table exists without doing a full query
+            db.execute("SELECT 1 FROM submission_retries LIMIT 1")
+        except Exception as table_error:
+            # If table doesn't exist, log and return early
+            if "relation \"submission_retries\" does not exist" in str(table_error):
+                logger.warning("submission_retries table does not exist yet. Skipping retry processing.")
+                return 0
+            # For other errors, re-raise
+            raise
+            
+        # Find pending retries that are due
+        now = datetime.utcnow()
+        pending_retries = db.query(SubmissionRetry).filter(
+            SubmissionRetry.status == RetryStatus.PENDING,
+            SubmissionRetry.next_attempt_at <= now
+        ).all()
+        
+        if not pending_retries:
+            return 0
+        
+        logger.info(f"Processing {len(pending_retries)} pending submission retries")
+        
+        # Process each retry
+        processed_count = 0
+        for retry in pending_retries:
+            try:
+                # Process the retry in the background
+                asyncio.create_task(process_submission_retry(db, retry.id))
+                processed_count += 1
+            except Exception as e:
+                logger.exception(f"Error scheduling retry {retry.id}: {str(e)}")
+        
+        return processed_count
+    except Exception as e:
+        logger.exception(f"Error in process_pending_retries: {str(e)}")
+        return 0
 
 
 async def send_alert(
