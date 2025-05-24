@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean, Integer, func # type: ignore
+from datetime import datetime
+from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean, Integer, Text, func # type: ignore
 from sqlalchemy.dialects.postgresql import UUID # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 from app.db.base import Base # type: ignore
@@ -8,7 +9,7 @@ from app.db.base import Base # type: ignore
 class APIKey(Base):
     """
     Model for storing API keys with field-level encryption.
-    The key field is encrypted using AES-256-GCM.
+    Supports both the original encryption-based model and the newer hashing-based model.
     """
     __tablename__ = "api_keys"
 
@@ -16,13 +17,42 @@ class APIKey(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
     name = Column(String(100), nullable=False)
-    key = Column(String(255), nullable=False)  # Encrypted API key
-    prefix = Column(String(10), nullable=False, unique=True)  # Unencrypted prefix for display
-    encryption_key_id = Column(String(100), ForeignKey("encryption_keys.id"))  # Reference to the key used for encryption
+    description = Column(Text, nullable=True)
+    
+    # Key can be either encrypted or hashed based on implementation needs
+    key = Column(String(255), nullable=True)  # Encrypted API key (legacy approach)
+    hashed_key = Column(String(255), nullable=True)  # Hashed API key (newer approach)
+    
+    # Prefix for display to user
+    prefix = Column(String(10), nullable=False, unique=True)
+    
+    # Secret key fields (for two-factor API authentication)
+    secret_prefix = Column(String(8), nullable=True)  # For secret key display
+    hashed_secret = Column(String(255), nullable=True)  # Hashed secret key
+    
+    # Encryption reference
+    encryption_key_id = Column(String(100), ForeignKey("encryption_keys.id"), nullable=True)
+    
+    # Timestamps
     created_at = Column(DateTime, nullable=False, server_default=func.now())
-    expires_at = Column(DateTime)
-    last_used = Column(DateTime)
+    expires_at = Column(DateTime, nullable=True)
+    last_used = Column(DateTime, nullable=True)
+    last_used_at = Column(DateTime, nullable=True)  # Duplicate field for backward compatibility
+    
+    # Status
     status = Column(String(20), nullable=False, default="active")
+    is_active = Column(Boolean, default=True, nullable=False)  # Duplicate field for backward compatibility
+    
+    # Rate limiting
+    rate_limit_per_minute = Column(Integer, default=60, nullable=True)
+    rate_limit_per_day = Column(Integer, default=10000, nullable=True)
+    current_minute_requests = Column(Integer, default=0, nullable=True)
+    current_day_requests = Column(Integer, default=0, nullable=True)
+    last_minute_reset = Column(DateTime, default=datetime.utcnow, nullable=True)
+    last_day_reset = Column(DateTime, default=datetime.utcnow, nullable=True)
+    
+    # Permissions
+    permissions = Column(Text, nullable=True)  # JSON string of permissions
 
     # Relationships
     user = relationship("User", back_populates="api_keys")

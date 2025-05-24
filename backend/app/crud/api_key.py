@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from app.models.api_key import APIKey
+from app.models.api_keys import APIKey
 from app.schemas.api_key import APIKeyCreate
 from app.models.user import User
 from app.models.organization import Organization # type: ignore

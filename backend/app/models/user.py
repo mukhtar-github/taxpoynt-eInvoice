@@ -43,6 +43,9 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    api_keys = relationship("APIKey", back_populates="user")
 
 
 class Organization(Base):
@@ -67,6 +70,7 @@ class Organization(Base):
     encryption_keys = relationship("EncryptionKey", back_populates="organization")
     encryption_config = relationship("EncryptionConfig", back_populates="organization", uselist=False)
     firs_credentials = relationship("FIRSCredentials", back_populates="organization")
+    api_keys = relationship("APIKey", back_populates="organization")
 
 
 class OrganizationUser(Base):
