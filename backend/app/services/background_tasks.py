@@ -17,6 +17,7 @@ from app.db.session import SessionLocal
 from app.services.retry_service import process_pending_retries
 from app.utils.logger import get_logger
 from app.core.config import settings
+from app.core.config_retry import retry_settings
 
 logger = get_logger(__name__)
 
@@ -32,7 +33,7 @@ async def start_background_tasks():
     start_task(
         "submission_retry_processor",
         submission_retry_processor,
-        interval_seconds=settings.RETRY_PROCESSOR_INTERVAL or 60
+        interval_seconds=retry_settings.RETRY_PROCESSOR_INTERVAL
     )
     
     # Add more background tasks here as needed
