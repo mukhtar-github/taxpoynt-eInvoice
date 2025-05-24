@@ -26,7 +26,7 @@ from app.services.odoo_service import (
 )
 from app.services.odoo_invoice_service import odoo_invoice_service
 from app.dependencies.auth import get_current_user
-from app.services.api_credential_service import get_credentials_for_integration
+from app.services.integration_credential_connector import get_credentials_for_integration
 
 # Create a router with prefix and tags
 router = APIRouter(prefix="/odoo-ubl", tags=["odoo-ubl"])
