@@ -28,7 +28,7 @@ class IntegrationStatusService:
     """
     
     @staticmethod
-    async def get_odoo_status(db: Session, integration_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_odoo_status(db: Session, integration_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Check the status of Odoo integration.
         
@@ -65,25 +65,34 @@ class IntegrationStatusService:
         for integration in integrations:
             try:
                 # Try to connect to Odoo
-                from app.schemas.integration import OdooConfig
-                
-                # Create OdooConfig object from integration configuration
-                odoo_config = OdooConfig(
-                    url=integration.config.get("url"),
-                    database=integration.config.get("database"),
-                    username=integration.config.get("username"),
-                    password=integration.config.get("password")
-                )
-                
-                # Initialize the OdooConnector with the config
-                connector = OdooConnector(config=odoo_config)
-                
-                # Test connection by connecting and authenticating
-                connector.connect()
-                connector.authenticate()
-                
-                # Get version info
-                version_info = connector.version_info
+                try:
+                    from app.schemas.integration import OdooConfig
+                    
+                    # Create OdooConfig object from integration configuration
+                    odoo_config = OdooConfig(
+                        url=integration.config.get("url"),
+                        database=integration.config.get("database"),
+                        username=integration.config.get("username"),
+                        password=integration.config.get("password")
+                    )
+                    
+                    # Initialize the OdooConnector with the config
+                    connector = OdooConnector(config=odoo_config)
+                    
+                    # Test connection by connecting and authenticating
+                    connector.connect()
+                    connector.authenticate()
+                    
+                    # Get version info
+                    version_info = connector.version_info or {"server_version": "Unknown"}
+                    connection_status = "connected"
+                    connection_message = f"Connected to Odoo server v{version_info.get('server_version', 'Unknown')}"
+                except Exception as e:
+                    logger.error(f"Error connecting to Odoo: {str(e)}")
+                    version_info = {"error": str(e)}
+                    connection_status = "error"
+                    connection_message = f"Failed to connect: {str(e)}"
+                    overall_status = "degraded"
                 
                 # Get recent submission statistics
                 now = datetime.utcnow()
