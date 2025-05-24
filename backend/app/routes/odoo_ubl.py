@@ -25,7 +25,7 @@ from app.services.odoo_service import (
     fetch_odoo_invoices, search_odoo_invoices, fetch_odoo_partners
 )
 from app.services.odoo_invoice_service import odoo_invoice_service
-from app.services.user_service import get_current_user # type: ignore
+from app.dependencies.auth import get_current_user
 from app.services.api_credential_service import get_credentials_for_integration
 
 # Create a router with prefix and tags
