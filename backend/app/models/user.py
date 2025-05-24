@@ -9,6 +9,7 @@ import uuid
 # These are forward references to break the circular dependencies
 from app.models.certificate import Certificate as CertificateModel
 from app.models.encryption import EncryptionKey, EncryptionConfig
+from app.models.firs_credentials import FIRSCredentials
 
 
 class UserRole(str, enum.Enum):
@@ -65,6 +66,7 @@ class Organization(Base):
     certificates = relationship("Certificate", back_populates="organization")
     encryption_keys = relationship("EncryptionKey", back_populates="organization")
     encryption_config = relationship("EncryptionConfig", back_populates="organization", uselist=False)
+    firs_credentials = relationship("FIRSCredentials", back_populates="organization")
 
 
 class OrganizationUser(Base):
