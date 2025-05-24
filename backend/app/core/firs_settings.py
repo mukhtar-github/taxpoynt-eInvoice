@@ -6,7 +6,8 @@ including configuration for both production and sandbox environments.
 """
 
 from typing import Optional
-from pydantic import BaseSettings, validator
+from pydantic import validator
+from pydantic_settings import BaseSettings
 import os
 from app.core.config import settings
 
