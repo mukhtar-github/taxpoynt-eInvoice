@@ -14,7 +14,7 @@ import json
 from app.services.firs_service import firs_service, InvoiceSubmissionResponse, SubmissionStatus
 from app.services.odoo_ubl_transformer import odoo_ubl_transformer
 from app.schemas.invoice_validation import InvoiceValidationRequest
-from app.core.security import get_current_user
+from app.dependencies.auth import get_current_user
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
