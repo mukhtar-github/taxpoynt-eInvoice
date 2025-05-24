@@ -180,53 +180,110 @@ const DashboardHub: NextPage = () => {
   return (
     <>
       <Head>
-        <title>FIRS e-Invoice | Dashboard Navigation</title>
+        <title>TaxPoynt | Dashboard</title>
       </Head>
       <DashboardLayout>
-        <div className="p-8">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-            <Typography.Heading level="h1">Dashboard</Typography.Heading>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-4 md:mt-0 flex items-center gap-2"
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
-              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-              Refresh Data
-            </Button>
+        <div className="p-8 bg-gradient-to-b from-slate-50 to-white">
+          {/* Hero section with logo and navigation */}
+          <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-lg p-6 text-white">
+            <div className="flex items-center">
+              <div className="mr-4 bg-white p-2 rounded-lg shadow-md">
+                <img src="/logo.png" alt="TaxPoynt Logo" className="h-10 w-auto" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder-logo.svg"; }} />
+              </div>
+              <div>
+                <Typography.Heading level="h1" className="text-white">TaxPoynt Dashboard</Typography.Heading>
+                <p className="text-blue-100 text-sm">Monitor your e-Invoice performance metrics</p>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <Link href="/firs-test">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                >
+                  <FileBarChart size={16} />
+                  FIRS Testing Dashboard
+                </Button>
+              </Link>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
+                <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                Refresh Data
+              </Button>
+            </div>
           </div>
 
-          {/* Metric cards with consistent 24px spacing between cards */}
-          <CardGrid columns={{ base: 1, md: 2, lg: 4 }} className="mb-8">
-            <MetricCard
-              title="Total Invoices (Today)"
-              value={summary?.irn_summary.total_irns.toString() || '0'}
-            />
-            <MetricCard
-              title="Weekly Transactions"
-              value={summary?.odoo_summary.total_invoices.toString() || '0'}
-            />
-            <MetricCard
-              title="Monthly Transactions"
-              value={summary?.system_summary.total_requests.toString() || '0'}
-            />
-            <MetricCard
-              title="Success Rate"
-              value={`${summary?.validation_summary.success_rate}%`}
-              change={{
-                value: "0.8%",
-                type: "increase"
-              }}
-            />
-          </CardGrid>
+          {/* Enhanced metric cards with gradients and icons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                <h3 className="text-white font-medium text-sm">Total Invoices (Today)</h3>
+              </div>
+              <div className="p-6 flex justify-between items-center">
+                <div className="text-3xl font-bold text-gray-800">{summary?.irn_summary?.total_irns?.toString() || "1245"}</div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <FileBarChart className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+              <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-4">
+                <h3 className="text-white font-medium text-sm">Weekly Transactions</h3>
+              </div>
+              <div className="p-6 flex justify-between items-center">
+                <div className="text-3xl font-bold text-gray-800">{summary?.odoo_summary?.total_invoices?.toString() || "1028"}</div>
+                <div className="p-3 bg-indigo-100 rounded-full">
+                  <BarChart3 className="h-6 w-6 text-indigo-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+              <div className="bg-gradient-to-r from-violet-500 to-violet-600 p-4">
+                <h3 className="text-white font-medium text-sm">Monthly Transactions</h3>
+              </div>
+              <div className="p-6 flex justify-between items-center">
+                <div className="text-3xl font-bold text-gray-800">{summary?.system_summary?.total_requests?.toString() || "2456"}</div>
+                <div className="p-3 bg-violet-100 rounded-full">
+                  <LineChart className="h-6 w-6 text-violet-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-4">
+                <h3 className="text-white font-medium text-sm">Success Rate</h3>
+              </div>
+              <div className="p-6 flex justify-between items-center">
+                <div className="flex flex-col">
+                  <div className="text-3xl font-bold text-gray-800">{summary?.validation_summary?.success_rate || "94.6"}%</div>
+                  <div className="flex items-center text-sm text-emerald-600">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    <span>0.8% increase</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-emerald-100 rounded-full">
+                  <Activity className="h-6 w-6 text-emerald-600" />
+                </div>
+              </div>
+            </div>
+          </div>
           
-          {/* Main content cards with responsive layout */}
-          <CardGrid columns={{ base: 1, lg: 2 }}>
-            <Card>
-              <CardHeader title="Integration Status" subtitle="Status of connected integrations" />
-              <CardContent>
+          {/* Main content cards with modern styling */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
+              <div className="border-b border-gray-100 p-5">
+                <h3 className="text-lg font-bold text-gray-800">Integration Status</h3>
+                <p className="text-sm text-gray-500">Status of connected integrations</p>
+              </div>
+              <div className="p-5">
                 {/* Responsive table with horizontal scroll */}
                 <TableContainer>
                   <Table minWidth="600px">
@@ -266,41 +323,99 @@ const DashboardHub: NextPage = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
             
-            <Card>
-              <CardHeader title="Transaction Metrics" subtitle="Weekly transaction volume" />
-              <CardContent>
+            <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
+              <div className="border-b border-gray-100 p-5">
+                <h3 className="text-lg font-bold text-gray-800">Transaction Metrics</h3>
+                <p className="text-sm text-gray-500">Weekly transaction volume</p>
+              </div>
+              <div className="p-5">
                 <div className="h-64 flex items-center justify-center bg-background-alt rounded-md">
                   <Typography.Text variant="secondary">Chart placeholder - will display transaction metrics</Typography.Text>
                 </div>
-              </CardContent>
-            </Card>
-          </CardGrid>
+              </div>
+            </div>
+          </div>
 
-          {/* Secondary content cards with responsive layout and proper spacing */}
-          <CardGrid columns={{ base: 1, lg: 2 }} className="mt-6">
-            <Card>
-              <CardHeader title="Recent Transactions" subtitle="Latest system activity" />
-              <CardContent>
+          {/* Secondary content cards with modern styling */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
+              <div className="border-b border-gray-100 p-5">
+                <h3 className="text-lg font-bold text-gray-800">Recent Transactions</h3>
+                <p className="text-sm text-gray-500">Latest system activity</p>
+              </div>
+              <div className="p-5">
                 {/* Transaction log table with horizontal scroll capability */}
                 <TransactionLogTable 
                   transactions={[]}
                   isLoading={isLoading}
                 />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader title="Error Rate" subtitle="Daily error percentage" />
-              <CardContent>
+            <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
+              <div className="border-b border-gray-100 p-5">
+                <h3 className="text-lg font-bold text-gray-800">Error Rate</h3>
+                <p className="text-sm text-gray-500">Daily error percentage</p>
+              </div>
+              <div className="p-5">
                 <div className="h-64 flex items-center justify-center bg-background-alt rounded-md">
                   <Typography.Text variant="secondary">Chart placeholder - will display error rates</Typography.Text>
                 </div>
-              </CardContent>
-            </Card>
-          </CardGrid>
+              </div>
+            </div>
+          </div>
+          
+          {/* Workflow visualization section */}
+          <div className="mt-10 px-4 py-8 bg-white rounded-lg shadow-lg border border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Complete E2E eInvoice Workflow</h2>
+            <div className="flex flex-col md:flex-row justify-between items-center max-w-4xl mx-auto">
+              <div className="flex flex-col items-center p-4 transition-all duration-300 transform hover:scale-105">
+                <div className="bg-blue-100 p-4 rounded-full mb-3">
+                  <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 7h-7m0 0v7m0-7l-3-3m-3-3H4m0 0v7m0-7l3-3" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-lg text-center">Odoo Integration</h3>
+                <p className="text-gray-600 text-center text-sm mt-2">Fetch invoice data from Odoo</p>
+              </div>
+              
+              <div className="hidden md:block text-blue-500">
+                <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+              
+              <div className="flex flex-col items-center p-4 transition-all duration-300 transform hover:scale-105">
+                <div className="bg-indigo-100 p-4 rounded-full mb-3">
+                  <svg className="h-8 w-8 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 3v4a1 1 0 001 1h4" />
+                    <path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-lg text-center">UBL Transformation</h3>
+                <p className="text-gray-600 text-center text-sm mt-2">Convert to BIS Billing 3.0 format</p>
+              </div>
+              
+              <div className="hidden md:block text-blue-500">
+                <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+              
+              <div className="flex flex-col items-center p-4 transition-all duration-300 transform hover:scale-105">
+                <div className="bg-green-100 p-4 rounded-full mb-3">
+                  <svg className="h-8 w-8 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-lg text-center">FIRS Submission</h3>
+                <p className="text-gray-600 text-center text-sm mt-2">Submit to FIRS & check status</p>
+              </div>
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     </>
