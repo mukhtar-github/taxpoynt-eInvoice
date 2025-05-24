@@ -24,7 +24,7 @@ interface SidebarProps {
   className?: string;
 }
 
-// Navigation Items
+// Navigation Items - matched to the screenshot
 const NavItems = [
   { name: 'Dashboard', icon: FiHome, href: '/dashboard' },
   { name: 'Integrations', icon: FiTrendingUp, href: '/integrations' },
@@ -32,6 +32,21 @@ const NavItems = [
   { name: 'Submission Dashboard', icon: FiBarChart2, href: '/submission-dashboard' },
   { name: 'Settings', icon: FiSettings, href: '/settings' },
 ];
+
+// Sidebar toggle button component
+const SidebarToggle = ({ onClick }: { onClick: () => void }) => {
+  return (
+    <button 
+      onClick={onClick}
+      className="absolute -right-3 top-20 bg-indigo-700 text-white rounded-full p-1 shadow-md hover:bg-indigo-800 transition-colors z-30"
+      aria-label="Toggle sidebar"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
+  );
+};
 
 // Sidebar Navigation Item
 const NavItem = ({ icon: Icon, children, href, className }: NavItemProps) => {
@@ -54,14 +69,17 @@ const NavItem = ({ icon: Icon, children, href, className }: NavItemProps) => {
 };
 
 // Sidebar Component
-const Sidebar = ({ onClose, className }: SidebarProps) => {
+const Sidebar = ({ onClose, className, onToggle }: SidebarProps & { onToggle: () => void }) => {
   return (
     <div className={cn(
       "transition-all duration-300 ease-in-out bg-gradient-to-b from-indigo-900 to-blue-800 text-white",
       "border-r border-indigo-700",
-      "w-full md:w-64 fixed h-full shadow-xl z-20",
+      "w-full md:w-64 fixed h-full shadow-xl z-20 relative",
       className
     )}>
+      {/* Sidebar Toggle Button */}
+      <SidebarToggle onClick={onToggle} />
+      
       <div className="h-24 flex items-center px-6 justify-between border-b border-indigo-700/50">
         <div className="flex items-center">
           <div className="bg-white p-2 rounded-lg shadow-md flex items-center justify-center mr-3" style={{ width: '40px', height: '40px' }}>
@@ -94,22 +112,15 @@ const Sidebar = ({ onClose, className }: SidebarProps) => {
   );
 };
 
-// Header Component
-const Header = ({ onOpen }: { onOpen: () => void }) => {
+// Header Component - simplified to match screenshot
+const Header = () => {
   return (
     <header className="
       ml-0 md:ml-64 px-4 h-16 flex items-center
       bg-white shadow-sm
       border-b border-gray-200
-      justify-between sticky top-0 z-10
+      justify-end sticky top-0 z-10
     ">
-      <button
-        className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
-        onClick={onOpen}
-        aria-label="Toggle menu"
-      >
-        <FiMenu className="h-6 w-6" />
-      </button>
       
       <div className="flex md:hidden">
         <Typography.Heading level="h1">
@@ -176,9 +187,28 @@ const DashboardLayout = ({ children, title = 'Dashboard | Taxpoynt eInvoice', de
     };
   }, [router.events]);
   
-  // Handle sidebar toggle
-  const toggleSidebar = () => setIsOpen(!isOpen);
+  // Handle sidebar toggle - store preference in localStorage
+  const toggleSidebar = () => {
+    const newState = !isOpen;
+    setIsOpen(newState);
+    // Store preference in localStorage for persistence
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebar_collapsed', newState ? 'false' : 'true');
+    }
+  };
   const closeSidebar = () => setIsOpen(false);
+  
+  // Initialize sidebar state from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('sidebar_collapsed');
+      if (savedState === 'true') {
+        setIsOpen(false);
+      } else {
+        setIsOpen(true); // Default to open
+      }
+    }
+  }, []);
   
   // If still checking auth, show loading
   if (isLoading) {
@@ -210,6 +240,7 @@ const DashboardLayout = ({ children, title = 'Dashboard | Taxpoynt eInvoice', de
         {/* Sidebar */}
         <Sidebar
           onClose={closeSidebar}
+          onToggle={toggleSidebar}
           className={cn(
             "md:translate-x-0 transform transition-transform duration-200 ease-in-out z-20",
             isOpen ? "translate-x-0" : "-translate-x-full"
@@ -218,7 +249,7 @@ const DashboardLayout = ({ children, title = 'Dashboard | Taxpoynt eInvoice', de
         
         {/* Main Content */}
         <div className="flex-1 transition-all duration-200 ease-in-out ml-0 md:ml-64">
-          <Header onOpen={toggleSidebar} />
+          <Header />
           <main className="min-h-[calc(100vh-4rem)] bg-gray-50 p-4">
             {children}
           </main>

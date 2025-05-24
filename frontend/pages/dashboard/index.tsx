@@ -204,10 +204,13 @@ const DashboardHub: NextPage = () => {
                   variant="secondary" 
                   size="sm" 
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20"
-                  onClick={() => {
+                  onClick={(e) => {
                     // Set dev mode in local storage to ensure persistence
                     if (typeof window !== 'undefined') {
+                      // Set authentication tokens if needed for development
                       localStorage.setItem('dev_mode', 'true');
+                      localStorage.setItem('auth_token', 'temp_dev_token_' + Date.now());
+                      localStorage.setItem('user_permissions', JSON.stringify(['firs_api_access', 'dashboard_access']));
                     }
                   }}
                 >
