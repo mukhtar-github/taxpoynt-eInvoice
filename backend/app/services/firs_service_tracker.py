@@ -10,7 +10,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.database.session import get_db
+from app.db.session import get_db
 from app.services.firs_service import firs_service, InvoiceSubmissionResponse, SubmissionStatus
 from app.services.submission_service import create_submission_record, update_submission_status
 from app.models.submission import SubmissionStatus as DbSubmissionStatus

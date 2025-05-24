@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Callable, Awaitable
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
+from app.db.session import SessionLocal
 from app.services.retry_service import process_pending_retries
 from app.utils.logger import get_logger
 from app.core.config import settings
