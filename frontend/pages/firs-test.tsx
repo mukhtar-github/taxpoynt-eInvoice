@@ -53,8 +53,7 @@ const FIRSTestPage: NextPage = () => {
             </Badge>
           </div>
         </div>
-        </div>
-      
+        </div>      
         <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <Typography.Heading level="h1">FIRS API Testing Dashboard</Typography.Heading>
