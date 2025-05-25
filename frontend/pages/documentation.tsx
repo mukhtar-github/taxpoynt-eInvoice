@@ -381,70 +381,117 @@ const DocumentationPage: React.FC = () => {
             <Card>
               <CardContent className="p-6">
                 <Typography.Heading level="h3" className="text-xl font-semibold mb-3">
-                  Invoice Submission API
+                  IRN Generation & Validation
                 </Typography.Heading>
                 <Typography.Text className="mb-4">
-                  Endpoints for submitting invoices for e-invoice generation:
+                  The Invoice Reference Number (IRN) is a critical component of the FIRS e-Invoicing system. Each invoice must have a unique IRN that follows the FIRS-specified format.
                 </Typography.Text>
                 
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <Typography.Text className="font-semibold mb-2">IRN Format</Typography.Text>
+                  <Typography.Text className="text-sm mb-3">
+                    Each IRN consists of three components concatenated with hyphens:
+                  </Typography.Text>
+                  <ul className="list-disc pl-5 space-y-1 mb-3 text-sm">
+                    <li><span className="font-medium">Invoice Number</span> - From your accounting system (alphanumeric, no special characters)</li>
+                    <li><span className="font-medium">Service ID</span> - 8-character FIRS-assigned identifier (e.g., 94ND90NR)</li>
+                    <li><span className="font-medium">Timestamp</span> - Invoice date in YYYYMMDD format</li>
+                  </ul>
+                  <div className="font-mono text-xs bg-gray-100 p-2 rounded mb-2">
+                    Example: INV001-94ND90NR-20250525
+                  </div>
+                </div>
+                
+                <Typography.Text className="font-semibold mb-2">API Endpoints</Typography.Text>
+                
                 <div className="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
-                  <div className="mb-2 font-semibold">POST /api/invoices</div>
-                  <div className="text-gray-600 mb-2">Submit a new invoice for processing</div>
+                  <div className="mb-2 font-semibold">POST /api/v1/invoice</div>
+                  <div className="text-gray-600 mb-2">Submit an invoice with automatic IRN generation</div>
                   <div className="mb-1">Request body:</div>
                   <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
 {`{
-  "invoice_data": {
-    "invoice_number": "INV-001",
-    "invoice_date": "2025-05-15",
-    "customer": {
-      "name": "Acme Corp",
-      "tax_id": "12345678-9"
-    },
-    "line_items": [
+  "business_id": "4a4d0d3b-2392-46d4-b3b4-8f9cc00d9443",
+  "invoice_reference": "INV001",
+  "invoice_date": "2025-05-25",
+  "invoice_type_code": "380",
+  "supplier": {
+    "id": "4a4d0d3b-2392-46d4-b3b4-8f9cc00d9443",
+    "tin": "31569955-0001",
+    "name": "Your Company Ltd"
+  },
+  "customer": {
+    "id": "171e2291-2656-44e4-a532-a49f31a61dbd",
+    "tin": "98765432-0001",
+    "name": "Sample Customer Ltd",
+    "address": "456 Customer Street, Abuja",
+    "email": "customer@example.com"
+  },
+  "invoice_items": [
       {
-        "description": "Product A",
-        "quantity": 5,
-        "unit_price": 100.00,
-        "tax_rate": 7.5
+        "id": "ITEM001",
+        "name": "Consulting Services",
+        "quantity": 1,
+        "unit_price": 50000.0,
+        "total_amount": 50000.0,
+        "vat_amount": 7500.0,
+        "vat_rate": 7.5
       }
     ],
-    "total_amount": 537.50
+    "total_amount": 50000.0,
+    "vat_amount": 7500.0,
+    "currency_code": "NGN"
+  }
+}`}
+                  </pre>
+                  <div className="mt-2 mb-1">Response:</div>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "code": 200,
+  "data": {
+    "irn": "INV001-94ND90NR-20250525",
+    "submission_id": "5f3e9b1d-8c4e-4b0a-9f5d-8e7a3b1d4c2e",
+    "status": "accepted"
   },
-  "format": "ubl21"
+  "message": "Invoice successfully submitted"
 }`}
                   </pre>
                 </div>
-                
-                <Typography.Text>
-                  Full API specification is available in the Swagger documentation available at your instance URL: 
-                  <span className="block mt-2 bg-gray-50 p-2 rounded-md font-mono text-xs">
-                    https://your-instance.taxpoynt.com/api/docs
-                  </span>
-                </Typography.Text>
               </CardContent>
             </Card>
             
             <Card>
               <CardContent className="p-6">
                 <Typography.Heading level="h3" className="text-xl font-semibold mb-3">
-                  Status Checking API
+                  IRN Validation API
                 </Typography.Heading>
                 <Typography.Text className="mb-4">
-                  Check the status of submitted invoices:
+                  Validate an IRN or check the status of submitted invoices:
                 </Typography.Text>
                 
                 <div className="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
-                  <div className="mb-2 font-semibold">GET /api/invoices/{'{'}'invoice_id'{'}'}/status</div>
-                  <div className="text-gray-600 mb-2">Retrieve current status of an invoice</div>
+                  <div className="mb-2 font-semibold">POST /api/v1/invoice/irn/validate</div>
+                  <div className="text-gray-600 mb-2">Validate an IRN with FIRS</div>
+                  <div className="mb-1">Request body:</div>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "business_id": "4a4d0d3b-2392-46d4-b3b4-8f9cc00d9443",
+  "invoice_reference": "INV001",
+  "irn": "INV001-94ND90NR-20250525",
+  "invoice_date": "2025-05-25",
+  "invoice_type_code": "380"
+}`}
+                  </pre>
                   <div className="mt-2 mb-1">Response:</div>
                   <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
 {`{
-  "invoice_id": "6dc8c42f-92cb-41d4-a40a-c7f9d16d0447",
-  "status": "VALIDATED",
-  "irn": "FIRS-82930492-2934",
-  "submission_date": "2025-05-15T10:30:45Z",
-  "validation_date": "2025-05-15T10:31:12Z",
-  "qr_code_url": "https://api.taxpoynt.com/qr/FIRS-82930492-2934"
+  "code": 200,
+  "data": {
+    "irn": "INV001-94ND90NR-20250525",
+    "status": "valid",
+    "validation_date": "2025-05-25T14:22:53+01:00",
+    "qr_code_url": "https://api.taxpoynt.com/qr/INV001-94ND90NR-20250525"
+  },
+  "message": "IRN validation successful"
 }`}
                   </pre>
                 </div>
