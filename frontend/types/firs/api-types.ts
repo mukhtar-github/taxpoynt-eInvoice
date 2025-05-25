@@ -78,10 +78,13 @@ export interface ApiErrorResponse {
 export interface FirsApiRequestOptions {
   timeout?: number;
   headers?: Record<string, string>;
+  useSandbox?: boolean;
+  useUUID4?: boolean;
 }
 
 // API Service response (for our frontend service wrapper)
 export interface ApiResponse<T> {
+  message: string;
   data: T;
   status: number;
   success: boolean;

@@ -138,20 +138,20 @@ const firsApiService = {
   /**
    * Submit an Odoo invoice to FIRS
    */
-  submitInvoice: async (
+  submitInvoice(
     invoiceData: InvoiceSubmitRequest,
     options?: FirsApiRequestOptions
-  ): Promise<ApiResponse<InvoiceSubmissionResponse>> => {
-    // Log the request for debugging purposes
-    console.log('Submitting invoice to FIRS API:', JSON.stringify(invoiceData, null, 2));
+  ): Promise<ApiResponse<InvoiceSubmissionResponse>> {
+    const { useSandbox = true, useUUID4 = true, ...restOptions } = options || {};
     
-    // Get the correct API base URL based on environment
-    const baseUrl = getApiBaseUrl();
-    const url = `${baseUrl}/api/firs/submit-invoice`;
+    // Construct URL with appropriate query parameters
+    let url = `/api/firs/submit`;
+    const params: string[] = [];
+    if (useSandbox) params.push('sandbox=true');
+    if (useUUID4) params.push('uuid4=true');
+    if (params.length > 0) url += `?${params.join('&')}`;
     
-    console.log('Submission URL:', url);
-    
-    return apiRequest<InvoiceSubmissionResponse>(
+    return apiRequest(
       'post',
       url,
       invoiceData,
@@ -210,17 +210,51 @@ const firsApiService = {
    * Test connection to the API server
    */
   testConnection: async (): Promise<ApiResponse<{status: string}>> => {
-    // Get the correct API base URL based on environment
-    const baseUrl = getApiBaseUrl();
-    const url = `${baseUrl}/health`;
-    
-    console.log('Testing connection to:', url);
-    
     return apiRequest<{status: string}>(
+      'get',
+      '/api/firs/status',
+      undefined,
+      { timeout: 10000 } // Use shorter timeout for connection test
+    );
+  },
+  
+  /**
+   * Connect to Odoo and fetch invoice data
+   */
+  fetchOdooInvoices: async (
+    options?: FirsApiRequestOptions
+  ): Promise<ApiResponse<any[]>> => {
+    const baseUrl = getApiBaseUrl();
+    return apiRequest<any[]>(
+      'get',
+      `${baseUrl}/api/odoo/invoices`,
+      undefined,
+      options
+    );
+  },
+  
+  /**
+   * Convert Odoo invoice to FIRS format with UUID4
+   */
+  convertOdooInvoice: async (
+    invoiceId: string,
+    options?: FirsApiRequestOptions
+  ): Promise<ApiResponse<any>> => {
+    const baseUrl = getApiBaseUrl();
+    const { useSandbox = true, useUUID4 = true, ...restOptions } = options || {};
+    
+    // Construct URL with appropriate query parameters
+    let url = `${baseUrl}/api/odoo/convert-invoice/${invoiceId}`;
+    const params: string[] = [];
+    if (useSandbox) params.push('sandbox=true');
+    if (useUUID4) params.push('uuid4=true');
+    if (params.length > 0) url += `?${params.join('&')}`;
+    
+    return apiRequest<any>(
       'get',
       url,
       undefined,
-      { timeout: 5000 } // Short timeout for health check
+      restOptions
     );
   }
 };

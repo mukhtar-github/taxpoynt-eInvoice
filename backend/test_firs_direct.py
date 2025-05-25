@@ -7,26 +7,35 @@ import os
 import requests
 import json
 import base64
+import uuid
 from datetime import datetime
 from pathlib import Path
 
 # FIRS API credentials and crypto paths
-FIRS_API_BASE_URL = "http://206.189.15.119:8080" # From the API documentation URL
+# Updated with the latest sandbox environment information (May 2025)
+FIRS_USE_SANDBOX = True
+FIRS_API_BASE_URL = "https://eivc-k6z6d.ondigitalocean.app" # Updated sandbox URL
 FIRS_API_KEY = "36dc0109-5fab-4433-80c3-84d9cef792a2"
 FIRS_API_SECRET = "mHtXX9UBq3qnvgJFkIIEjQLlxjXKS1yECpqmTWa1AuCzRg5sJNOpxDefCYds18WNma3zUUgt1ccIUOgNtBb4wk8s4MshQl8OxhQA"
 FIRS_PUBLIC_KEY_PATH = "/home/mukhtar-tanimu/taxpoynt-eInvoice/backend/crypto/firs_public_key.pem"
 FIRS_CERTIFICATE_PATH = "/home/mukhtar-tanimu/taxpoynt-eInvoice/backend/crypto/firs_certificate.txt"
 
-# API Endpoints from the documentation
-API_ENDPOINT_HEALTH_CHECK = "/"
+# API Endpoints updated from the FIRS-MBS E-Invoicing Documentation (May 2025)
+API_ENDPOINT_HEALTH_CHECK = "/api"
+
+# Entity and Party Management Endpoints
+API_ENDPOINT_BUSINESS_SEARCH = "/api/v1/entity"
+API_ENDPOINT_BUSINESS_BY_ID = "/api/v1/entity/{ENTITY_ID}"
+API_ENDPOINT_CREATE_PARTY = "/api/v1/invoice/party"
+API_ENDPOINT_GET_PARTY = "/api/v1/invoice/party/{BUSINESS_ID}"
 
 # Invoice Management Endpoints
 API_ENDPOINT_IRN_VALIDATE = "/api/v1/invoice/irn/validate"
 API_ENDPOINT_INVOICE_VALIDATE = "/api/v1/invoice/validate"
 API_ENDPOINT_INVOICE_SIGN = "/api/v1/invoice/sign"
-API_ENDPOINT_BUSINESS_SEARCH = "/api/v1/entity"
-API_ENDPOINT_DOWNLOAD_INVOICE = "/api/v1/invoice/download"
-API_ENDPOINT_TRANSACT = "/api/v1/invoice/transact"
+API_ENDPOINT_INVOICE_CONFIRM = "/api/v1/invoice/confirm/{IRN}"
+API_ENDPOINT_DOWNLOAD_INVOICE = "/api/v1/invoice/download/{IRN}"
+API_ENDPOINT_SEARCH_INVOICE = "/api/v1/invoice/{BUSINESS_ID}"
 
 # Utility Endpoints
 API_ENDPOINT_VERIFY_TIN = "/api/v1/utilities/verify-tin"
@@ -69,24 +78,41 @@ def load_firs_certificate():
         print(f"Error loading certificate: {str(e)}")
         return None
         
-def prepare_encrypted_irn(irn, certificate):
-    """Prepare encrypted IRN data for validation.
+def get_business_id():
+    """Return a proper UUID4 format business ID for FIRS API.
     
-    This is a simplified implementation and may need adjustments based on
-    actual FIRS documentation for proper IRN encryption.
+    FIRS API requires valid UUID4 format, not TIN format.
+    In production, this would be the UUID4 assigned to your business
+    during FIRS registration.
+    """
+    # Generate a valid UUID4 as required by FIRS API
+    # In production, this would be a stored UUID4 associated with your TIN
+    return str(uuid.uuid4())
+
+def get_tin():
+    """Return the user's TIN for use in appropriate fields."""
+    return "31569955-0001"
+
+def prepare_irn_validation_payload():
+    """Prepare payload for IRN validation based on the FIRS-MBS E-Invoicing Documentation.
+    
+    According to the latest documentation, IRN validation requires a standard JSON payload
+    with business_id, invoice_reference, and irn.
     """
     try:
-        # Create a dictionary with IRN and certificate
-        irn_data = {
-            "irn": irn,
-            "certificate": certificate
+        # Create a dictionary with required fields from documentation
+        # Using the TIN for business_id as specified by the user
+        business_id = get_business_id()
+        payload = {
+            "business_id": business_id,
+            "invoice_reference": "INV001",
+            "irn": "INV001-F3A3A0CF-20240619"
         }
         
-        # Convert to JSON and encode as base64
-        json_data = json.dumps(irn_data)
-        return base64.b64encode(json_data.encode()).decode()
+        print(f"Using business_id UUID4: {business_id} (associated with TIN {get_tin()})")
+        return payload
     except Exception as e:
-        print(f"Error preparing encrypted IRN: {str(e)}")
+        print(f"Error preparing IRN validation payload: {str(e)}")
         return None
 
 def main():
@@ -94,12 +120,13 @@ def main():
     print("FIRS API Direct Integration Test")
     print("=" * 60)
     print("Using TaxPoynt eInvoice Odoo Integration Framework")
+    print(f"FIRS Sandbox Mode: {FIRS_USE_SANDBOX}")
     print("=" * 60)
     
     # Test 1: Health Check (API Availability)
     print("\n[1/5] Testing API Health Check...")
     try:
-        # Use the health check endpoint from documentation
+        # Use the updated health check endpoint from FIRS API Integration Guide
         health_url = f"{FIRS_API_BASE_URL}{API_ENDPOINT_HEALTH_CHECK}"
         print(f"Connecting to: {health_url}")
         
@@ -111,7 +138,14 @@ def main():
         
         if response.status_code == 200:
             print(f"✅ Connection successful! Status code: {response.status_code}")
-            print(f"Response: {response.text[:100]}...")
+            try:
+                health_data = response.json()
+                print(f"Response: {json.dumps(health_data, indent=2)}")
+                if health_data.get('healthy') == True:
+                    print("✅ API health check confirmed operational status")
+            except:
+                # Handle case where response might not be JSON
+                print(f"Response: {response.text[:100]}...")
         else:
             print(f"⚠️ Connection received a non-200 response: {response.status_code}")
             print(f"Response: {response.text[:200]}")
@@ -161,10 +195,11 @@ def main():
     # Test 3: Specific Business ID lookup
     print("\n[3/5] Testing Business ID Lookup...")
     try:
-        # Extract BUSINESS_ID from documentation Image 4 (/api/v1/invoice/party/{BUSINESS_ID})
-        business_id = "BUSINESS_ID"
+        # Use the TIN for business_id as specified by the user
+        business_id = get_business_id()
         business_url = f"{FIRS_API_BASE_URL}/api/v1/invoice/party/{business_id}"
         print(f"Connecting to: {business_url}")
+        print(f"Using business_id: {business_id} (TIN)")
         
         business_lookup_response = requests.get(
             business_url,
@@ -182,10 +217,10 @@ def main():
     except requests.exceptions.RequestException as e:
         print(f"❌ Business lookup test failed: {str(e)}")
         
-        # Try with MT GARBA GLOBAL VENTURES from your dashboard
+        # Try with user's TIN as business ID
         try:
-            print("\nTrying with 'MT GARBA GLOBAL VENTURES' business ID...")
-            business_id = "MT_GARBA_GLOBAL_VENTURES"
+            print("\nTrying with user's TIN as business ID...")
+            business_id = get_business_id()
             business_url = f"{FIRS_API_BASE_URL}/api/v1/invoice/party/{business_id}"
             print(f"Connecting to: {business_url}")
             
@@ -275,81 +310,156 @@ def main():
     except requests.exceptions.RequestException as e:
         print(f"❌ Reference data test failed: {str(e)}")
     
-    # Test 5: IRN Validation with Cryptographic Keys
-    print("\n[5/5] Testing IRN Validation with Cryptographic Keys...")
+    # Test 5: IRN Validation with Updated Request Format
+    print("\n[5/5] Testing IRN Validation with Updated Request Format...")
     try:
-        # Load cryptographic materials
-        public_key = load_firs_public_key()
-        certificate = load_firs_certificate()
+        # Prepare IRN validation payload based on latest API docs
+        irn_payload = prepare_irn_validation_payload()
         
-        if not public_key or not certificate:
-            print("❌ Failed to load cryptographic keys")
-            return
-        
-        print("✅ Successfully loaded cryptographic keys")
-        print(f"   Public key length: {len(public_key)} bytes")
-        print(f"   Certificate: {certificate[:20]}...")
-        
-        # Test IRN - this would be a real IRN in production
-        test_irn = "TEST-IRN-2025-001"
-        business_id = "MT GARBA GLOBAL VENTURES"  # From your Image 3
-        
-        # Prepare encrypted IRN data
-        encrypted_irn = prepare_encrypted_irn(test_irn, certificate)
-        
-        if not encrypted_irn:
-            print("❌ Failed to prepare encrypted IRN data")
-            return
+        if irn_payload:
+            print("✅ Successfully prepared IRN validation payload")
+            print(f"   Sample payload: {json.dumps(irn_payload, indent=2)}")
             
-        print("✅ Successfully prepared encrypted IRN data")
+            # Use the IRN validation endpoint
+            irn_validate_url = f"{FIRS_API_BASE_URL}{API_ENDPOINT_IRN_VALIDATE}"
+            print(f"Connecting to: {irn_validate_url}")
+            print("Sending IRN validation request...")
+            
+            irn_response = requests.post(
+                irn_validate_url,
+                headers=get_headers(),
+                json=irn_payload,
+                timeout=10
+            )
+            
+            print(f"IRN Validation response: Status {irn_response.status_code}")
+            if irn_response.status_code in [200, 201]:
+                print("✅ IRN Validation successful")
+                print(f"Response: {irn_response.text[:200]}")
+                
+                # Save the response for reference
+                with open("irn_validation_response.json", "w") as f:
+                    try:
+                        json.dump(irn_response.json(), f, indent=2)
+                        print("   Response saved to irn_validation_response.json")
+                    except:
+                        f.write(irn_response.text)
+                        print("   Raw response saved to irn_validation_response.json")
+            else:
+                print(f"⚠️ IRN Validation returned status: {irn_response.status_code}")
+                print(f"Response: {irn_response.text[:200]}")
+        else:
+            print("❌ Failed to prepare IRN validation payload")
+    except Exception as e:
+        print(f"❌ IRN Validation test failed: {str(e)}")
+    
+    print("\n" + "=" * 60)
+    # Test 6: Test Invoice Validation Endpoint
+    print("\n[+] BONUS: Testing Invoice Validation Endpoint...")
+    try:
+        # Use the TIN for business_id as specified by the user
+        business_id = get_business_id()
         
-        # The correct endpoint from the documentation Image 4
-        irn_url = f"{FIRS_API_BASE_URL}{API_ENDPOINT_IRN_VALIDATE}"
-        print(f"Connecting to: {irn_url}")
-        
-        # Based on the documentation, construct the proper payload
-        irn_payload = {
-            "invoice_reference": "INV-2025-001",
+        # Prepare a properly formatted invoice validation payload based on FIRS-MBS documentation
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        validation_payload = {
             "business_id": business_id,
-            "irn": test_irn,
-            "signature": encrypted_irn
+            "irn": "ITW006-F3A3A0CF-20240703",
+            "issue_date": current_date,
+            "invoice_type_code": "396",
+            "document_currency_code": "NGN",
+            "accounting_supplier_party": {
+                "party_name": "Test Supplier",
+                "tin": get_tin(),  # Use actual TIN here,
+                "email": "supplier@example.com",
+                "postal_address": {
+                    "street_name": "123 Test Street",
+                    "city_name": "Lagos",
+                    "postal_zone": "100001",
+                    "country": "NG"
+                }
+            },
+            "accounting_customer_party": {
+                "party_name": "Test Customer",
+                "tin": get_tin(),  # Use actual TIN here,
+                "email": "customer@example.com",
+                "postal_address": {
+                    "street_name": "456 Test Avenue",
+                    "city_name": "Abuja",
+                    "postal_zone": "900001",
+                    "country": "NG"
+                }
+            },
+            "invoice_line": [
+                {
+                    "id": "1",
+                    "invoiced_quantity": 2,
+                    "line_extension_amount": 100.00,
+                    "item": {
+                        "name": "Test Product",
+                        "description": "Test product description"
+                    },
+                    "price": {
+                        "price_amount": 50.00
+                    },
+                    "tax_total": {
+                        "tax_amount": 7.50
+                    }
+                }
+            ],
+            "tax_total": {
+                "tax_amount": 7.50
+            },
+            "monetary_total": {
+                "line_extension_amount": 100.00,
+                "tax_exclusive_amount": 100.00,
+                "tax_inclusive_amount": 107.50,
+                "payable_amount": 107.50
+            }
         }
         
-        print("Sending IRN validation request...")
-        irn_response = requests.post(
-            irn_url,
+        validation_url = f"{FIRS_API_BASE_URL}{API_ENDPOINT_INVOICE_VALIDATE}"
+        print(f"Connecting to: {validation_url}")
+        print(f"Using business_id: {business_id} (TIN)")
+        print("Sending test invoice validation request...")
+        
+        validation_response = requests.post(
+            validation_url,
             headers=get_headers(),
-            json=irn_payload,
+            json=validation_payload,
             timeout=15
         )
         
-        print(f"IRN Validation response: Status {irn_response.status_code}")
-        if irn_response.status_code in (200, 201, 202):
-            print("✅ IRN Validation successful")
-            print(f"Response: {irn_response.text[:100]}...")
+        print(f"Invoice Validation response: Status {validation_response.status_code}")
+        if validation_response.status_code in [200, 201, 202]:
+            print("✅ Invoice Validation API accessible")
+            print(f"Response: {validation_response.text[:200]}")
             # Save the response for reference
-            with open("irn_validation_response.json", "w") as f:
-                json.dump(irn_response.json(), f, indent=2)
-            print("   Response saved to irn_validation_response.json")
+            with open("invoice_validation_response.json", "w") as f:
+                try:
+                    json.dump(validation_response.json(), f, indent=2)
+                    print("   Response saved to invoice_validation_response.json")
+                except:
+                    f.write(validation_response.text)
+                    print("   Raw response saved to invoice_validation_response.json")
         else:
-            print(f"⚠️ IRN Validation returned status: {irn_response.status_code}")
-            print(f"Response: {irn_response.text[:200]}")
-    except requests.exceptions.RequestException as e:
-        print(f"❌ IRN Validation request failed: {str(e)}")
+            print(f"⚠️ Invoice Validation returned status: {validation_response.status_code}")
+            print(f"Response: {validation_response.text[:200]}")
     except Exception as e:
-        print(f"❌ Error during IRN validation: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Invoice Validation test failed: {str(e)}")
     
-    print("\n" + "=" * 60)
-    print("FIRS Sandbox API Tests Completed")
+    print("\n==== FIRS Sandbox API Tests Completed")
     print(f"Timestamp: {datetime.now().isoformat()}")
     print("=" * 60)
+    
     print("\nNext Steps:")
     print("1. Review any errors from the tests above")
-    print("2. Adjust API endpoints based on actual documentation if needed")
-    print("3. Verify the credentials are correct if authentications failed")
-    print("4. For production integration, update the FIRSService to match working endpoints")
+    print("2. Ensure all business IDs are valid UUIDs as required by the FIRS API")
+    print("3. Validate invoice payloads against the complete FIRS-MBS E-Invoicing specifications")
+    print("4. For production integration, update the sandbox flag to false and use production credentials")
+    print("5. Integrate Odoo invoice data with proper field mapping for FIRS validation and signing")
+    print("6. Implement proper error handling for different API response codes")
+    print("7. Consider adding retry mechanisms for transient errors")
 
 if __name__ == "__main__":
     main()

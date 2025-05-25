@@ -10,8 +10,9 @@ import FIRSTestForm from "../components/firs/FIRSTestForm";
 import FIRSStatusCheck from "../components/firs/FIRSStatusCheck";
 import FIRSBatchSubmit from "../components/firs/FIRSBatchSubmit";
 import FIRSSettings from "../components/firs/FIRSSettings";
+import FIRSOdooConnect from "../components/firs/FIRSOdooConnect";
 import withFirsAuth from "../components/firs/withFirsAuth";
-import { AlertCircle, CheckCircle, Terminal, Settings, FileText, BarChart2, ArrowRight, Zap } from "lucide-react";
+import { AlertCircle, CheckCircle, Terminal, Settings, FileText, BarChart2, ArrowRight, Zap, Database } from "lucide-react";
 
 const FIRSTestPage: NextPage = () => {
   const [activeTab, setActiveTab] = useState("submit");
@@ -115,6 +116,15 @@ const FIRSTestPage: NextPage = () => {
                     {activeTab === "batch" && <ArrowRight className="ml-auto h-4 w-4" />}
                   </Button>
                   <Button 
+                    variant={activeTab === "odoo" ? "default" : "ghost"} 
+                    onClick={() => setActiveTab("odoo")}
+                    className={`w-full rounded-none py-4 px-4 flex items-center justify-start border-l-4 ${activeTab === "odoo" ? "border-blue-600 bg-blue-50" : "border-transparent"} transition-all duration-200`}
+                  >
+                    <Database className="mr-2 h-5 w-5" />
+                    <span>Odoo Connect</span>
+                    {activeTab === "odoo" && <ArrowRight className="ml-auto h-4 w-4" />}
+                  </Button>
+                  <Button 
                     variant={activeTab === "settings" ? "default" : "ghost"} 
                     onClick={() => setActiveTab("settings")}
                     className={`w-full rounded-none py-4 px-4 flex items-center justify-start border-l-4 ${activeTab === "settings" ? "border-blue-600 bg-blue-50" : "border-transparent"} transition-all duration-200`}
@@ -206,41 +216,48 @@ const FIRSTestPage: NextPage = () => {
                   {activeTab === "submit" && <FileText className="mr-2 h-5 w-5 text-blue-600" />}
                   {activeTab === "status" && <CheckCircle className="mr-2 h-5 w-5 text-blue-600" />}
                   {activeTab === "batch" && <BarChart2 className="mr-2 h-5 w-5 text-blue-600" />}
+                  {activeTab === "odoo" && <Database className="mr-2 h-5 w-5 text-blue-600" />}
                   {activeTab === "settings" && <Settings className="mr-2 h-5 w-5 text-blue-600" />}
                   <Typography.Heading level="h3" className="font-bold text-gray-800">
                     {activeTab === "submit" && "Submit Invoice to FIRS"}
-                    {activeTab === "status" && "Check Submission Status"}
-                    {activeTab === "batch" && "Batch Process Invoices"}
-                    {activeTab === "settings" && "API Configuration Settings"}
+                    {activeTab === "status" && "Check Invoice Status"}
+                    {activeTab === "batch" && "Batch Invoice Submission"}
+                    {activeTab === "odoo" && "Odoo to FIRS Integration with UUID4"}
+                    {activeTab === "settings" && "FIRS API Settings"}
                   </Typography.Heading>
                 </div>
               </CardHeader>
               <CardContent className="p-6 bg-white">
-                <div className="transition-all duration-500 transform">
-                  {activeTab === "submit" && (
-                    <FIRSTestForm 
-                      sandboxMode={isSandboxMode} 
-                      onSubmissionSuccess={handleSubmissionSuccess}
-                    />
-                  )}
+                {activeTab === "submit" && (
+                  <FIRSTestForm 
+                    sandboxMode={isSandboxMode} 
+                    onSubmissionSuccess={handleSubmissionSuccess}
+                  />
+                )}
 
-                  {activeTab === "status" && (
-                    <FIRSStatusCheck 
-                      sandboxMode={isSandboxMode}
-                      initialSubmissionId={submissionId}
-                    />
-                  )}
+                {activeTab === "status" && (
+                  <FIRSStatusCheck 
+                    sandboxMode={isSandboxMode}
+                    initialSubmissionId={submissionId}
+                  />
+                )}
 
-                  {activeTab === "batch" && (
-                    <FIRSBatchSubmit 
-                      sandboxMode={isSandboxMode}
-                    />
-                  )}
+                {activeTab === "batch" && (
+                  <FIRSBatchSubmit 
+                    sandboxMode={isSandboxMode}
+                  />
+                )}
+                
+                {activeTab === "odoo" && (
+                  <FIRSOdooConnect 
+                    sandboxMode={isSandboxMode}
+                    onSubmissionSuccess={handleSubmissionSuccess}
+                  />
+                )}
 
-                  {activeTab === "settings" && (
-                    <FIRSSettings />
-                  )}
-                </div>
+                {activeTab === "settings" && (
+                  <FIRSSettings />
+                )}
               </CardContent>
             </Card>
           </div>
