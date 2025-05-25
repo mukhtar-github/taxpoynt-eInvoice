@@ -102,7 +102,8 @@ const apiRequest = async <T>(
     return {
       data: response.data,
       status: response.status,
-      success: true
+      success: true,
+      message: "Request successful" // Add missing message property required by ApiResponse<T>
     };
   } catch (error) {
     // Handle axios errors
@@ -110,11 +111,13 @@ const apiRequest = async <T>(
       console.error('API Error:', error.response.data);
       
       // Return formatted error response
+      const errorMessage = formatApiError(error);
       return {
         data: error.response.data as T,
         status: error.response.status,
         success: false,
-        error: formatApiError(error)
+        error: errorMessage,
+        message: errorMessage // Add missing message property required by ApiResponse<T>
       };
     }
     
@@ -126,7 +129,8 @@ const apiRequest = async <T>(
       data: {} as T,
       status: 500,
       success: false,
-      error: errorMessage
+      error: errorMessage,
+      message: errorMessage // Add missing message property required by ApiResponse<T>
     };
   }
 };
