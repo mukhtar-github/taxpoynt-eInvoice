@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from app.db.base_class import Base
 from app.models.user import UserRole
@@ -21,6 +21,9 @@ class Organization(Base):
     website = Column(String, nullable=True)
     status = Column(String, default="active", nullable=False)
     firs_service_id = Column(String, nullable=True)
+    # New fields for company branding
+    logo_url = Column(String, nullable=True)
+    branding_settings = Column(JSONB, nullable=True)  # Store UI customization (colors, theme)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, nullable=True)
     

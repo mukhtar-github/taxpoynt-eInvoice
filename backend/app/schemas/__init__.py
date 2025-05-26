@@ -5,5 +5,9 @@ from app.schemas.integration import (
     IntegrationHistory, IntegrationHistoryCreate, IntegrationHistoryInDB,
     IntegrationTestResult, IntegrationTemplateCreate
 )
+from app.schemas.organization import (
+    Organization, OrganizationCreate, OrganizationUpdate, OrganizationInDB,
+    OrganizationWithUsers, BrandingSettings, LogoUpload
+)
 
-# Add new schemas here when created 
+# Add new schemas here when created

@@ -171,6 +171,158 @@ class OdooConnector:
             "company_id": user.company_id.id if hasattr(user, "company_id") else None,
             "company_name": user.company_id.name if hasattr(user, "company_id") else None
         }
+        
+    @ensure_connected
+    def get_company_info(self) -> Dict[str, Any]:
+        """
+        Get information about the company associated with the authenticated user.
+        
+        Returns:
+            Dict with company information
+        """
+        try:
+            company = self.odoo.env.user.company_id
+            # Get company logo if available
+            logo_data = None
+            if hasattr(company, 'logo') and company.logo:
+                logo_data = company.logo
+                
+            # Get company address if available
+            address = {}
+            if hasattr(company, 'street'):
+                address['street'] = company.street
+            if hasattr(company, 'street2'):
+                address['street2'] = company.street2
+            if hasattr(company, 'city'):
+                address['city'] = company.city
+            if hasattr(company, 'state_id') and company.state_id:
+                address['state'] = company.state_id.name
+            if hasattr(company, 'zip'):
+                address['zip'] = company.zip
+            if hasattr(company, 'country_id') and company.country_id:
+                address['country'] = company.country_id.name
+                
+            return {
+                "id": company.id,
+                "name": company.name,
+                "vat": company.vat if hasattr(company, "vat") else None,
+                "email": company.email if hasattr(company, "email") else None,
+                "phone": company.phone if hasattr(company, "phone") else None,
+                "website": company.website if hasattr(company, "website") else None,
+                "currency": company.currency_id.name if hasattr(company, "currency_id") and company.currency_id else None,
+                "logo": logo_data,
+                "address": address
+            }
+        except Exception as e:
+            logger.error(f"Error retrieving company information: {str(e)}")
+            raise OdooDataError(f"Error retrieving company information: {str(e)}")
+            
+    @ensure_connected
+    def get_customers(self, limit: int = 100, offset: int = 0, search_term: str = None) -> List[Dict[str, Any]]:
+        """
+        Get list of customers (partners with customer=True).
+        
+        Args:
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            search_term: Optional search term to filter customers
+            
+        Returns:
+            List of customer records
+        """
+        try:
+            Partner = self.odoo.env['res.partner']
+            
+            # Build domain filter
+            domain = [('customer_rank', '>', 0)]  # In Odoo 13+, customer_rank > 0 indicates customers
+            
+            # Add search term if provided
+            if search_term:
+                domain.append('|')
+                domain.append(('name', 'ilike', search_term))
+                domain.append(('email', 'ilike', search_term))
+                
+            # Get customer IDs with pagination
+            customer_ids = Partner.search(domain, limit=limit, offset=offset)
+            
+            if not customer_ids:
+                return []
+                
+            # Get customer records
+            customers = []
+            for customer in Partner.browse(customer_ids):
+                customers.append({
+                    "id": customer.id,
+                    "name": customer.name,
+                    "email": customer.email if hasattr(customer, "email") else None,
+                    "phone": customer.phone if hasattr(customer, "phone") else None,
+                    "street": customer.street if hasattr(customer, "street") else None,
+                    "city": customer.city if hasattr(customer, "city") else None,
+                    "country": customer.country_id.name if hasattr(customer, "country_id") and customer.country_id else None,
+                    "vat": customer.vat if hasattr(customer, "vat") else None
+                })
+                
+            return customers
+            
+        except Exception as e:
+            logger.error(f"Error retrieving customers: {str(e)}")
+            raise OdooDataError(f"Error retrieving customers: {str(e)}")
+            
+    @ensure_connected
+    def get_products(self, limit: int = 100, offset: int = 0, search_term: str = None) -> List[Dict[str, Any]]:
+        """
+        Get list of products.
+        
+        Args:
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            search_term: Optional search term to filter products
+            
+        Returns:
+            List of product records
+        """
+        try:
+            Product = self.odoo.env['product.product']
+            
+            # Build domain filter
+            domain = [('sale_ok', '=', True)]  # Only products that can be sold
+            
+            # Add search term if provided
+            if search_term:
+                domain.append('|')
+                domain.append(('name', 'ilike', search_term))
+                domain.append(('default_code', 'ilike', search_term))
+                
+            # Get product IDs with pagination
+            product_ids = Product.search(domain, limit=limit, offset=offset)
+            
+            if not product_ids:
+                return []
+                
+            # Get product records
+            products = []
+            for product in Product.browse(product_ids):
+                products.append({
+                    "id": product.id,
+                    "name": product.name,
+                    "code": product.default_code if hasattr(product, "default_code") else None,
+                    "price": product.list_price if hasattr(product, "list_price") else 0.0,
+                    "currency": product.currency_id.name if hasattr(product, "currency_id") and product.currency_id else None,
+                    "category": product.categ_id.name if hasattr(product, "categ_id") and product.categ_id else None,
+                    "type": product.type if hasattr(product, "type") else None,
+                    "uom": product.uom_id.name if hasattr(product, "uom_id") and product.uom_id else None,
+                    "taxes": [
+                        {"id": tax.id, "name": tax.name} 
+                        for tax in product.taxes_id.browse(product.taxes_id) 
+                        if hasattr(product, "taxes_id") and product.taxes_id
+                    ] if hasattr(product, "taxes_id") else []
+                })
+                
+            return products
+            
+        except Exception as e:
+            logger.error(f"Error retrieving products: {str(e)}")
+            raise OdooDataError(f"Error retrieving products: {str(e)}")
     
     @ensure_connected
     def get_invoices(
