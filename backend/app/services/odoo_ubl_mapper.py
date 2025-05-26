@@ -9,6 +9,7 @@ import re
 from typing import Dict, Any, List, Optional, Union, Tuple
 from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
+import asyncio
 
 from app.schemas.invoice_validation import (
     InvoiceValidationRequest, InvoiceType, Party, Address, 
@@ -16,6 +17,7 @@ from app.schemas.invoice_validation import (
     TaxCategory, InvoiceLine, UnitCode, LegalMonetaryTotal,
     AllowanceCharge, PaymentTerms, PaymentMeans, CurrencyCode
 )
+from app.services.odoo_firs_service_code_mapper import odoo_firs_service_code_mapper
 
 logger = logging.getLogger(__name__)
 
@@ -264,8 +266,8 @@ class OdooUBLMapper:
             electronic_address=partner.get("email", "")
         )
     
-    def _map_invoice_lines(self, odoo_lines: List[Dict[str, Any]]) -> List[InvoiceLine]:
-        """Map Odoo invoice lines to UBL invoice lines."""
+    async def _map_invoice_lines_async(self, odoo_lines: List[Dict[str, Any]]) -> List[InvoiceLine]:
+        """Map Odoo invoice lines to UBL invoice lines asynchronously with service code mapping."""
         ubl_lines = []
         
         for i, line in enumerate(odoo_lines):
@@ -275,6 +277,30 @@ class OdooUBLMapper:
             # Map unit code
             unit_code = self._map_unit_code(line.get("uom_id", {}).get("name", "ea"))
             
+            # Get product information for service code mapping
+            product = line.get("product", {})
+            product_name = product.get("name", line.get("name", ""))
+            product_category = product.get("categ_id", {}).get("name", "")
+            product_description = line.get("name", "")
+            
+            # Try to map service code
+            service_code = None
+            try:
+                # Try to get service code suggestion
+                service_code_data = await odoo_firs_service_code_mapper.suggest_service_code(
+                    product_name=product_name,
+                    category=product_category,
+                    description=product_description
+                )
+                
+                if service_code_data and service_code_data.get("confidence", 0) > 0.4:
+                    service_code = service_code_data.get("code")
+                    logger.info(f"Mapped product '{product_name}' to service code '{service_code}' "
+                               f"({service_code_data.get('name', '')}) with confidence "
+                               f"{service_code_data.get('confidence', 0):.2f}")
+            except Exception as e:
+                logger.warning(f"Error mapping service code for '{product_name}': {str(e)}")
+            
             # Create invoice line
             ubl_line = InvoiceLine(
                 id=str(i + 1),
@@ -282,16 +308,61 @@ class OdooUBLMapper:
                 unit_code=unit_code,
                 line_extension_amount=Decimal(str(line.get("price_subtotal", 0))),
                 item_description=line.get("name", ""),
-                item_name=line.get("product", {}).get("name", line.get("name", ""))[:100],
+                item_name=product_name[:100],
                 price_amount=Decimal(str(line.get("price_unit", 0))),
-                buyers_item_identification=line.get("product", {}).get("default_code", ""),
-                sellers_item_identification=line.get("product", {}).get("id", ""),
+                buyers_item_identification=product.get("default_code", ""),
+                sellers_item_identification=product.get("id", ""),
+                service_code=service_code,
                 tax_total=tax_info
             )
             
             ubl_lines.append(ubl_line)
             
         return ubl_lines
+    
+    def _map_invoice_lines(self, odoo_lines: List[Dict[str, Any]]) -> List[InvoiceLine]:
+        """Map Odoo invoice lines to UBL invoice lines.
+        
+        This is a synchronous wrapper around the async version for backward compatibility.
+        """
+        try:
+            # Try to run the async version in a new event loop
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(self._map_invoice_lines_async(odoo_lines))
+            finally:
+                loop.close()
+        except Exception as e:
+            logger.error(f"Error in async service code mapping: {str(e)}")
+            
+            # Fallback to non-service code version if async fails
+            ubl_lines = []
+            
+            for i, line in enumerate(odoo_lines):
+                # Get tax information
+                tax_info = self._get_line_tax_info(line)
+                
+                # Map unit code
+                unit_code = self._map_unit_code(line.get("uom_id", {}).get("name", "ea"))
+                
+                # Create invoice line without service code
+                ubl_line = InvoiceLine(
+                    id=str(i + 1),
+                    invoiced_quantity=Decimal(str(line.get("quantity", 1))),
+                    unit_code=unit_code,
+                    line_extension_amount=Decimal(str(line.get("price_subtotal", 0))),
+                    item_description=line.get("name", ""),
+                    item_name=line.get("product", {}).get("name", line.get("name", ""))[:100],
+                    price_amount=Decimal(str(line.get("price_unit", 0))),
+                    buyers_item_identification=line.get("product", {}).get("default_code", ""),
+                    sellers_item_identification=line.get("product", {}).get("id", ""),
+                    tax_total=tax_info
+                )
+                
+                ubl_lines.append(ubl_line)
+            
+            return ubl_lines
     
     def _get_line_tax_info(self, line: Dict[str, Any]) -> Optional[TaxTotal]:
         """Extract tax information from an invoice line."""

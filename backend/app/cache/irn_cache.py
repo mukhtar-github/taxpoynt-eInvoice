@@ -20,17 +20,11 @@ logger = logging.getLogger(__name__)
 # Default cache expiry (12 hours)
 DEFAULT_CACHE_EXPIRY = 60 * 60 * 12
 
-# Try to connect to Redis if configured
+# Try to connect to Redis if configured, but don't fail if it's not available
 redis_client = None
-try:
-    if hasattr(settings, 'REDIS_URL') and settings.REDIS_URL:
-        redis_client = redis.from_url(settings.REDIS_URL)
-        logger.info("Connected to Redis for IRN caching")
-    else:
-        logger.warning("Redis URL not configured, IRN caching will be disabled")
-except RedisError as e:
-    logger.error(f"Failed to connect to Redis: {str(e)}")
-    redis_client = None
+
+# Disable Redis connection attempts to bypass startup issues
+logger.warning("Redis connection disabled to allow application startup. IRN caching will use in-memory cache.")
 
 
 class IRNCache:

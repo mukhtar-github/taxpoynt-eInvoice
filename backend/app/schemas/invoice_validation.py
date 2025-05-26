@@ -160,6 +160,7 @@ class InvoiceLine(BaseModel):
     buyers_item_identification: Optional[str] = Field(None, max_length=50, description="Buyer's item identifier")
     sellers_item_identification: Optional[str] = Field(None, max_length=50, description="Seller's item identifier")
     standard_item_identification: Optional[Dict[str, str]] = Field(None, description="Standard item identifier")
+    service_code: Optional[str] = Field(None, max_length=10, description="FIRS service code for classification")
     tax_total: Optional[TaxTotal] = Field(None, description="Tax information for the line")
     allowance_charge: Optional[List[Dict[str, Any]]] = Field(None, description="Allowances or charges")
 

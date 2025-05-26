@@ -1955,6 +1955,71 @@ class FIRSService:
                 detail=f"Error retrieving VAT exemptions: {str(e)}"
             )
     
+    async def get_service_codes(self) -> List[Dict[str, Any]]:
+        """Get list of service codes from FIRS API.
+        
+        Returns:
+            List of service code dictionaries
+            
+        Raises:
+            HTTPException: If retrieval fails
+        """
+        try:
+            # First try to load service codes from our reference data file
+            try:
+                service_codes_file = os.path.join(settings.REFERENCE_DATA_DIR, 'firs', 'service_codes.json')
+                if os.path.exists(service_codes_file):
+                    with open(service_codes_file, 'r') as f:
+                        service_codes_data = json.load(f)
+                        logger.info(f"Loaded {len(service_codes_data.get('service_codes', []))} service codes from reference file")
+                        return service_codes_data.get('service_codes', [])
+            except Exception as file_err:
+                logger.warning(f"Could not load service codes from reference file: {str(file_err)}")
+            
+            # Fall back to API call if reference file not available
+            url = f"{self.base_url}{self.endpoints['service_codes']}"
+            logger.info(f"Fetching service codes from FIRS API: {url}")
+            
+            response = requests.get(
+                url, 
+                headers=self._get_default_headers(),
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"FIRS service codes retrieval failed: {response.status_code} - {response.text[:200]}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"FIRS API service error: {response.status_code}"
+                )
+                
+            try:
+                result = response.json()
+                service_codes = result.get("data", [])
+                logger.info(f"Retrieved {len(service_codes)} service codes from FIRS API")
+                
+                # Save to reference file for future use
+                os.makedirs(os.path.dirname(service_codes_file), exist_ok=True)
+                with open(service_codes_file, 'w') as f:
+                    json.dump({"service_codes": service_codes, "metadata": {"retrieved_at": datetime.now().isoformat()}}, f, indent=2)
+                
+                return service_codes
+            except ValueError as json_err:
+                logger.error(f"Error parsing FIRS service codes response: {str(json_err)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error parsing FIRS API response: {str(json_err)}"
+                )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"FIRS service codes retrieval error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving service codes: {str(e)}"
+            )
+    
     async def submit_ubl_invoice(self, ubl_xml: str, invoice_type: str = "standard") -> InvoiceSubmissionResponse:
         """Submit a UBL format invoice to FIRS.
         

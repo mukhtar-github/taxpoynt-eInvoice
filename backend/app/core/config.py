@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings # type: ignore
 import secrets
 
 class Settings(BaseSettings):
+
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "TaxPoynt eInvoice API"
     VERSION: str = "0.1.0"
@@ -186,8 +187,12 @@ class Settings(BaseSettings):
     # Logging Configuration
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    # Configuration for Pydantic v2
+    model_config = {
+        "case_sensitive": True,
+        "env_file": ".env",
+        "extra": "allow",  # Allow extra fields in the settings to support flexible configuration
+        "arbitrary_types_allowed": True
+    }
 
 settings = Settings() 
