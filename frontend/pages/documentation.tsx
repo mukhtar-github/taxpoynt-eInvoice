@@ -402,6 +402,19 @@ const DocumentationPage: React.FC = () => {
                   </div>
                 </div>
                 
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <Typography.Text className="font-semibold mb-2">Validation Rules</Typography.Text>
+                  <Typography.Text className="text-sm mb-3">
+                    IRNs must meet the following validation criteria:
+                  </Typography.Text>
+                  <ul className="list-disc pl-5 space-y-1 mb-3 text-sm">
+                    <li><span className="font-medium">Pattern Compliance</span> - Must match regex: <code>^[a-zA-Z0-9]+-[a-zA-Z0-9]{8}-\d{8}$</code></li>
+                    <li><span className="font-medium">Service ID</span> - Must be exactly 8 alphanumeric characters</li>
+                    <li><span className="font-medium">Date Format</span> - Must be a valid date in YYYYMMDD format</li>
+                    <li><span className="font-medium">Uniqueness</span> - Must not duplicate an existing IRN</li>
+                  </ul>
+                </div>
+                
                 <Typography.Text className="font-semibold mb-2">API Endpoints</Typography.Text>
                 
                 <div className="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
@@ -538,6 +551,89 @@ const DocumentationPage: React.FC = () => {
   }
 }`}
                 </pre>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Typography.Heading level="h3" className="text-xl font-semibold mb-3">
+                  Odoo Integration API
+                </Typography.Heading>
+                <Typography.Text className="mb-4">
+                  Connect and submit invoices directly from your Odoo ERP system using our ERP-first integration approach:
+                </Typography.Text>
+                
+                <div className="bg-gray-50 p-4 rounded-md mb-4">
+                  <Typography.Text className="font-semibold mb-2">ERP-First Integration</Typography.Text>
+                  <Typography.Text className="text-sm mb-3">
+                    TaxPoynt eInvoice follows an ERP-first integration strategy, with comprehensive support for Odoo. This integration:
+                  </Typography.Text>
+                  <ul className="list-disc pl-5 space-y-1 mb-3 text-sm">
+                    <li>Maps Odoo invoice fields to BIS Billing 3.0 UBL format</li>
+                    <li>Handles complex field transformations including tax calculations</li>
+                    <li>Generates compliant IRNs from Odoo invoice numbers</li>
+                    <li>Uses UUID4 format for business identification</li>
+                    <li>Provides two-way status updates between systems</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
+                  <div className="mb-2 font-semibold">POST /api/v1/odoo/connect</div>
+                  <div className="text-gray-600 mb-2">Connect to your Odoo instance and fetch invoices</div>
+                  <div className="mb-1">Request body:</div>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "url": "https://your-odoo-instance.com",
+  "database": "your_odoo_database",
+  "username": "your_odoo_username",
+  "password": "your_odoo_password",
+  "options": {
+    "include_draft_invoices": false,
+    "start_date": "2025-01-01",
+    "limit": 50
+  }
+}`}
+                  </pre>
+                  <div className="mt-2 mb-1">Response:</div>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "code": 200,
+  "data": {
+    "connection_id": "9e8d7c6b-5a4b-3c2d-1e0f-9a8b7c6d5e4f",
+    "invoices_count": 12,
+    "invoice_ids": ["INV/2025/0001", "INV/2025/0002", "INV/2025/0003"]
+  },
+  "message": "Successfully connected to Odoo instance"
+}`}
+                  </pre>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md mb-4 font-mono text-sm">
+                  <div className="mb-2 font-semibold">POST /api/v1/odoo/submit</div>
+                  <div className="text-gray-600 mb-2">Convert and submit an Odoo invoice to FIRS</div>
+                  <div className="mb-1">Request body:</div>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "connection_id": "9e8d7c6b-5a4b-3c2d-1e0f-9a8b7c6d5e4f",
+  "invoice_id": "INV/2025/0001",
+  "business_id": "4a4d0d3b-2392-46d4-b3b4-8f9cc00d9443", 
+  "use_sandbox": true
+}`}
+                  </pre>
+                  <div className="mt-2 mb-1">Response:</div>
+                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+{`{
+  "code": 200,
+  "data": {
+    "irn": "INV/2025/0001-94ND90NR-20250526",
+    "submission_id": "5f3e9b1d-8c4e-4b0a-9f5d-8e7a3b1d4c2e",
+    "status": "accepted",
+    "odoo_status_update": "success"
+  },
+  "message": "Odoo invoice successfully submitted to FIRS"
+}`}
+                  </pre>
+                </div>
               </CardContent>
             </Card>
           </div>
