@@ -14,6 +14,16 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  register: (userData: {
+    companyName: string;
+    taxId: string;
+    address: string;
+    phone: string;
+    email: string;
+    website?: string;
+    username: string;
+    password: string;
+  }) => Promise<{ id: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +56,46 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     
     checkAuth();
   }, []);
+
+  // Register function
+  const register = async (userData: {
+    companyName: string;
+    taxId: string;
+    address: string;
+    phone: string;
+    email: string;
+    website?: string;
+    username: string;
+    password: string;
+  }): Promise<{ id: string }> => {
+    setIsLoading(true);
+    try {
+      // Here you would typically make an API call to your backend registration endpoint
+      // For now, we'll simulate a successful registration and return a mock user ID
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const mockUserId = `user_${Date.now()}`;
+
+      // After successful registration, you might want to automatically log the user in
+      // or redirect them to the login page. For now, just show a toast.
+      toast({
+        title: 'Registration successful',
+        description: 'Please log in with your credentials',
+        status: 'success'
+      });
+      return { id: mockUserId }; // Return the mock user ID
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({
+        title: 'Registration failed',
+        description: error instanceof Error ? error.message : 'An error occurred during registration',
+        status: 'error'
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Mock login function - in real app, this would call an API
   const login = async (email: string, password: string) => {
@@ -108,12 +158,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
       isLoading,
       login,
-      logout
+      logout,
+      register,
     }}>
       {children}
     </AuthContext.Provider>
@@ -137,6 +188,10 @@ export const useAuth = () => {
         },
         logout: () => { 
           console.warn('Auth functions not available during SSR'); 
+        },
+        register: async () => {
+          console.warn('Auth functions not available during SSR');
+          return { id: 'ssr-mock-id' }; // Ensure SSR mock also matches new signature
         }
       };
     }
