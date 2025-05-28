@@ -3,34 +3,53 @@ import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import PageHeader from '@/components/common/PageHeader';
 import OdooConnectionForm from '@/components/integrations/OdooConnectionForm';
+import QuickBooksConnectionForm from '@/components/integrations/QuickBooksConnectionForm';
+import SAPConnectionForm from '@/components/integrations/SAPConnectionForm';
+import OracleConnectionForm from '@/components/integrations/OracleConnectionForm';
+import DynamicsConnectionForm from '@/components/integrations/DynamicsConnectionForm';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/utils/apiClient';
 import ErrorAlert from '@/components/common/ErrorAlert';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 
+// TODO: Add Sage integration support when ready (form, backend, and UI logic)
 // Integration type options
 const integrationOptions = [
   {
+    id: 'sap',
+    name: 'SAP',
+    description: 'Direct integration with SAP ERP for automated invoice synchronization and real-time reporting.',
+    logo: '/images/integration-logos/sap.png',
+    comingSoon: false
+  },
+  {
     id: 'odoo',
-    name: 'Odoo ERP',
-    description: 'Connect to your Odoo ERP system to import invoices, customers, and products.',
+    name: 'Odoo',
+    description: 'Seamless Odoo integration for small to medium businesses needing end-to-end e-invoicing.',
     logo: '/images/integration-logos/odoo.png',
+    comingSoon: false
+  },
+  {
+    id: 'oracle',
+    name: 'Oracle',
+    description: 'Enterprise-grade Oracle ERP validation with secure data transmission and validation.',
+    logo: '/images/integration-logos/oracle.png',
+    comingSoon: false
+  },
+  {
+    id: 'dynamics',
+    name: 'Microsoft Dynamics',
+    description: 'Full Microsoft Dynamics 365 compatibility with bi-directional data flow.',
+    logo: '/images/integration-logos/dynamics.png',
     comingSoon: false
   },
   {
     id: 'quickbooks',
     name: 'QuickBooks',
-    description: 'Connect to QuickBooks for accounting and financial data integration.',
+    description: 'Quick and easy QuickBooks integration for small businesses and accountants.',
     logo: '/images/integration-logos/quickbooks.png',
-    comingSoon: true
-  },
-  {
-    id: 'sage',
-    name: 'Sage',
-    description: 'Connect to Sage for business management solutions.',
-    logo: '/images/integration-logos/sage.png',
-    comingSoon: true
+    comingSoon: false
   }
 ];
 
@@ -196,13 +215,53 @@ const AddIntegrationPage = () => {
           </div>
         );
       case 1:
-        return (
-          <OdooConnectionForm
-            config={connectionConfig}
-            onChange={handleConnectionConfigChange}
-            isSubmitting={isSubmitting}
-          />
-        );
+        switch (selectedIntegration) {
+          case 'odoo':
+            return (
+              <OdooConnectionForm
+                config={connectionConfig}
+                onChange={handleConnectionConfigChange}
+                isSubmitting={isSubmitting}
+              />
+            );
+          case 'quickbooks':
+            return (
+              <QuickBooksConnectionForm
+                config={connectionConfig}
+                onChange={handleConnectionConfigChange}
+                isSubmitting={isSubmitting}
+              />
+            );
+          case 'sap':
+            return (
+              <SAPConnectionForm
+                config={connectionConfig}
+                onChange={handleConnectionConfigChange}
+                isSubmitting={isSubmitting}
+              />
+            );
+          case 'oracle':
+            return (
+              <OracleConnectionForm
+                config={connectionConfig}
+                onChange={handleConnectionConfigChange}
+                isSubmitting={isSubmitting}
+              />
+            );
+          case 'dynamics':
+            return (
+              <DynamicsConnectionForm
+                config={connectionConfig}
+                onChange={handleConnectionConfigChange}
+                isSubmitting={isSubmitting}
+              />
+            );
+          // TODO: Add a SageConnectionForm here when Sage is supported
+          default:
+            return (
+              <div className="text-gray-500">Integration form not available for this ERP.</div>
+            );
+        }
       case 2:
         return (
           <div>

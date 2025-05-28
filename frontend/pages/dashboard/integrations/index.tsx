@@ -1,25 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Plus, Link2, Database, RefreshCw } from 'lucide-react';
+import { Plus, Link2, Database } from 'lucide-react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import PageHeader from '@/components/common/PageHeader';
 import LoadingScreen from '@/components/common/LoadingScreen';
 import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/utils/apiClient';
 import { formatDate } from '@/utils/dateUtils';
 import ErrorAlert from '@/components/common/ErrorAlert';
+import IntegrationStatusMonitor from '@/components/integrations/IntegrationStatusMonitor';
+import { IntegrationService } from '@/services/api/integrationService';
+import { Integration, IntegrationsResponse } from '@/services/api/types';
 
-// Define types for integrations
-interface Integration {
-  id: string;
-  name: string;
-  description: string;
-  integration_type: string;
-  status: string;
-  created_at: string;
-  last_sync?: string;
-  config: Record<string, any>;
-}
+// Using Integration type from services/api/types.ts
 
 const IntegrationsPage = () => {
   const router = useRouter();
@@ -34,14 +26,12 @@ const IntegrationsPage = () => {
       
       try {
         setLoading(true);
-        const response = await apiClient.get(
-          `/api/v1/organizations/${organization.id}/integrations`
-        );
-        setIntegrations(response.data);
+        const response = await IntegrationService.getIntegrations(organization.id);
+        setIntegrations(response.integrations || []);
         setError(null);
       } catch (err: any) {
         console.error('Failed to fetch integrations:', err);
-        setError(err.response?.data?.detail || 'Failed to fetch integrations');
+        setError(err.error || 'Failed to fetch integrations');
       } finally {
         setLoading(false);
       }
@@ -58,25 +48,23 @@ const IntegrationsPage = () => {
     router.push(`/dashboard/integrations/${id}`);
   };
 
-  const handleSyncIntegration = async (id: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!organization?.id) return;
+  const handleSyncIntegration = async (integrationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!organization) return;
     
     try {
       setLoading(true);
-      await apiClient.post(
-        `/api/v1/organizations/${organization.id}/integrations/${id}/odoo/sync`
-      );
+      // Sync integration using the service
+      await IntegrationService.syncIntegration(organization.id, integrationId);
       
       // Refresh integrations list
-      const response = await apiClient.get(
-        `/api/v1/organizations/${organization.id}/integrations`
-      );
-      setIntegrations(response.data);
+      const response = await IntegrationService.getIntegrations(organization.id);
+      setIntegrations(response.integrations || []);
+      
       setError(null);
     } catch (err: any) {
       console.error('Failed to sync integration:', err);
-      setError(err.response?.data?.detail || 'Failed to sync integration');
+      setError(err.error || 'Failed to sync integration');
     } finally {
       setLoading(false);
     }
@@ -91,18 +79,7 @@ const IntegrationsPage = () => {
     }
   };
 
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case 'configured':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'error':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  // Status styles now handled by IntegrationStatusMonitor component
 
   if (loading && integrations.length === 0) {
     return <LoadingScreen />;
@@ -139,12 +116,15 @@ const IntegrationsPage = () => {
               className="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer border flex flex-col h-full"
               onClick={() => handleViewIntegration(integration.id)}
             >
-              <div className="flex items-center px-6 pt-6 pb-2">
-                {getIntegrationTypeIcon(integration.integration_type)}
-                <span className="ml-3 text-lg font-semibold text-gray-900 flex-1">{integration.name}</span>
-                <span className={`border px-2 py-0.5 rounded text-xs font-medium capitalize ${getStatusStyles(integration.status)}`}>
-                  {integration.status}
-                </span>
+              <div className="flex justify-between items-center px-6 pt-6 pb-2">
+                <div className="flex items-center">
+                  {getIntegrationTypeIcon(integration.integration_type)}
+                  <span className="ml-3 text-lg font-semibold text-gray-900">{integration.name}</span>
+                </div>
+                <IntegrationStatusMonitor 
+                  status={integration.status} 
+                  showDetails={false} 
+                />
               </div>
               <div className="px-6 pb-2 text-gray-600 text-sm">
                 {integration.description}
@@ -155,14 +135,12 @@ const IntegrationsPage = () => {
                   <div>Created: {formatDate(integration.created_at)}</div>
                   <div>Last Sync: {integration.last_sync ? formatDate(integration.last_sync) : '-'}</div>
                 </div>
-                <button
-                  className="inline-flex items-center px-3 py-1 border border-blue-600 text-blue-700 rounded hover:bg-blue-50 text-xs font-medium transition"
-                  onClick={e => handleSyncIntegration(integration.id, e)}
-                  type="button"
-                >
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Sync
-                </button>
+                <IntegrationStatusMonitor 
+                  status={integration.status} 
+                  lastSync={integration.last_sync} 
+                  showDetails={false} 
+                  onSyncClick={e => handleSyncIntegration(integration.id, e)}
+                />
               </div>
             </div>
           ))

@@ -1,46 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { ArrowLeft, RefreshCw, Edit, Trash2, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import PageHeader from '@/components/common/PageHeader';
 import IntegrationInfo from '@/components/integrations/IntegrationInfo';
-import OdooInvoicesTab from '@/components/integrations/OdooInvoicesTab';
-import OdooCustomersTab from '@/components/integrations/OdooCustomersTab';
-import OdooProductsTab from '@/components/integrations/OdooProductsTab';
+import ERPInvoicesTab from '@/components/integrations/ERPInvoicesTab';
+import ERPCustomersTab from '@/components/integrations/ERPCustomersTab';
+import ERPProductsTab from '@/components/integrations/ERPProductsTab';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ErrorAlert from '@/components/common/ErrorAlert';
 import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/utils/apiClient';
 import { formatDate } from '@/utils/dateUtils';
+import { IntegrationService } from '@/services/api/integrationService';
+import { Integration, CompanyInfo, APIErrorResponse } from '@/services/api/types';
+import { useApiPolling } from '@/hooks/useApiPolling';
 
-// Interface for the integration object
-interface Integration {
-  id: string;
-  name: string;
-  description: string;
-  integration_type: string;
-  status: string;
-  created_at: string;
-  last_sync?: string;
-  config: Record<string, any>;
-}
-
-// Interface for company information
-interface CompanyInfo {
-  id: number;
-  name: string;
-  vat?: string;
-  email?: string;
-  phone?: string;
-  website?: string;
-  currency?: string;
-  logo?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    country?: string;
-  };
-}
+// Using types imported from services/api/types.ts
 
 const IntegrationDetailPage = () => {
   const router = useRouter();
@@ -54,42 +29,62 @@ const IntegrationDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  useEffect(() => {
-    if (!id || !organization?.id) return;
+  // Create a fetch function that can be used both directly and for polling
+  const fetchIntegrationDetails = useCallback(async () => {
+    if (!organization) return null;
     
-    const fetchIntegrationDetails = async () => {
-      try {
-        setLoading(true);
-        // Fetch integration details
-        const response = await apiClient.get(
-          `/api/v1/organizations/${organization.id}/integrations/${id}`
-        );
-        setIntegration(response.data);
-        
-        // If it's an Odoo integration, fetch company info
-        if (response.data.integration_type === 'odoo') {
-          try {
-            const companyResponse = await apiClient.get(
-              `/api/v1/organizations/${organization.id}/integrations/${id}/odoo/company-info`
-            );
-            setCompanyInfo(companyResponse.data);
-          } catch (err) {
-            console.error('Failed to fetch Odoo company info:', err);
-            // Continue even if company info fetch fails
-          }
+    try {
+      setLoading(true);
+      
+      // Fetch integration details using the service
+      const response = await IntegrationService.getIntegration(organization.id, id as string);
+      const integrationData = response.integration;
+      setIntegration(integrationData);
+      
+      // If it's an ERP integration, fetch company info
+      if (integrationData.integration_type) {
+        try {
+          const companyResponse = await IntegrationService.getCompanyInfo(organization.id, id as string);
+          setCompanyInfo(companyResponse.company);
+        } catch (err) {
+          console.error('Failed to fetch company info:', err);
+          // Continue even if company info fetch fails
         }
-        
-        setError(null);
-      } catch (err: any) {
-        console.error('Failed to fetch integration details:', err);
-        setError(err.response?.data?.detail || 'Failed to fetch integration details');
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      setError(null);
+      return integrationData; // Return for the polling hook
+    } catch (err: any) {
+      console.error('Failed to fetch integration details:', err);
+      const errorMessage = err.error || 'Failed to fetch integration details';
+      setError(errorMessage);
+      throw err; // Rethrow for the polling hook to catch
+    } finally {
+      setLoading(false);
+    }
+  }, [organization, id]);
 
-    fetchIntegrationDetails();
-  }, [id, organization?.id]);
+  // Set up polling for real-time status updates
+  const { isPolling, startPolling, stopPolling } = useApiPolling({
+    fetchFunction: fetchIntegrationDetails,
+    interval: 5000, // Poll every 5 seconds
+    // Stop polling when status is not 'syncing'
+    stopPollingWhen: (data) => data?.status !== 'syncing',
+    onError: (err) => {
+      console.error('Polling error:', err);
+      // Only set error if it's not already set to avoid UI flicker during polling
+      if (!error) {
+        setError(err.error || 'Failed to update integration status');
+      }
+    }
+  });
+
+  // Initial fetch
+  useEffect(() => {
+    if (organization) {
+      fetchIntegrationDetails();
+    }
+  }, [organization, fetchIntegrationDetails]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -108,37 +103,36 @@ const IntegrationDetailPage = () => {
     if (!id || !organization?.id) return;
     
     try {
-      await apiClient.delete(
-        `/api/v1/organizations/${organization.id}/integrations/${id}`
-      );
+      await IntegrationService.deleteIntegration(organization.id, id as string);
       router.push('/dashboard/integrations');
     } catch (err: any) {
       console.error('Failed to delete integration:', err);
-      setError(err.response?.data?.detail || 'Failed to delete integration');
+      setError(err.error || 'Failed to delete integration');
     }
     
     setDeleteDialogOpen(false);
   };
 
   const handleSyncData = async () => {
-    if (!id || !organization?.id) return;
+    if (!organization || !integration || syncing) return;
     
     try {
       setSyncing(true);
-      await apiClient.post(
-        `/api/v1/organizations/${organization.id}/integrations/${id}/odoo/sync`
-      );
       
-      // Refresh integration details to get updated last_sync
-      const response = await apiClient.get(
-        `/api/v1/organizations/${organization.id}/integrations/${id}`
-      );
-      setIntegration(response.data);
+      // Use IntegrationService to sync
+      await IntegrationService.syncIntegration(organization.id, integration.id);
+      
+      // Start polling to get real-time updates on sync status
+      startPolling();
+      
+      // Refresh integration data after sync initiated
+      const response = await IntegrationService.getIntegration(organization.id, integration.id);
+      setIntegration(response.integration);
       
       setError(null);
     } catch (err: any) {
-      console.error('Failed to sync data:', err);
-      setError(err.response?.data?.detail || 'Failed to sync data from Odoo');
+      console.error('Failed to sync integration:', err);
+      setError(err.error || 'Failed to sync integration');
     } finally {
       setSyncing(false);
     }
@@ -256,21 +250,28 @@ const IntegrationDetailPage = () => {
         </div>
         <div className="p-6">
           {activeTab === 0 && (
-            <OdooInvoicesTab 
+            <ERPInvoicesTab 
               organizationId={organization?.id} 
-              integrationId={integration.id} 
+              integrationId={integration.id}
+              erpType={integration.integration_type as 'odoo' | 'quickbooks' | 'sap' | 'oracle' | 'dynamics'}
+              title={`Invoices from ${integration.name}`}
             />
           )}
           {activeTab === 1 && (
-            <OdooCustomersTab 
+            <ERPCustomersTab 
               organizationId={organization?.id} 
               integrationId={integration.id}
+              erpType={integration.integration_type as 'odoo' | 'quickbooks' | 'sap' | 'oracle' | 'dynamics'}
+              title={`Customers from ${integration.name}`}
             />
           )}
           {activeTab === 2 && (
-            <OdooProductsTab 
+            <ERPProductsTab 
               organizationId={organization?.id} 
               integrationId={integration.id}
+              erpType={integration.integration_type as 'odoo' | 'quickbooks' | 'sap' | 'oracle' | 'dynamics'}
+              title={`Products from ${integration.name}`}
+              defaultCurrency="NGN"
             />
           )}
         </div>

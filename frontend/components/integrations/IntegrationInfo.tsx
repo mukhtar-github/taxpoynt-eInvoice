@@ -1,5 +1,6 @@
 import React from 'react';
 import { Database } from 'lucide-react';
+import IntegrationStatusMonitor from './IntegrationStatusMonitor';
 import { formatDate } from '@/utils/dateUtils';
 
 interface Integration {
@@ -35,18 +36,7 @@ interface IntegrationInfoProps {
 }
 
 const IntegrationInfo: React.FC<IntegrationInfoProps> = ({ integration, companyInfo }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'configured':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'error':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Status styling now handled by IntegrationStatusMonitor component
 
   const formatAddress = (address?: { street?: string; city?: string; country?: string }) => {
     if (!address) return 'N/A';
@@ -75,11 +65,11 @@ const IntegrationInfo: React.FC<IntegrationInfoProps> = ({ integration, companyI
                 <span className="text-sm text-gray-500 mr-2">
                   {integration.integration_type.toUpperCase()}
                 </span>
-                <span 
-                  className={`px-2 py-1 text-xs rounded-full ${getStatusColor(integration.status)}`}
-                >
-                  {integration.status}
-                </span>
+                <IntegrationStatusMonitor
+                  status={integration.status}
+                  lastSync={integration.last_sync}
+                  showDetails={false}
+                />
               </div>
             </div>
           </div>
