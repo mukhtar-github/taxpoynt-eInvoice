@@ -72,6 +72,7 @@ except Exception as e:
 
 try:
     from app.routes import validation, firs, integrations, api_credentials, bulk_irn, validation_management, organization
+    from app.routes import organization_integrations, organization_odoo
     logger.info("Successfully imported primary feature routes")
 except Exception as e:
     logger.critical(f"FATAL ERROR importing primary feature routes: {str(e)}")
@@ -193,6 +194,8 @@ try:
     app.include_router(integrations.router, prefix=f"{settings.API_V1_STR}/integrations", tags=["integrations"])
     app.include_router(api_credentials.router, prefix=f"{settings.API_V1_STR}/api-credentials", tags=["api-credentials"])
     app.include_router(organization.router, prefix=f"{settings.API_V1_STR}/organizations", tags=["organizations"])
+    app.include_router(organization_integrations.router, prefix=f"{settings.API_V1_STR}/organizations", tags=["organization-integrations"])
+    app.include_router(organization_odoo.router, prefix=f"{settings.API_V1_STR}/organizations", tags=["organization-odoo"])
     logger.info("Successfully included feature routers - group 1")
 except Exception as e:
     logger.critical(f"FATAL ERROR including feature routers - group 1: {str(e)}")
