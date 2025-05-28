@@ -1,0 +1,22 @@
+{
+  "service_codes": {
+    "GOODS": {
+      "code": "GOODS",
+      "description": "General goods",
+      "category": "Goods",
+      "taxable": true
+    },
+    "SERVICES": {
+      "code": "SERVICES",
+      "description": "General services",
+      "category": "Services",
+      "taxable": true
+    }
+  },
+  "category_mappings": {
+    "All": "GOODS",
+    "All/Saleable": "GOODS",
+    "All/Service": "SERVICES"
+  },
+  "last_updated": "2025-05-28T00:00:00Z"
+}
