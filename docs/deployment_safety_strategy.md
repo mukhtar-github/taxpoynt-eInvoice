@@ -251,6 +251,76 @@ class SAPAdapter(ERPAdapter):
 [What other options were considered and why weren't they chosen?]
 ```
 
+## 9. API Documentation
+
+Comprehensive API documentation is critical for stable deployments, especially for an ERP integration platform:
+
+- **OpenAPI/Swagger Integration**:
+  - Implement automatic API documentation using FastAPI's built-in support
+  - Keep documentation synchronized with actual endpoints
+  - Include authentication requirements, request/response schemas, and examples
+
+- **API Versioning Documentation**:
+  - Document which versions of each API endpoint are available
+  - Provide deprecation timelines for older API versions
+  - Include migration guides for upgrading between API versions
+
+- **Integration-Specific Documentation**:
+  - Create separate documentation for each ERP integration (Odoo, SAP, etc.)
+  - Document field mappings between TaxPoynt and each ERP system
+  - Include setup guides and troubleshooting for each integration type
+
+- **API Testing Tools**:
+  - Provide Postman collections or similar for testing API endpoints
+  - Include example requests for common operations
+
+### Implementation Plan
+
+1. Enable FastAPI's automatic OpenAPI documentation
+2. Create a dedicated API docs section in the application
+3. Generate Postman collections for common API operations
+4. Document ERP-specific field mappings and requirements
+
+### Example API Documentation Implementation
+
+```python
+# In your FastAPI app
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="TaxPoynt eInvoice API",
+    description="API for integrating with ERPs and managing electronic invoices",
+    version="1.0.0",
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+)
+
+# Example of well-documented endpoint
+@app.get(
+    "/api/v1/organizations/{organization_id}/integrations",
+    response_model=List[IntegrationSchema],
+    tags=["Integrations"],
+    summary="List all integrations for an organization",
+    description="Returns a list of all ERP integrations configured for the specified organization",
+)
+async def get_integrations(
+    organization_id: str = Path(..., description="The unique identifier of the organization"),
+    status: Optional[str] = Query(None, description="Filter by integration status"),
+):
+    """Get all integrations for an organization.
+    
+    This endpoint retrieves all ERP integration configurations for the specified
+    organization. Results can be filtered by status.
+    
+    - **organization_id**: The unique identifier of the organization
+    - **status**: Optional filter for integration status (configured, syncing, error)
+    
+    Returns a list of integration objects with their current status and configuration.
+    """
+    # Implementation
+```
+
 ## Implementation Plan
 
 For TaxPoynt eInvoice, we recommend a phased approach:

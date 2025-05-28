@@ -113,12 +113,42 @@ except Exception as e:
 try:
     app = FastAPI(
         title=settings.PROJECT_NAME,
+        description="TaxPoynt eInvoice API for ERP integration and electronic invoice management",
+        version="1.0.0",
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         docs_url="/docs",
         redoc_url="/redoc",
+        contact={
+            "name": "TaxPoynt Support",
+            "url": "https://taxpoynt.com/support",
+            "email": "support@taxpoynt.com",
+        },
+        license_info={
+            "name": "Proprietary",
+            "url": "https://taxpoynt.com/terms",
+        },
+        terms_of_service="https://taxpoynt.com/terms",
+        openapi_tags=[
+            {
+                "name": "auth",
+                "description": "Authentication and authorization operations",
+            },
+            {
+                "name": "integrations",
+                "description": "ERP integration management endpoints",
+            },
+            {
+                "name": "invoices",
+                "description": "Electronic invoice operations", 
+            },
+            {
+                "name": "organizations",
+                "description": "Organization management endpoints",
+            },
+        ],
         on_startup=[start_background_tasks]  # Start background tasks on startup
     )
-    logger.info("FastAPI application initialized successfully")
+    logger.info("FastAPI application initialized successfully with enhanced OpenAPI documentation")
 except Exception as e:
     logger.critical(f"FATAL ERROR initializing FastAPI application: {str(e)}")
     logger.critical(traceback.format_exc())
