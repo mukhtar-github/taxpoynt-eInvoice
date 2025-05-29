@@ -45,13 +45,12 @@ interface AppDashboardLayoutProps {
 // Navigation Items - consolidated from both dashboard layouts
 const NavItems = [
   { name: 'Dashboard', icon: Home, href: '/dashboard' },
-  { name: 'Company Dashboard', icon: Users, href: '/dashboard/company' },
+  { name: 'Company Dashboard', icon: Users, href: '/dashboard/company-home' },
   { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations' },
-  { name: 'IRN Management', icon: FileText, href: '/dashboard/irn' },
-  { name: 'Customers', icon: Users, href: '/dashboard/customers' },
   { name: 'Submission', icon: BarChart2, href: '/dashboard/submission' },
-  { name: 'Reports', icon: FileText, href: '/dashboard/reports' },
-  { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
+  { name: 'Organization', icon: Users, href: '/dashboard/organization' },
+  { name: 'Metrics', icon: BarChart2, href: '/dashboard/metrics' },
+  { name: 'ERP Connection', icon: LinkIcon, href: '/dashboard/erp-connection' },
 ];
 
 // Simpler toggle button that matches the screenshot
@@ -102,28 +101,13 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
     )}>
       <div className="h-20 flex items-center px-6 justify-between border-b border-indigo-800">
         <div className="flex items-center">
-          {/* Show company logo if provided, otherwise show TaxPoynt logo */}
-          {branding?.logoUrl ? (
-            <div className="mr-3">
-              <Image 
-                src={branding.logoUrl} 
-                alt={branding.companyName || 'Company logo'}
-                width={32}
-                height={32}
-                className="rounded-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="bg-white rounded-full w-8 h-8 flex items-center justify-center mr-3">
-              <svg width="20" height="20" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M32 0C14.327 0 0 14.327 0 32C0 49.673 14.327 64 32 64C49.673 64 64 49.673 64 32C64 14.327 49.673 0 32 0ZM32 12C38.627 12 44 17.373 44 24C44 30.627 38.627 36 32 36C25.373 36 20 30.627 20 24C20 17.373 25.373 12 32 12ZM32 56C24.36 56 17.56 52.36 13.6 46.64C13.8 39.32 27.2 35.2 32 35.2C36.76 35.2 50.2 39.32 50.4 46.64C46.44 52.36 39.64 56 32 56Z" fill={logoColor}/>
-              </svg>
-            </div>
-          )}
-          {/* Show company name if provided by CompanyDashboardLayout, otherwise show TaxPoynt */}
-          <h2 className="font-bold text-lg truncate">
-            {branding?.companyName ? 'Company Dashboard' : 'TaxPoynt eInvoice'}
-          </h2>
+          {/* TaxPoynt Logo (default) */}
+          <div className="bg-white rounded-full w-8 h-8 flex items-center justify-center mr-3">
+            <svg width="20" height="20" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32 0C14.327 0 0 14.327 0 32C0 49.673 14.327 64 32 64C49.673 64 64 49.673 64 32C64 14.327 49.673 0 32 0ZM32 12C38.627 12 44 17.373 44 24C44 30.627 38.627 36 32 36C25.373 36 20 30.627 20 24C20 17.373 25.373 12 32 12ZM32 56C24.36 56 17.56 52.36 13.6 46.64C13.8 39.32 27.2 35.2 32 35.2C36.76 35.2 50.2 39.32 50.4 46.64C46.44 52.36 39.64 56 32 56Z" fill={logoColor}/>
+            </svg>
+          </div>
+          <h2 className="font-bold text-lg truncate">TaxPoynt eInvoice</h2>
         </div>
         <button 
           onClick={onClose}
@@ -243,6 +227,9 @@ const AppDashboardLayout = ({
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
+  
+  // Determine if this is a company dashboard view based on the router path
+  const isCompanyDashboard = router.pathname.includes('/dashboard/company');
   
   // Handle authentication status
   useEffect(() => {
