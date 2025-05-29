@@ -81,16 +81,28 @@ const Home: React.FC = () => {
               </div>
             </div>
             <div className="hidden lg:flex justify-end">
-              <div className="relative w-full max-w-lg h-96 bg-white/10 rounded-lg overflow-hidden backdrop-blur-sm">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent">
-                  <div className="relative h-full flex items-center justify-center">
-                    <Image 
-                      src="/icons/logo.svg" 
-                      alt="Taxpoynt E-Invoice" 
-                      width={150} 
-                      height={150} 
-                      className="drop-shadow-xl" 
-                    />
+              <div className="relative w-full max-w-xl h-96 bg-white/10 rounded-lg overflow-hidden backdrop-blur-sm border-2 border-white/20 shadow-2xl">
+                {/* Dashboard Screenshot */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent">
+                  <div className="relative h-full w-full overflow-hidden">
+                    {/* Create a browser window frame effect */}
+                    <div className="h-6 bg-gray-800 flex items-center px-2">
+                      <div className="flex space-x-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                      </div>
+                    </div>
+                    {/* Dashboard screenshot fills the frame */}
+                    <div className="h-[calc(100%-24px)] w-full">
+                      <Image 
+                        src="/icons/dashboard-screenshot.png" 
+                        alt="TaxPoynt E-Invoice Dashboard" 
+                        width={600} 
+                        height={400}
+                        className="w-full h-full object-cover object-top" 
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

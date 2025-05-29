@@ -101,11 +101,15 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
     )}>
       <div className="h-20 flex items-center px-6 justify-between border-b border-indigo-800">
         <div className="flex items-center">
-          {/* TaxPoynt Logo (default) */}
-          <div className="bg-white rounded-full w-8 h-8 flex items-center justify-center mr-3">
-            <svg width="20" height="20" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M32 0C14.327 0 0 14.327 0 32C0 49.673 14.327 64 32 64C49.673 64 64 49.673 64 32C64 14.327 49.673 0 32 0ZM32 12C38.627 12 44 17.373 44 24C44 30.627 38.627 36 32 36C25.373 36 20 30.627 20 24C20 17.373 25.373 12 32 12ZM32 56C24.36 56 17.56 52.36 13.6 46.64C13.8 39.32 27.2 35.2 32 35.2C36.76 35.2 50.2 39.32 50.4 46.64C46.44 52.36 39.64 56 32 56Z" fill={logoColor}/>
-            </svg>
+          {/* TaxPoynt Logo (official) */}
+          <div className="w-8 h-8 flex items-center justify-center mr-3 rounded-full overflow-hidden bg-white">
+            <Image 
+              src="/logo.svg" 
+              alt="TaxPoynt Logo" 
+              width={32} 
+              height={32}
+              className="object-contain"
+            />
           </div>
           <h2 className="font-bold text-lg truncate">TaxPoynt eInvoice</h2>
         </div>
