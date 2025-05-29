@@ -1,7 +1,7 @@
 import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
-import DashboardLayout from '../../components/layouts/DashboardLayout';
+import CompanyDashboardLayout from '../../components/layouts/CompanyDashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardGrid, MetricCard } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -182,7 +182,7 @@ const DashboardHub: NextPage = () => {
       <Head>
         <title>TaxPoynt | Dashboard</title>
       </Head>
-      <DashboardLayout>
+      <CompanyDashboardLayout title="Dashboard Overview | Taxpoynt eInvoice" description="View your company's e-invoicing performance and metrics">
         <div className="p-8 bg-gradient-to-b from-slate-50 to-white">
           {/* Hero section with logo and navigation */}
           <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:justify-between md:items-center mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-lg p-6 text-white">
@@ -429,7 +429,7 @@ const DashboardHub: NextPage = () => {
             </div>
           </div>
         </div>
-      </DashboardLayout>
+      </CompanyDashboardLayout>
     </>
   );
 };

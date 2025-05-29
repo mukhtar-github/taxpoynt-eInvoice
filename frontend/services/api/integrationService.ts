@@ -193,7 +193,9 @@ export class IntegrationService {
     organizationId: string,
     integrationType: string,
     config: Record<string, any>
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{
+    status: string; success: boolean; message: string 
+}> {
     try {
       const response = await apiClient.post(
         `/api/v1/organizations/${organizationId}/integrations/test-connection`,

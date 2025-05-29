@@ -3,17 +3,17 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
-  FiHome, FiTrendingUp, FiList, FiSettings, FiMenu, FiBell, FiUser, FiX, FiBarChart2,
-  FiGrid, FiDatabase, FiUsers, FiCreditCard, FiCheckSquare
-} from 'react-icons/fi';
+  Home, TrendingUp, FileText, Settings, Menu, Bell, User, X, BarChart2,
+  Grid, Database, Users, CreditCard, CheckSquare, LucideIcon
+} from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Spinner';
 import { cn } from '../../utils/cn';
-import MainLayout from './MainLayout';
+import AppDashboardLayout from './AppDashboardLayout';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import { IconType } from 'react-icons';
+import { FiBarChart2, FiBell, FiCheckSquare, FiCreditCard, FiDatabase, FiGrid, FiHome, FiList, FiSettings, FiUser, FiUsers } from 'react-icons/fi';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -179,19 +179,25 @@ const Header = ({ companyName }: { companyName?: string }) => {
   );
 };
 
-// Main Company Dashboard Layout
+// Main Company Dashboard Layout - extends AppDashboardLayout
 interface CompanyDashboardLayoutProps {
   children: ReactNode;
   title?: string;
   description?: string;
 }
 
+/**
+ * CompanyDashboardLayout Component
+ * 
+ * This layout extends the AppDashboardLayout to provide company-specific features,
+ * such as fetching and displaying company branding and information.
+ * It handles retrieving company data from the API and passes it to AppDashboardLayout.
+ */
 const CompanyDashboardLayout = ({ 
   children, 
-  title = 'Dashboard | Taxpoynt eInvoice',
+  title = 'Company Dashboard | Taxpoynt eInvoice',
   description 
 }: CompanyDashboardLayoutProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   interface BrandingSettings {
     primary_color: string;
     theme: string;
@@ -204,132 +210,68 @@ const CompanyDashboardLayout = ({
   }
 
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
-    name: 'MT Garba Global Ventures',
+    name: 'Company Dashboard',
     logo_url: null,
     branding_settings: null
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  
-  // Handle authentication status
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login?returnUrl=' + encodeURIComponent(router.pathname));
-    }
-  }, [isAuthenticated, authLoading, router]);
-  
-  // Fetch company information
+
+  // Fetch company information when component mounts
   useEffect(() => {
     const fetchCompanyInfo = async () => {
+      if (!isAuthenticated || authLoading) return;
+      
       try {
-        // In a real implementation, this would fetch from the API
-        // For now, we'll use a placeholder with MT Garba Global Ventures
+        setIsLoading(true);
+        // Safely access organizationId from router query or use type assertion for user object
+        const organizationId = router.query.organizationId as string || (user as any)?.default_organization_id;
+        if (!organizationId) return;
+
+        const response = await axios.get(`/api/v1/organizations/${organizationId}`);
+        const data = response.data;
+        
         setCompanyInfo({
-          name: 'MT Garba Global Ventures',
-          logo_url: null, // This would be the actual logo URL
-          branding_settings: {
-            primary_color: '#4F46E5', // Default indigo color
-            theme: 'light'
-          }
+          name: data.name,
+          logo_url: data.logo_url,
+          branding_settings: data.branding_settings
         });
-        setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching company info:', error);
+        console.error('Error fetching company information:', error);
+      } finally {
         setIsLoading(false);
       }
     };
-    
-    if (isAuthenticated) {
-      fetchCompanyInfo();
-    }
-  }, [isAuthenticated]);
-  
-  // Handle sidebar for mobile - auto-close on route change
-  useEffect(() => {
-    const handleRouteChange = () => {
-      if (window.innerWidth < 768) {
-        setIsOpen(false);
-      }
-    };
-    
-    router.events.on('routeChangeComplete', handleRouteChange);
-    
-    return () => {
-      router.events.off('routeChangeComplete', handleRouteChange);
-    };
-  }, [router.events]);
-  
-  // Handle sidebar toggle
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-  
-  const closeSidebar = () => setIsOpen(false);
-  
-  // If still checking auth or loading company info, show loading
-  if (authLoading || isLoading) {
+
+    fetchCompanyInfo();
+  }, [isAuthenticated, authLoading, user, router.query]);
+
+  // If still checking company info, show loading
+  if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner size="lg" />
-        <span className="ml-2">Loading dashboard...</span>
-      </div>
+      <AppDashboardLayout title={title} description={description}>
+        <div className="flex items-center justify-center h-[calc(100vh-120px)]">
+          <Spinner size="lg" />
+          <span className="ml-2">Loading company information...</span>
+        </div>
+      </AppDashboardLayout>
     );
   }
-  
-  // If not authenticated, don't render anything (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
-  
+
+  // Once company information is loaded, render with the branding
   return (
-    <MainLayout title={title} description={description}>
-      <div className="flex min-h-screen bg-gray-50">
-        {/* Fixed Sidebar - always visible on desktop */}
-        <Sidebar
-          onClose={closeSidebar}
-          className="hidden md:block"
-          companyName={companyInfo.name}
-          companyLogo={companyInfo.logo_url || undefined}
-          primaryColor={companyInfo.branding_settings?.primary_color}
-        />
-        
-        {/* Mobile Sidebar - visible only when open */}
-        {isOpen && (
-          <>
-            <div 
-              className="fixed inset-0 bg-gray-900 bg-opacity-50 z-10 md:hidden"
-              onClick={closeSidebar}
-              aria-hidden="true"
-            />
-            <Sidebar
-              onClose={closeSidebar}
-              className="md:hidden block"
-              companyName={companyInfo.name}
-              companyLogo={companyInfo.logo_url || undefined}
-              primaryColor={companyInfo.branding_settings?.primary_color}
-            />
-          </>
-        )}
-        
-        {/* Mobile menu button */}
-        <button
-          className="md:hidden fixed top-4 right-4 z-30 bg-white p-2 rounded-md shadow-sm"
-          onClick={toggleSidebar}
-          aria-label="Open menu"
-        >
-          <FiMenu className="h-5 w-5 text-gray-700" />
-        </button>
-        
-        {/* Main Content */}
-        <div className="flex-1 ml-0 md:ml-64">
-          <Header companyName={companyInfo.name} />
-          <main className="p-6">
-            {children}
-          </main>
-        </div>
-      </div>
-    </MainLayout>
+    <AppDashboardLayout 
+      title={`${companyInfo.name} - Dashboard`}
+      description={description} 
+      branding={{
+        companyName: companyInfo.name,
+        logoUrl: companyInfo.logo_url || undefined,
+        primaryColor: companyInfo.branding_settings?.primary_color || '#4F46E5'
+      }}
+    >
+      {children}
+    </AppDashboardLayout>
   );
 };
 

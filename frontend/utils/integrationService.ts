@@ -1,5 +1,11 @@
 import api from './api';
 
+/**
+ * @deprecated This utility integration service is deprecated. 
+ * Please use the class-based IntegrationService from '/services/api/integrationService.ts' instead.
+ * This file will be removed in a future update.
+ */
+
 // Types
 export interface Integration {
   id: string;
