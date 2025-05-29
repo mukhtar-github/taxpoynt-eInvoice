@@ -45,6 +45,7 @@ interface AppDashboardLayoutProps {
 // Navigation Items - consolidated from both dashboard layouts
 const NavItems = [
   { name: 'Dashboard', icon: Home, href: '/dashboard' },
+  { name: 'Company Dashboard', icon: Users, href: '/dashboard/company' },
   { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations' },
   { name: 'IRN Management', icon: FileText, href: '/dashboard/irn' },
   { name: 'Customers', icon: Users, href: '/dashboard/customers' },
@@ -90,6 +91,7 @@ const NavItem = ({ icon: Icon, children, href, isActive: forcedActive, className
 
 // Enhanced Sidebar Component with branding support
 const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
+  const { logout } = useAuth();
   const logoColor = branding?.primaryColor || '#4F46E5';
   
   return (
@@ -100,6 +102,7 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
     )}>
       <div className="h-20 flex items-center px-6 justify-between border-b border-indigo-800">
         <div className="flex items-center">
+          {/* Show company logo if provided, otherwise show TaxPoynt logo */}
           {branding?.logoUrl ? (
             <div className="mr-3">
               <Image 
@@ -117,7 +120,10 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
               </svg>
             </div>
           )}
-          <h2 className="font-bold text-lg truncate">{branding?.companyName || 'Taxpoynt'}</h2>
+          {/* Show company name if provided by CompanyDashboardLayout, otherwise show TaxPoynt */}
+          <h2 className="font-bold text-lg truncate">
+            {branding?.companyName ? 'Company Dashboard' : 'TaxPoynt eInvoice'}
+          </h2>
         </div>
         <button 
           onClick={onClose}
@@ -138,6 +144,20 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
             {item.name}
           </NavItem>
         ))}
+        
+        <div className="px-4 mt-8">
+          <Button
+            variant="ghost"
+            onClick={logout}
+            className="w-full flex items-center space-x-3 text-indigo-100 hover:text-white hover:bg-indigo-800 px-4 py-3 rounded-md transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1v-3a1 1 0 10-2 0v3H3V4h9v3a1 1 0 102 0V4a1 1 0 00-1-1H3z" clipRule="evenodd" />
+              <path fillRule="evenodd" d="M13.293 7.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L15.586 11H7a1 1 0 110-2h8.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+            <span>Logout</span>
+          </Button>
+        </div>
       </nav>
     </div>
   );
@@ -146,13 +166,14 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
 // Enhanced Header Component with title detection
 const Header = () => {
   const router = useRouter();
+  const { user, logout } = useAuth();
   
-  // Determine current page title based on route
   const getPageTitle = () => {
     if (router.pathname === '/dashboard') return 'Dashboard Overview';
     if (router.pathname.startsWith('/dashboard/integrations')) return 'Integrations';
     if (router.pathname.startsWith('/dashboard/irn')) return 'IRN Management';
     if (router.pathname.startsWith('/dashboard/customers')) return 'Customers';
+    if (router.pathname.startsWith('/dashboard/submission')) return 'Submission Dashboard';
     if (router.pathname.startsWith('/dashboard/reports')) return 'Reports';
     if (router.pathname.startsWith('/dashboard/settings')) return 'Settings';
     
@@ -176,19 +197,37 @@ const Header = () => {
           size="icon"
           aria-label="notifications"
           className="rounded-full"
-          onClick={() => {}}
         >
           <Bell className="h-5 w-5" />
         </Button>
-        <Button 
-          variant="ghost"
-          size="icon"
-          aria-label="profile"
-          className="rounded-full"
-          onClick={() => {}}
-        >
-          <User className="h-5 w-5" />
-        </Button>
+        
+        <div className="relative group">
+          <Button 
+            variant="ghost"
+            size="icon"
+            aria-label="profile"
+            className="rounded-full"
+          >
+            <User className="h-5 w-5" />
+          </Button>
+          
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block border">
+            <div className="px-4 py-2 text-sm text-gray-700 border-b">
+              {user?.name || 'User'}
+            </div>
+            <Button
+              variant="ghost"
+              onClick={logout}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H3a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3a1 1 0 1 1-2 0V4a1 1 0 0 0-1-1H3z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M13.293 7.293a1 1 0 0 1 1.414 0l3 3a1 1 0 0 1 0 1.414l-3 3a1 1 0 0 1-1.414-1.414L15.586 11H7a1 1 0 1 1 0-2h8.586l-2.293-2.293a1 1 0 0 1 0-1.414z" clipRule="evenodd" />
+              </svg>
+              Logout
+            </Button>
+          </div>
+        </div>
       </div>
     </header>
   );
@@ -197,12 +236,12 @@ const Header = () => {
 // Main App Dashboard Layout
 const AppDashboardLayout = ({ 
   children, 
-  title = 'Dashboard | Taxpoynt eInvoice', 
+  title = 'Dashboard | TaxPoynt eInvoice', 
   description,
   branding
 }: AppDashboardLayoutProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
   
   // Handle authentication status

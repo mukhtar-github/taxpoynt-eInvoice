@@ -115,7 +115,10 @@ class Settings(BaseSettings):
         "https://localhost:8000",
         "https://www.taxpoynt.com",  # Production frontend
         "https://taxpoynt.com",      # Production frontend (apex domain)
-        "https://taxpoynte-invoice.vercel.app"  # Vercel deployment
+        "http://www.taxpoynt.com",   # HTTP version of production frontend
+        "http://taxpoynt.com",       # HTTP version of apex domain
+        "https://taxpoynte-invoice.vercel.app",  # Vercel deployment
+        "*"  # Allow all origins (for testing - remove in production)
     ]
     
     # Frontend/Backend URLs (optional fields)

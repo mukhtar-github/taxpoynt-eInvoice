@@ -93,30 +93,40 @@ const SubmissionDashboard: NextPage = () => {
     setError(null);
     
     try {
-      // Safely fetch each metric with proper error handling
-      try {
-        const submissionData = await fetchSubmissionMetrics(timeRange);
-        setSubmissionMetrics(submissionData || defaultSubmissionMetrics);
-      } catch (submissionErr) {
-        console.log('Submission metrics error:', submissionErr);
-        setSubmissionMetrics(defaultSubmissionMetrics);
-      }
+      // Use Promise.allSettled to fetch all metrics with enhanced error handling
+      const [submissionResult, retryResult, odooResult] = await Promise.allSettled([
+        fetchSubmissionMetrics(timeRange).catch(err => {
+          console.log('Submission metrics error:', err);
+          return defaultSubmissionMetrics;
+        }),
+        fetchRetryMetrics(timeRange).catch(err => {
+          console.log('Retry metrics error:', err);
+          return defaultRetryMetrics;
+        }),
+        fetchOdooSubmissionMetrics(timeRange).catch(err => {
+          console.log('Odoo metrics error:', err);
+          return defaultSubmissionMetrics;
+        })
+      ]);
       
-      try {
-        const retryData = await fetchRetryMetrics(timeRange);
-        setRetryMetrics(retryData || defaultRetryMetrics);
-      } catch (retryErr) {
-        console.log('Retry metrics error:', retryErr);
-        setRetryMetrics(defaultRetryMetrics);
-      }
+      // Safely process results, ensuring we always have default data if needed
+      setSubmissionMetrics(
+        submissionResult.status === 'fulfilled' ? 
+          submissionResult.value || defaultSubmissionMetrics : 
+          defaultSubmissionMetrics
+      );
       
-      try {
-        const odooData = await fetchOdooSubmissionMetrics(timeRange);
-        setOdooMetrics(odooData || defaultSubmissionMetrics);
-      } catch (odooErr) {
-        console.log('Odoo metrics error:', odooErr);
-        setOdooMetrics(defaultSubmissionMetrics);
-      }
+      setRetryMetrics(
+        retryResult.status === 'fulfilled' ? 
+          retryResult.value || defaultRetryMetrics : 
+          defaultRetryMetrics
+      );
+      
+      setOdooMetrics(
+        odooResult.status === 'fulfilled' ? 
+          odooResult.value || defaultSubmissionMetrics : 
+          defaultSubmissionMetrics
+      );
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Unable to fetch dashboard data. Please try again later.');
