@@ -96,7 +96,7 @@ const Home: React.FC = () => {
                     {/* Dashboard screenshot fills the frame */}
                     <div className="h-[calc(100%-24px)] w-full">
                       <Image 
-                        src="/icons/dashboard-screenshot.png" 
+                        src="/icons/dashboard-screenshot.webp" 
                         alt="TaxPoynt E-Invoice Dashboard" 
                         width={600} 
                         height={400}
