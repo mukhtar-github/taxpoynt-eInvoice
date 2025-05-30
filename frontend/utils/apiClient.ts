@@ -1,4 +1,11 @@
+/**
+ * @deprecated This API client is deprecated in favor of apiService.
+ * Please import from 'utils/apiService' instead.
+ * This file is maintained for backward compatibility only.
+ */
+
 import axios from 'axios';
+import apiService from './apiService';
 
 // Create an axios instance with default configuration
 const apiClient = axios.create({
@@ -8,46 +15,9 @@ const apiClient = axios.create({
   },
 });
 
-// Add a request interceptor to include the auth token on every request
-apiClient.interceptors.request.use(
-  (config) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('token');
-    
-    // If token exists, add it to the headers
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add a response interceptor to handle common errors
-apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    // Handle authentication errors
-    if (error.response && error.response.status === 401) {
-      // Redirect to login page if not already there
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      }
-    }
-    
-    // Handle server errors
-    if (error.response && error.response.status >= 500) {
-      console.error('Server error:', error.response.data);
-    }
-    
-    return Promise.reject(error);
-  }
-);
+// Use the same interceptors as apiService for consistent behavior
+const axiosInstance = apiService.getAxiosInstance();
+apiClient.interceptors.request = axiosInstance.interceptors.request;
+apiClient.interceptors.response = axiosInstance.interceptors.response;
 
 export { apiClient };
