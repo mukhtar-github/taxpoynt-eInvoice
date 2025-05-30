@@ -269,6 +269,28 @@ except Exception as e:
     raise
 logger.info("FIRS API router initialized")
 
+# Import and include APP functionality routers with error handling
+try:
+    logger.info("Importing APP functionality routers...")
+    from app.routes.certificate_requests import router as certificate_requests_router
+    from app.routes.csid import router as csid_router
+    from app.routes.transmissions import router as transmissions_router
+    from app.routes.certificates import router as certificates_router
+    
+    # Include APP-related routers
+    app.include_router(certificates_router, prefix=settings.API_V1_STR, tags=["certificates"])
+    app.include_router(certificate_requests_router, prefix=settings.API_V1_STR, tags=["certificate-requests"])
+    app.include_router(csid_router, prefix=settings.API_V1_STR, tags=["csids"])
+    app.include_router(transmissions_router, prefix=settings.API_V1_STR, tags=["transmissions"])
+    
+    logger.info("Successfully included APP functionality routers")
+except Exception as e:
+    logger.critical(f"FATAL ERROR including APP functionality routers: {str(e)}")
+    logger.critical(traceback.format_exc())
+    logger.warning("APP functionality may not be available")
+    # Don't raise exception here to allow the application to start even if APP features are not available
+    # This follows the graceful failure approach used in the multi-step database migration strategy
+
 logger.info("All routers initialized successfully")
 logger.info("Application setup complete and ready to serve requests")
 

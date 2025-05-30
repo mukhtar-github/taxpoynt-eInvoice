@@ -32,6 +32,14 @@ class Organization(Base):
     organization_users = relationship("OrganizationUser", back_populates="organization", cascade="all, delete-orphan")
     integrations = relationship("Integration", back_populates="organization", cascade="all, delete-orphan")
     
+    # APP-related relationships
+    certificates = relationship("Certificate", back_populates="organization", cascade="all, delete-orphan")
+    certificate_requests = relationship("CertificateRequest", back_populates="organization", cascade="all, delete-orphan")
+    csids = relationship("CSIDRegistry", back_populates="organization", cascade="all, delete-orphan")
+    transmissions = relationship("TransmissionRecord", back_populates="organization", cascade="all, delete-orphan")
+    encryption_keys = relationship("EncryptionKey", back_populates="organization")
+    encryption_config = relationship("EncryptionConfig", back_populates="organization", uselist=False)
+    
 
 class OrganizationUser(Base):
     """
