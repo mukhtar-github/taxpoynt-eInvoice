@@ -25,6 +25,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import transmissionApiService, { TransmissionDetail, TransmissionHistory, HistoryEvent } from '../../../services/transmissionApiService';
+import RetryConfirmationDialog from '../../../components/app/transmission/RetryConfirmationDialog';
+import { formatDateTime } from '@/utils/formatters';
 
 /**
  * Transmission Detail Page - Access Point Provider (APP) Feature
@@ -35,15 +37,19 @@ import transmissionApiService, { TransmissionDetail, TransmissionHistory, Histor
  */
 const TransmissionDetailPage: NextPage = () => {
   const router = useRouter();
-  const { id } = router.query;
+  const { id: queryId } = router.query;
+  const id = Array.isArray(queryId) ? queryId[0] : queryId;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const toast = useToast();
   
   const [transmission, setTransmission] = useState<TransmissionDetail | null>(null);
   const [history, setHistory] = useState<HistoryEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Retry dialog state
+  const [isRetryDialogOpen, setIsRetryDialogOpen] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -52,42 +58,51 @@ const TransmissionDetailPage: NextPage = () => {
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // Load transmission data - used for initial load and refreshing after actions
+  const loadTransmissionData = async () => {
+    try {
+      if (!id) {
+        setIsLoading(false);
+        setError("No transmission ID provided");
+        return;
+      }
+      
+      setIsLoading(true);
+      setError(null);
+      
+      // Fetch transmission details
+      const transmissionResponse = await transmissionApiService.getTransmission(id as string);
+      if (transmissionResponse.error) {
+        throw new Error(transmissionResponse.error);
+      }
+      setTransmission(transmissionResponse.data);
+      
+      // Fetch transmission history
+      const historyResponse = await transmissionApiService.getTransmissionHistory(id as string);
+      if (historyResponse.error) {
+        throw new Error(historyResponse.error);
+      }
+      if (historyResponse.data && historyResponse.data.history) {
+        setHistory(historyResponse.data.history);
+      } else {
+        setHistory([]);
+      }
+    } catch (err) {
+      console.error('Error loading transmission details:', err);
+      setError('Failed to load transmission details. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Fetch transmission details
   useEffect(() => {
-    const fetchTransmissionDetails = async () => {
-      if (id && typeof id === 'string' && isAuthenticated) {
-        setIsLoading(true);
-        setError(null);
-        
-        try {
-          // Fetch transmission details
-          const transmissionResponse = await transmissionApiService.getTransmission(id);
-          if (transmissionResponse.error) {
-            throw new Error(transmissionResponse.error);
-          }
-          setTransmission(transmissionResponse.data);
-          
-          // Fetch transmission history
-          const historyResponse = await transmissionApiService.getTransmissionHistory(id);
-          if (historyResponse.error) {
-            throw new Error(historyResponse.error);
-          }
-          if (historyResponse.data && historyResponse.data.history) {
-            setHistory(historyResponse.data.history);
-          } else {
-            setHistory([]);
-          }
-        } catch (err) {
-          console.error('Error fetching transmission details:', err);
-          setError('Failed to load transmission details. Please try again.');
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchTransmissionDetails();
-  }, [id, isAuthenticated]);
+    if (id && isAuthenticated && !authLoading) {
+      setIsLoading(true);
+      setError(null);
+      loadTransmissionData();
+    }
+  }, [id, isAuthenticated, authLoading]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -114,48 +129,43 @@ const TransmissionDetailPage: NextPage = () => {
     return date.toLocaleString();
   };
 
-  const handleRetry = async () => {
-    if (!transmission) return;
+  // Handle retry action with configurable parameters
+  const handleRetryConfirm = async (maxRetries: number, retryDelay: number, force: boolean) => {
+    if (!id) return;
     
-    setIsRetrying(true);
     try {
-      const retryResponse = await transmissionApiService.retryTransmission(transmission.id);
+      setIsRetrying(true);
+      const retryResponse = await transmissionApiService.retryTransmission(
+        id as string,
+        maxRetries,
+        retryDelay,
+        force
+      );
+      
       if (retryResponse.error) {
         throw new Error(retryResponse.error);
       }
       
-      // Refetch the transmission data
-      const updatedTransmissionResponse = await transmissionApiService.getTransmission(transmission.id);
-      if (updatedTransmissionResponse.error) {
-        throw new Error(updatedTransmissionResponse.error);
-      }
-      setTransmission(updatedTransmissionResponse.data);
-      
-      // Fetch updated history
-      const updatedHistoryResponse = await transmissionApiService.getTransmissionHistory(transmission.id);
-      if (updatedHistoryResponse.error) {
-        throw new Error(updatedHistoryResponse.error);
-      }
-      if (updatedHistoryResponse.data && updatedHistoryResponse.data.history) {
-        setHistory(updatedHistoryResponse.data.history);
-      } else {
-        setHistory([]);
-      }
+      // Refresh the data
+      await loadTransmissionData();
       
       toast({
         title: "Transmission Retry Initiated",
-        description: "The system is attempting to resend the transmission.",
+        description: retryDelay > 0 
+          ? `Retry scheduled with exponential backoff starting at ${retryDelay}s.`
+          : "The system is attempting to resend the transmission immediately.",
         status: "success"
       });
     } catch (err) {
       console.error('Error retrying transmission:', err);
       toast({
         title: "Retry Failed",
-        description: "Failed to retry the transmission. Please try again.",
+        description: `Failed to retry the transmission: ${err instanceof Error ? err.message : 'Unknown error'}`,
         status: "error"
       });
     } finally {
       setIsRetrying(false);
+      setIsRetryDialogOpen(false);
     }
   };
 
@@ -242,19 +252,22 @@ const TransmissionDetailPage: NextPage = () => {
           </div>
           
           <div className="mt-4 md:mt-0">
-            {(transmission.status === 'failed' || transmission.status === 'canceled') && (
-              <Button 
-                onClick={handleRetry} 
+            {(transmission.status === 'failed' || transmission.status === 'pending' || transmission.status === 'canceled') && (
+              <Button
+                variant="outline"
+                size="sm"
                 disabled={isRetrying}
+                onClick={() => setIsRetryDialogOpen(true)}
+                className="ml-auto"
               >
                 {isRetrying ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    <RotateCw className="mr-2 h-4 w-4 animate-spin" />
                     Retrying...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RotateCw className="mr-2 h-4 w-4" />
                     Retry Transmission
                   </>
                 )}
@@ -301,18 +314,24 @@ const TransmissionDetailPage: NextPage = () => {
           
           <Card>
             <CardHeader>
-              <CardTitle>Transmission Stats</CardTitle>
+              <CardTitle>Retry Stats</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <div>
-                  <span className="text-sm font-medium">Attempts:</span>
+                  <span className="text-sm font-medium">Total Attempts:</span>
                   <p>{transmission.retry_count + 1}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium">Last Attempt:</span>
-                  <p>{transmission.last_retry_at ? formatDate(transmission.last_retry_at) : 'N/A'}</p>
+                  <span className="text-sm font-medium">Last Retry:</span>
+                  <p>{transmission.last_retry_time ? formatDateTime(transmission.last_retry_time) : 'N/A'}</p>
                 </div>
+                {transmission.status === 'retrying' && (
+                  <div>
+                    <span className="text-sm font-medium text-amber-600">Status:</span>
+                    <p className="text-amber-600">Waiting for next retry attempt</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -324,6 +343,10 @@ const TransmissionDetailPage: NextPage = () => {
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-2" />
               History
+            </TabsTrigger>
+            <TabsTrigger value="retries">
+              <RotateCw className="h-4 w-4 mr-2" />
+              Retry History
             </TabsTrigger>
             <TabsTrigger value="metadata">
               <Info className="h-4 w-4 mr-2" />
@@ -367,7 +390,7 @@ const TransmissionDetailPage: NextPage = () => {
                                     {getStatusBadge(event.status)}
                                   </div>
                                 </div>
-                                <span className="text-sm text-gray-500">{formatDate(event.timestamp)}</span>
+                                <span className="text-sm text-gray-500">{formatDateTime(event.timestamp)}</span>
                               </div>
                               {event.details && (
                                 <p className="text-sm text-gray-600">{event.details}</p>
@@ -383,8 +406,102 @@ const TransmissionDetailPage: NextPage = () => {
             </Card>
           </TabsContent>
           
+          {/* Retry History Tab */}
+          <TabsContent value="retries" className="mt-2">
+            <div className="p-4 bg-white rounded-md shadow-sm overflow-x-auto">
+              <h3 className="text-lg font-medium mb-4">Retry Information</h3>
+              
+              {/* Basic retry information */}
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 mb-6">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Total Attempts</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{transmission.retry_count + 1}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Last Retry Time</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {transmission.last_retry_time ? formatDateTime(transmission.last_retry_time) : 'Never'}
+                  </dd>
+                </div>
+                {transmission.status === 'retrying' && (
+                  <div className="col-span-2">
+                    <dt className="text-sm font-medium text-amber-600">Current Status</dt>
+                    <dd className="mt-1 text-sm text-amber-600">
+                      <Clock className="inline-block h-4 w-4 mr-1" />
+                      Waiting for next retry attempt
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              
+              {/* Retry History Table */}
+              {transmission.transmission_metadata?.retry_history && transmission.transmission_metadata.retry_history.length > 0 ? (
+                <div>
+                  <h4 className="text-md font-medium mb-2">Retry History</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempt</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delay (s)</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Initiator</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {transmission.transmission_metadata.retry_history.map((retry: any, index: number) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{retry.attempt}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{formatDateTime(retry.timestamp)}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{retry.delay || 0}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{retry.initiator || 'System'}</td>
+                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                              {retry.success ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Success
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  <XCircle className="h-3 w-3 mr-1" /> Failed
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-4">No retry history available</p>
+              )}
+              
+              {/* Retry Strategy Information */}
+              {transmission.transmission_metadata?.retry_strategy && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h4 className="text-md font-medium mb-2">Retry Strategy</h4>
+                  <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Max Retries</dt>
+                      <dd className="text-sm text-gray-900">{transmission.transmission_metadata.retry_strategy.max_retries || 3}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Base Delay (s)</dt>
+                      <dd className="text-sm text-gray-900">{transmission.transmission_metadata.retry_strategy.retry_delay || 0}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Backoff Type</dt>
+                      <dd className="text-sm text-gray-900">Exponential</dd>
+                    </div>
+                  </dl>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
           {/* Metadata Tab */}
-          <TabsContent value="metadata">
+          <TabsContent value="metadata" className="mt-2">
             <Card>
               <CardHeader>
                 <CardTitle>Transmission Metadata</CardTitle>

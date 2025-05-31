@@ -20,13 +20,15 @@ interface TransmissionListTableProps {
   onRetry?: (id: string) => void;
   onViewDetails?: (id: string) => void;
   isLoading?: boolean;
+  isRetrying?: boolean;
 }
 
 const TransmissionListTable: React.FC<TransmissionListTableProps> = ({ 
   transmissions, 
   onRetry,
   onViewDetails,
-  isLoading = false
+  isLoading = false,
+  isRetrying = false
 }) => {
   const router = useRouter();
 
@@ -119,14 +121,24 @@ const TransmissionListTable: React.FC<TransmissionListTableProps> = ({
                       <ExternalLink className="h-4 w-4 mr-1" />
                       Details
                     </Button>
-                    {(transmission.status === 'failed' || transmission.status === 'canceled') && onRetry && (
+                    {(transmission.status === 'failed' || transmission.status === 'pending' || transmission.status === 'canceled') && onRetry && (
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={(e) => handleRetry(transmission.id, e)}
+                        disabled={isRetrying}
                       >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        Retry
+                        {isRetrying ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                            Retrying...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-1" />
+                            Retry
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>

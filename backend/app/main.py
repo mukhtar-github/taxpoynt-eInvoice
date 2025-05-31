@@ -294,6 +294,21 @@ except Exception as e:
 logger.info("All routers initialized successfully")
 logger.info("Application setup complete and ready to serve requests")
 
+# Start the retry scheduler service in background mode
+try:
+    from app.services.retry_scheduler import RetryScheduler
+    
+    # Start the retry scheduler with default settings
+    retry_scheduler = RetryScheduler()
+    scheduler_thread = retry_scheduler.start_background_scheduler()
+    logger.info("Transmission retry scheduler started successfully in background mode")
+except Exception as e:
+    logger.error(f"Failed to start retry scheduler service: {str(e)}")
+    logger.error(traceback.format_exc())
+    logger.warning("Automatic transmission retries will not be available")
+    # Don't raise the exception to allow the application to start
+    # even if the retry scheduler is not available
+
 # Final health check to ensure everything is loaded correctly
 try:
     # Check that all essential components are available

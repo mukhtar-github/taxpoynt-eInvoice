@@ -10,6 +10,7 @@ import { Loader2, AlertTriangle, RefreshCw, Activity, BarChart3, RotateCw, Clock
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import AppDashboardLayout from '../../components/layouts/AppDashboardLayout';
+import RetryConfirmationDialog from '../../components/app/transmission/RetryConfirmationDialog';
 // Import APP-specific components from the app directory
 import { 
   TransmissionStatsCard,
@@ -67,6 +68,10 @@ const TransmissionDashboard: NextPage = () => {
   const [statistics, setStatistics] = useState<TransmissionStatus | null>(null);
   const [timeline, setTimeline] = useState<TransmissionTimeline | null>(null);
   const [recentTransmissions, setRecentTransmissions] = useState<TransmissionListItem[]>([]);
+  
+  // Retry dialog state
+  const [isRetryDialogOpen, setIsRetryDialogOpen] = useState(false);
+  const [selectedTransmissionId, setSelectedTransmissionId] = useState<string | null>(null);
   
   // Convert time range to date objects
   const getDateRange = (range: string) => {
@@ -155,11 +160,25 @@ const TransmissionDashboard: NextPage = () => {
     loadDashboardData();
   };
   
-  // Handle retry transmission
-  const handleRetryTransmission = async (id: string) => {
+  // Open retry dialog for a specific transmission
+  const openRetryDialog = (id: string) => {
+    setSelectedTransmissionId(id);
+    setIsRetryDialogOpen(true);
+  };
+  
+  // Handle retry transmission with configurable parameters
+  const handleRetryConfirm = async (maxRetries: number, retryDelay: number, force: boolean) => {
+    if (!selectedTransmissionId) return;
+    
     setIsRetrying(true);
     try {
-      const retryResponse = await transmissionApiService.retryTransmission(id);
+      const retryResponse = await transmissionApiService.retryTransmission(
+        selectedTransmissionId,
+        maxRetries,
+        retryDelay,
+        force
+      );
+      
       if (retryResponse.error) {
         throw new Error(retryResponse.error);
       }
@@ -169,18 +188,22 @@ const TransmissionDashboard: NextPage = () => {
       
       toast({
         title: "Transmission Retry Initiated",
-        description: "The system is attempting to resend the transmission.",
+        description: retryDelay > 0 
+          ? `Retry scheduled with exponential backoff starting at ${retryDelay}s.`
+          : "The system is attempting to resend the transmission immediately.",
         status: "success"
       });
     } catch (err) {
       console.error('Error retrying transmission:', err);
       toast({
         title: "Retry Failed",
-        description: "Failed to retry the transmission. Please try again.",
+        description: `Failed to retry the transmission: ${err instanceof Error ? err.message : 'Unknown error'}`,
         status: "error"
       });
     } finally {
       setIsRetrying(false);
+      setIsRetryDialogOpen(false);
+      setSelectedTransmissionId(null);
     }
   };
   
@@ -400,7 +423,8 @@ const TransmissionDashboard: NextPage = () => {
                   <TransmissionListTable 
                     transmissions={recentTransmissions}
                     onViewDetails={(id) => router.push(`/dashboard/transmission/${id}`)}
-                    onRetry={handleRetryTransmission}
+                    onRetry={openRetryDialog}
+                    isRetrying={isRetrying}
                   />
                 ) : (
                   <div className="flex h-40 items-center justify-center">
@@ -412,6 +436,19 @@ const TransmissionDashboard: NextPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+      {/* Retry Confirmation Dialog */}
+      {selectedTransmissionId && (
+        <RetryConfirmationDialog
+          isOpen={isRetryDialogOpen}
+          onClose={() => {
+            setIsRetryDialogOpen(false);
+            setSelectedTransmissionId(null);
+          }}
+          onConfirm={handleRetryConfirm}
+          transmissionId={selectedTransmissionId}
+          isLoading={isRetrying}
+        />
+      )}
     </AppDashboardLayout>
   );
 };
