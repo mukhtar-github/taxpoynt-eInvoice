@@ -6,9 +6,11 @@ This module provides API endpoints for:
 - Signing IRNs
 - Generating QR codes
 - CSID (Cryptographic Stamp ID) operations
+- Cryptographic stamping for FIRS compliance
 """
 
 import os
+import datetime
 from typing import Dict, Optional, List, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -20,9 +22,12 @@ from app.utils.encryption import encrypt_irn_data, extract_keys_from_file, load_
 from app.utils.irn_generator import generate_firs_irn as generate_irn, validate_irn # Using new implementation
 from app.utils.qr_code import generate_qr_code, generate_qr_code_for_irn, qr_code_as_base64 # type: ignore
 from app.utils.crypto_signing import sign_invoice, verify_csid, csid_generator
+from app.utils.certificate_manager import CertificateManager, get_certificate_manager
+from app.utils.key_management import KeyManager, get_key_manager
 from app.db.session import get_db # type: ignore
 from app.services.key_service import KeyManagementService, get_key_service
 from app.services.encryption_service import EncryptionService, get_encryption_service
+from app.services.cryptographic_stamping_service import CryptographicStampingService, get_cryptographic_stamping_service
 from app.api.dependencies import get_current_active_user # type: ignore
 from app.models.user import User # type: ignore # type: ignore # type: ignore
 from app.schemas.key import KeyMetadata, KeyRotateResponse # type: ignore # type: ignore # type: ignore
@@ -83,6 +88,23 @@ class VerifyCSIDResponse(BaseModel):
     details: Optional[Dict[str, Any]] = Field(None, description="Additional verification details")
 
 
+class CryptoStampRequest(BaseModel):
+    """Request model for cryptographic stamping."""
+    invoice_data: Dict[str, Any] = Field(..., description="Invoice data to stamp")
+
+
+class CryptoStampResponse(BaseModel):
+    """Response model for cryptographic stamping."""
+    stamped_invoice: Dict[str, Any] = Field(..., description="Invoice data with cryptographic stamp")
+    stamp_info: Dict[str, Any] = Field(..., description="Information about the stamp applied")
+
+
+class VerifyStampRequest(BaseModel):
+    """Request model for verifying a cryptographic stamp."""
+    invoice_data: Dict[str, Any] = Field(..., description="Original invoice data")
+    stamp_data: Dict[str, Any] = Field(..., description="Stamp data to verify")
+
+
 @router.get("/keys", response_model=List[KeyMetadata])
 async def list_keys(
     current_user: User = Depends(get_current_active_user),
@@ -122,7 +144,8 @@ async def rotate_key(
 async def upload_crypto_keys(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    certificate_manager: CertificateManager = Depends(get_certificate_manager)
 ):
     """
     Upload FIRS crypto keys file.
@@ -142,9 +165,22 @@ async def upload_crypto_keys(
         # Extract keys from file
         public_key_bytes, certificate_bytes = extract_keys_from_file(file_location)
         
-        # TODO: Store these keys in database for the organization
+        # Store the certificate
+        cert_name = f"firs_cert_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.crt"
+        cert_path = certificate_manager.store_certificate(certificate_bytes, name=cert_name)
         
-        return {"filename": file.filename, "message": "FIRS crypto keys uploaded successfully"}
+        # Validate the certificate
+        is_valid, cert_info = certificate_manager.validate_certificate(cert_path)
+        
+        return {
+            "filename": file.filename, 
+            "message": "FIRS crypto keys uploaded successfully",
+            "certificate_info": {
+                "path": cert_path,
+                "is_valid": is_valid,
+                **cert_info
+            }
+        }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -285,11 +321,11 @@ async def get_qr_code(irn: str):
     ) 
 
 
-@router.post("/csid/generate", response_model=CSIDResponse)
+@router.post("/generate-csid")
 async def generate_csid(
     request: CSIDRequest,
     current_user: User = Depends(get_current_active_user),
-) -> CSIDResponse:
+):
     """
     Generate a Cryptographic Stamp ID (CSID) for an invoice.
     
@@ -297,54 +333,182 @@ async def generate_csid(
     and is required for compliance with FIRS digital signing requirements.
     """
     try:
-        # Sign the invoice with CSID
-        signed_invoice = sign_invoice(request.invoice_data)
+        # Generate CSID using the signing utility
+        invoice_with_csid = sign_invoice(request.invoice_data)
+        
+        # Extract CSID information
+        csid_info = invoice_with_csid.get("cryptographic_stamp", {})
         
         return CSIDResponse(
-            cryptographic_stamp=signed_invoice["cryptographic_stamp"],
+            cryptographic_stamp=csid_info,
             is_signed=True
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate CSID: {str(e)}"
         )
 
 
-@router.post("/csid/verify", response_model=VerifyCSIDResponse)
+@router.post("/verify-csid")
 async def verify_csid_endpoint(
     request: VerifyCSIDRequest,
     current_user: User = Depends(get_current_active_user),
-) -> VerifyCSIDResponse:
+):
     """
     Verify a Cryptographic Stamp ID (CSID) on an invoice.
     
     This checks that the invoice has not been tampered with since it was signed.
     """
     try:
-        # Extract CSID from invoice data if not explicitly provided
-        csid = request.csid
-        if not csid and "cryptographic_stamp" in request.invoice_data:
-            if "csid" in request.invoice_data["cryptographic_stamp"]:
-                csid = request.invoice_data["cryptographic_stamp"]["csid"]
-        
-        if not csid:
-            return VerifyCSIDResponse(
-                is_valid=False,
-                details={"error": "No CSID found in request or invoice data"}
-            )
-            
         # Verify the CSID
-        is_valid = verify_csid(request.invoice_data, csid)
+        is_valid, details = verify_csid(
+            invoice_data=request.invoice_data,
+            csid=request.csid
+        )
+        
+        if not is_valid:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "is_valid": False,
+                    "details": {
+                        "error": "Invalid CSID",
+                        **(details or {})
+                    }
+                }
+            )
         
         return VerifyCSIDResponse(
-            is_valid=is_valid,
-            details={
-                "message": "CSID verification successful" if is_valid else "CSID verification failed"
-            }
+            is_valid=True,
+            details=details
         )
     except Exception as e:
-        return VerifyCSIDResponse(
-            is_valid=False,
-            details={"error": f"Verification error: {str(e)}"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify CSID: {str(e)}"
+        )
+
+
+@router.post("/generate-stamp", response_model=CryptoStampResponse)
+async def generate_cryptographic_stamp(
+    request: CryptoStampRequest,
+    current_user: User = Depends(get_current_active_user),
+    crypto_stamping_service: CryptographicStampingService = Depends(get_cryptographic_stamping_service)
+):
+    """
+    Generate a cryptographic stamp for an invoice according to FIRS requirements.
+    
+    This enhanced version provides a compliant cryptographic stamp that includes:
+    - Digital signature for invoice authenticity verification
+    - Timestamp for audit trail
+    - QR code containing the signature for easy verification
+    - Certificate reference for validation
+    """
+    try:
+        # Apply the cryptographic stamp to the invoice
+        stamped_invoice = crypto_stamping_service.stamp_invoice(request.invoice_data)
+        
+        # Extract stamp information
+        stamp_info = stamped_invoice.get("cryptographic_stamp", {})
+        
+        return CryptoStampResponse(
+            stamped_invoice=stamped_invoice,
+            stamp_info=stamp_info
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate cryptographic stamp: {str(e)}"
+        )
+
+
+@router.post("/verify-stamp")
+async def verify_cryptographic_stamp(
+    request: VerifyStampRequest,
+    current_user: User = Depends(get_current_active_user),
+    crypto_stamping_service: CryptographicStampingService = Depends(get_cryptographic_stamping_service)
+):
+    """
+    Verify a cryptographic stamp on an invoice.
+    
+    This checks that the invoice has not been tampered with since it was stamped
+    and validates the authenticity of the stamp according to FIRS requirements.
+    """
+    try:
+        # Verify the cryptographic stamp
+        is_valid, details = crypto_stamping_service.verify_stamp(
+            request.invoice_data, 
+            request.stamp_data
+        )
+        
+        if not is_valid:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "is_valid": False,
+                    "details": {
+                        "error": "Invalid cryptographic stamp",
+                        **(details or {})
+                    }
+                }
+            )
+        
+        return {
+            "is_valid": True,
+            "details": details
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify cryptographic stamp: {str(e)}"
+        )
+
+
+@router.get("/certificates")
+async def list_certificates(
+    current_user: User = Depends(get_current_active_user),
+    certificate_manager: CertificateManager = Depends(get_certificate_manager)
+):
+    """
+    List all available certificates for cryptographic stamping.
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view certificates"
+        )
+    
+    try:
+        # Get all certificate files in the certificates directory
+        cert_files = [f for f in os.listdir(certificate_manager.certs_dir) 
+                     if f.endswith(".crt") or f.endswith(".pem")]
+        
+        certificates = []
+        for cert_file in cert_files:
+            cert_path = os.path.join(certificate_manager.certs_dir, cert_file)
+            try:
+                is_valid, cert_info = certificate_manager.validate_certificate(cert_path)
+                certificates.append({
+                    "filename": cert_file,
+                    "path": cert_path,
+                    "is_valid": is_valid,
+                    **(cert_info or {})
+                })
+            except Exception as e:
+                certificates.append({
+                    "filename": cert_file,
+                    "path": cert_path,
+                    "is_valid": False,
+                    "error": str(e)
+                })
+        
+        return {
+            "certificates": certificates,
+            "count": len(certificates)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list certificates: {str(e)}"
         )
