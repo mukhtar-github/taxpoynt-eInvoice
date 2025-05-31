@@ -188,6 +188,125 @@ class CSIDService:
         logger.info(f"Revoked CSID {csid_id}")
         return True
     
+    def sign_data(self, data: str, certificate_id: UUID, csid_id: Optional[UUID] = None) -> Tuple[str, Dict[str, Any]]:
+        """
+        Sign data using a certificate's private key and record the operation under a CSID.
+        
+        Args:
+            data: The data to sign (typically a hash)
+            certificate_id: The ID of the certificate to use for signing
+            csid_id: Optional CSID ID. If not provided, an active CSID will be found
+            
+        Returns:
+            Tuple containing (signature, signature_metadata)
+        """
+        # Get certificate
+        certificate = self.db.query(Certificate).filter(
+            Certificate.id == certificate_id,
+            Certificate.status == CertificateStatus.ACTIVE
+        ).first()
+        
+        if not certificate:
+            raise ValueError("Certificate not found or not active")
+            
+        # Get CSID
+        csid = None
+        if csid_id:
+            csid = self.db.query(CSIDRegistry).filter(
+                CSIDRegistry.id == csid_id,
+                CSIDRegistry.certificate_id == certificate_id,
+                CSIDRegistry.status == CSIDStatus.ACTIVE
+            ).first()
+        else:
+            # Find any active CSID for this certificate
+            csid = self.db.query(CSIDRegistry).filter(
+                CSIDRegistry.certificate_id == certificate_id,
+                CSIDRegistry.status == CSIDStatus.ACTIVE
+            ).first()
+            
+        if not csid:
+            raise ValueError("No active CSID found for this certificate")
+            
+        try:
+            # Import required modules here to avoid circular imports
+            from app.utils.crypto_signing import sign_data as crypto_sign_data
+            
+            # Get the private key from the certificate
+            private_key = certificate.get_private_key()
+            if not private_key:
+                raise ValueError("Certificate private key not available")
+                
+            # Sign the data
+            signature = crypto_sign_data(data, private_key)
+            
+            # Create signature metadata
+            signature_metadata = {
+                "certificate_id": str(certificate.id),
+                "csid": csid.csid_value,
+                "csid_id": str(csid.id),
+                "timestamp": datetime.utcnow().isoformat(),
+                "algorithm": certificate.key_algorithm or "RSA-SHA256",
+                "subject": certificate.subject
+            }
+            
+            # Update CSID usage count
+            csid.usage_count = (csid.usage_count or 0) + 1
+            csid.last_used = datetime.utcnow()
+            
+            # Add to usage history in metadata
+            current_metadata = csid.metadata or {}
+            if not current_metadata.get('usage_history'):
+                current_metadata['usage_history'] = []
+                
+            current_metadata['usage_history'].append({
+                'timestamp': datetime.utcnow().isoformat(),
+                'operation': 'sign',
+                'data_hash': hashlib.sha256(data.encode()).hexdigest() if isinstance(data, str) else hashlib.sha256(data).hexdigest()
+            })
+            
+            csid.metadata = current_metadata
+            self.db.commit()
+            
+            return signature, signature_metadata
+        except Exception as e:
+            logger.error(f"Error signing data: {str(e)}")
+            raise ValueError(f"Failed to sign data: {str(e)}")
+    
+    def verify_signature(self, data: str, signature: str, certificate_id: UUID) -> bool:
+        """
+        Verify a signature against data using a certificate.
+        
+        Args:
+            data: The data that was signed
+            signature: The signature to verify
+            certificate_id: The ID of the certificate to use for verification
+            
+        Returns:
+            True if signature is valid, False otherwise
+        """
+        # Get certificate
+        certificate = self.db.query(Certificate).filter(
+            Certificate.id == certificate_id
+        ).first()
+        
+        if not certificate:
+            raise ValueError("Certificate not found")
+            
+        try:
+            # Import required modules here to avoid circular imports
+            from app.utils.crypto_signing import verify_signature as crypto_verify_signature
+            
+            # Get the public key from the certificate
+            public_key = certificate.public_key
+            if not public_key:
+                raise ValueError("Certificate public key not available")
+                
+            # Verify the signature
+            return crypto_verify_signature(data, signature, public_key)
+        except Exception as e:
+            logger.error(f"Error verifying signature: {str(e)}")
+            return False
+            
     def verify_csid(self, csid: str) -> Tuple[bool, CSIDStatus, List[str]]:
         """
         Verify a CSID's validity.

@@ -465,6 +465,114 @@ def sign_invoice(invoice_data: Dict, version: Union[str, CSIDVersion] = CSIDVers
     return signed_invoice
 
 
+def sign_data(data: Union[str, bytes], private_key: Union[str, bytes, rsa.RSAPrivateKey]) -> str:
+    """
+    Sign data using a private key.
+    
+    Args:
+        data: Data to sign (string or bytes)
+        private_key: Private key to use for signing (PEM string, bytes, or key object)
+        
+    Returns:
+        Base64 encoded signature
+    """
+    try:
+        # Convert data to bytes if it's a string
+        if isinstance(data, str):
+            data_bytes = data.encode('utf-8')
+        else:
+            data_bytes = data
+            
+        # Convert private key to RSAPrivateKey object if needed
+        if not isinstance(private_key, rsa.RSAPrivateKey):
+            if isinstance(private_key, str):
+                private_key_bytes = private_key.encode('utf-8')
+            else:
+                private_key_bytes = private_key
+                
+            private_key_obj = serialization.load_pem_private_key(
+                private_key_bytes,
+                password=None,
+                backend=default_backend()
+            )
+        else:
+            private_key_obj = private_key
+            
+        # Sign the data using RSA-PSS with SHA-256
+        signature = private_key_obj.sign(
+            data_bytes,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        
+        # Encode the signature as base64
+        return base64.b64encode(signature).decode('utf-8')
+    except Exception as e:
+        logger.error(f"Error signing data: {str(e)}")
+        raise ValueError(f"Failed to sign data: {str(e)}")
+
+def verify_signature(data: Union[str, bytes], signature: Union[str, bytes], public_key: Union[str, bytes, rsa.RSAPublicKey]) -> bool:
+    """
+    Verify a signature against data using a public key.
+    
+    Args:
+        data: Data that was signed (string or bytes)
+        signature: Signature to verify (base64 string or bytes)
+        public_key: Public key to use for verification (PEM string, bytes, or key object)
+        
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    try:
+        # Convert data to bytes if it's a string
+        if isinstance(data, str):
+            data_bytes = data.encode('utf-8')
+        else:
+            data_bytes = data
+            
+        # Convert signature to bytes if it's a string
+        if isinstance(signature, str):
+            signature_bytes = base64.b64decode(signature)
+        else:
+            signature_bytes = signature
+            
+        # Convert public key to RSAPublicKey object if needed
+        if not isinstance(public_key, rsa.RSAPublicKey):
+            if isinstance(public_key, str):
+                public_key_bytes = public_key.encode('utf-8')
+            else:
+                public_key_bytes = public_key
+                
+            public_key_obj = serialization.load_pem_public_key(
+                public_key_bytes,
+                backend=default_backend()
+            )
+        else:
+            public_key_obj = public_key
+            
+        # Verify the signature using RSA-PSS with SHA-256
+        public_key_obj.verify(
+            signature_bytes,
+            data_bytes,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        
+        # If no exception is raised, the signature is valid
+        return True
+    except InvalidSignature:
+        logger.warning("Invalid signature detected")
+        return False
+    except Exception as e:
+        logger.error(f"Error verifying signature: {str(e)}")
+        return False
+
 # Create singleton instance for easy import
 csid_generator = CSIDGenerator()
 
