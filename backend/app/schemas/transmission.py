@@ -81,8 +81,70 @@ class TransmissionBatchStatus(BaseModel):
     completed: int
     failed: int
     retrying: int
-    canceled: int
-    success_rate: float
+    canceled: int  # Using consistent spelling with the TransmissionStatus enum
+    success_rate: Optional[float] = None
+    average_retries: Optional[float] = None
+    signed_transmissions: Optional[int] = None
+
+
+# Schema for time-series data point
+class TransmissionTimePoint(BaseModel):
+    period: str
+    total: int
+    pending: int
+    in_progress: int
+    completed: int
+    failed: int
+    retrying: int
+    cancelled: int
+
+
+# Schema for time-series data
+class TransmissionTimeline(BaseModel):
+    timeline: List[TransmissionTimePoint]
+    interval: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+# Schema for transmission history event
+class TransmissionHistoryEvent(BaseModel):
+    timestamp: str
+    event: str
+    status: str
+    details: Optional[str] = None
+
+
+# Schema for transmission debug info
+class TransmissionDebugInfo(BaseModel):
+    encryption_metadata: Dict[str, Any] = Field(default_factory=dict)
+    response_data: Dict[str, Any] = Field(default_factory=dict)
+    retry_count: int = 0
+    error_details: Dict[str, Any] = Field(default_factory=dict)
+
+
+# Schema for detailed transmission history
+class TransmissionHistory(BaseModel):
+    transmission: TransmissionWithResponse
+    history: List[TransmissionHistoryEvent]
+    debug_info: TransmissionDebugInfo
+
+
+# Schema for batch update request
+class TransmissionBatchUpdate(BaseModel):
+    transmission_ids: List[UUID]
+    status: Optional[TransmissionStatus] = None
+    response_data: Optional[Dict[str, Any]] = None
+    transmission_metadata: Optional[Dict[str, Any]] = None
+
+
+# Schema for batch update response
+class TransmissionBatchUpdateResponse(BaseModel):
+    updated: int
+    failed: int
+    errors: List[str] = Field(default_factory=list)
+    failed: int
+    retrying: int
 
 
 # Schema for transmission status notification

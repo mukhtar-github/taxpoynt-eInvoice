@@ -16,8 +16,10 @@ from datetime import datetime, timedelta
 from app.db.session import get_db
 from app.models.transmission import TransmissionStatus
 from app.schemas.transmission import (
-    TransmissionCreate, TransmissionUpdate, Transmission,
-    TransmissionWithResponse, TransmissionRetry, TransmissionBatchStatus
+    TransmissionCreate, TransmissionUpdate, Transmission, TransmissionWithResponse, 
+    TransmissionRetry, TransmissionBatchStatus, TransmissionTimeline, TransmissionTimePoint,
+    TransmissionHistory, TransmissionHistoryEvent, TransmissionDebugInfo,
+    TransmissionBatchUpdate, TransmissionBatchUpdateResponse
 )
 from app.services.transmission_service import TransmissionService
 from app.services.key_service import KeyManagementService, get_key_service
@@ -50,6 +52,168 @@ async def create_transmission(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+
+
+@router.get("/timeline", response_model=TransmissionTimeline)
+async def get_transmission_timeline(
+    organization_id: Optional[UUID] = Query(None, description="Filter by organization ID"),
+    start_date: Optional[datetime] = Query(None, description="Start date for timeline"),
+    end_date: Optional[datetime] = Query(None, description="End date for timeline"),
+    interval: str = Query("day", description="Time interval for grouping (hour, day, week, month)"),
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+    key_service: KeyManagementService = Depends(get_key_service)
+):
+    """
+    Get time-series data for transmissions based on specified interval.
+    """
+    transmission_service = TransmissionService(db, key_service)
+    
+    # Validate interval parameter
+    valid_intervals = {'hour', 'day', 'week', 'month'}
+    if interval not in valid_intervals:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid interval. Must be one of: {', '.join(valid_intervals)}"
+        )
+    
+    # Get timeline data
+    timeline_data = transmission_service.get_transmission_timeline(
+        organization_id=organization_id,
+        start_date=start_date,
+        end_date=end_date,
+        interval=interval
+    )
+    
+    return TransmissionTimeline(
+        timeline=[TransmissionTimePoint(**point) for point in timeline_data],
+        interval=interval,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+
+@router.get("/{transmission_id}/history", response_model=TransmissionHistory)
+async def get_transmission_history(
+    transmission_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+    key_service: KeyManagementService = Depends(get_key_service)
+):
+    """
+    Get detailed history and debug information for a specific transmission.
+    """
+    transmission_service = TransmissionService(db, key_service)
+    
+    try:
+        history_data = transmission_service.get_transmission_history(transmission_id)
+        
+        # Convert history events to proper schema format
+        history_events = [
+            TransmissionHistoryEvent(**event) for event in history_data['history']
+        ]
+        
+        # Create the response model
+        return TransmissionHistory(
+            transmission=history_data['transmission'],
+            history=history_events,
+            debug_info=TransmissionDebugInfo(**history_data['debug_info'])
+        )
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving transmission history: {str(e)}"
+        )
+
+
+@router.post("/batch", response_model=TransmissionBatchUpdateResponse)
+async def batch_update_transmissions(
+    update_data: TransmissionBatchUpdate,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+    key_service: KeyManagementService = Depends(get_key_service)
+):
+    """
+    Update multiple transmissions in a single batch operation.
+    """
+    transmission_service = TransmissionService(db, key_service)
+    
+    if not update_data.transmission_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No transmission IDs provided"
+        )
+    
+    # Prepare the update fields
+    update_fields = {}
+    if update_data.status is not None:
+        update_fields['status'] = update_data.status
+    if update_data.response_data is not None:
+        update_fields['response_data'] = update_data.response_data
+    if update_data.transmission_metadata is not None:
+        update_fields['transmission_metadata'] = update_data.transmission_metadata
+    
+    if not update_fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields to update"
+        )
+    
+    # Perform the batch update
+    result = transmission_service.batch_update_transmissions(
+        transmission_ids=update_data.transmission_ids,
+        update_data=update_fields,
+        current_user_id=current_user.id
+    )
+    
+    return TransmissionBatchUpdateResponse(**result)
+
+
+@router.post("/webhook", status_code=status.HTTP_202_ACCEPTED)
+async def process_transmission_webhook(
+    webhook_data: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    key_service: KeyManagementService = Depends(get_key_service)
+):
+    """
+    Process webhook notifications for transmission status updates.
+    
+    This endpoint does not require authentication as it's called by external systems.
+    Instead, it uses webhook secrets or signatures for verification.
+    """
+    transmission_service = TransmissionService(db, key_service)
+    
+    try:
+        # Validate minimum required webhook data
+        if 'transmission_id' not in webhook_data or 'status' not in webhook_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing required fields: transmission_id and status"
+            )
+        
+        # Process the webhook asynchronously
+        result = transmission_service.process_transmission_webhook(webhook_data)
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        # Log the error but don't expose details to the caller
+        logger.error(f"Error processing webhook: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing webhook"
         )
 
 
@@ -201,5 +365,7 @@ async def get_transmission_statistics(
         failed=stats.get('failed', 0),
         retrying=stats.get('retrying', 0),
         canceled=stats.get('canceled', 0),
-        success_rate=stats.get('success_rate', 0.0)
+        success_rate=stats.get('success_rate', 0.0),
+        average_retries=stats.get('average_retries', 0.0),
+        signed_transmissions=stats.get('signed_transmissions', 0)
     )
