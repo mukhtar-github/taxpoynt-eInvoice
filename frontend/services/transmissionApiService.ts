@@ -87,6 +87,8 @@ export interface TransmissionListItem {
   transmission_time: string;
   status: string;
   retry_count: number;
+  created_at: string;
+  reference_id?: string;
 }
 
 export interface TransmissionBatchUpdate {

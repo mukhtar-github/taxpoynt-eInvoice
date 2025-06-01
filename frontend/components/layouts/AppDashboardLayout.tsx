@@ -3,10 +3,12 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { 
   Home, TrendingUp, List, Settings, Menu, Bell, User, X, BarChart2,
-  FileText, Users, Link as LinkIcon, Compass, HardDrive, Shield, Send
+  FileText, Users, Link as LinkIcon, Compass, HardDrive, Shield, Send,
+  Key, ShieldCheck
 } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
 import { cn } from '../../utils/cn';
 import MainLayout from './MainLayout';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +21,7 @@ interface NavItemProps {
   href: string;
   isActive?: boolean;
   className?: string;
+  isPlatform?: boolean;
 }
 
 interface SidebarProps {
@@ -42,16 +45,21 @@ interface AppDashboardLayoutProps {
   };
 }
 
-// Navigation Items - consolidated from both dashboard layouts
+// Navigation Items - separated by Platform and SI functionality
 const NavItems = [
-  { name: 'Dashboard', icon: Home, href: '/dashboard' },
-  { name: 'Company Dashboard', icon: Users, href: '/dashboard/company-home' },
-  { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations' },
-  { name: 'Submission', icon: BarChart2, href: '/dashboard/submission' },
-  { name: 'Secure Transmission', icon: Shield, href: '/firs-transmission' },
-  { name: 'Organization', icon: Users, href: '/dashboard/organization' },
-  { name: 'Metrics', icon: BarChart2, href: '/dashboard/metrics' },
-  { name: 'ERP Connection', icon: LinkIcon, href: '/dashboard/erp-connection' },
+  // System Integration (SI) Items
+  { name: 'Dashboard', icon: Home, href: '/dashboard', isPlatform: false },
+  { name: 'Company Dashboard', icon: Users, href: '/dashboard/company-home', isPlatform: false },
+  { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations', isPlatform: false },
+  { name: 'Submission', icon: BarChart2, href: '/dashboard/submission', isPlatform: false },
+  { name: 'Organization', icon: Users, href: '/dashboard/organization', isPlatform: false },
+  { name: 'Metrics', icon: BarChart2, href: '/dashboard/metrics', isPlatform: false },
+  { name: 'ERP Connection', icon: LinkIcon, href: '/dashboard/erp-connection', isPlatform: false },
+  
+  // Platform Items (formerly APP) - with visual indicators
+  { name: 'Secure Transmission', icon: Shield, href: '/dashboard/transmission', isPlatform: true },
+  { name: 'Certificate Management', icon: Key, href: '/dashboard/certificates', isPlatform: true },
+  { name: 'Crypto Stamping', icon: ShieldCheck, href: '/dashboard/crypto-stamping', isPlatform: true },
 ];
 
 // Simpler toggle button that matches the screenshot
@@ -69,8 +77,8 @@ const SidebarToggle = ({ onClick }: { onClick: () => void }) => {
   );
 };
 
-// Sidebar Navigation Item with active state detection
-const NavItem = ({ icon: Icon, children, href, isActive: forcedActive, className }: NavItemProps) => {
+// Sidebar Navigation Item with active state detection and platform indicators
+const NavItem = ({ icon: Icon, children, href, isActive: forcedActive, isPlatform, className }: NavItemProps) => {
   const router = useRouter();
   const isActive = forcedActive !== undefined ? forcedActive : 
                   router.pathname === href || router.pathname.startsWith(`${href}/`);
@@ -79,12 +87,20 @@ const NavItem = ({ icon: Icon, children, href, isActive: forcedActive, className
     <Link href={href} className={cn(
       "flex items-center py-3 px-6 cursor-pointer transition-all duration-200",
       isActive ? "bg-indigo-800 text-white" : "text-indigo-200 hover:text-white hover:bg-indigo-800/70",
+      isPlatform && "border-l-4 border-cyan-500",
       className
     )}>
-      {Icon && (
-        <Icon className="mr-3 h-5 w-5" />
+      <div className="flex items-center flex-1">
+        {Icon && (
+          <Icon className={cn("mr-3 h-5 w-5", isPlatform && "text-cyan-400")} />
+        )}
+        <span>{children}</span>
+      </div>
+      {isPlatform && (
+        <Badge className="ml-2 bg-cyan-200 text-cyan-800 text-xs">
+          Platform
+        </Badge>
       )}
-      <span>{children}</span>
     </Link>
   );
 };
@@ -124,11 +140,35 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
       </div>
       
       <nav className="mt-4">
-        {NavItems.map(item => (
+        {/* Divider and heading for SI section */}
+        <div className="px-6 py-2 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+          System Integration
+        </div>
+        
+        {/* SI Nav Items */}
+        {NavItems.filter(item => !item.isPlatform).map(item => (
           <NavItem
             key={item.name}
             icon={item.icon}
             href={item.href}
+            isPlatform={item.isPlatform}
+          >
+            {item.name}
+          </NavItem>
+        ))}
+        
+        {/* Divider and heading for Platform section */}
+        <div className="mt-6 mb-2 px-6 py-2 text-xs font-semibold text-cyan-300 uppercase tracking-wider border-t border-indigo-800">
+          Platform
+        </div>
+        
+        {/* Platform Nav Items */}
+        {NavItems.filter(item => item.isPlatform).map(item => (
+          <NavItem
+            key={item.name}
+            icon={item.icon}
+            href={item.href}
+            isPlatform={item.isPlatform}
           >
             {item.name}
           </NavItem>

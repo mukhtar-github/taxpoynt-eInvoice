@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
+import EnhancedDashboard from '../../components/dashboard/EnhancedDashboard';
+import { useAuth } from '../../context/AuthContext';
 import Head from 'next/head';
 import { fetchDashboardSummary } from '../../services/dashboardService';
 import axios, { AxiosError } from 'axios';
@@ -126,6 +128,7 @@ const DashboardHub: NextPage = () => {
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   
   // Fetch dashboard summary if available
   useEffect(() => {
@@ -219,14 +222,22 @@ const DashboardHub: NextPage = () => {
                 </Button>
               </Link>
               <Button 
-                variant="secondary" 
-                size="sm" 
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                variant="outline" 
+                className="bg-blue-500 hover:bg-blue-600 text-white border-blue-400 hover:border-blue-500 font-medium"
                 onClick={handleRefresh}
                 disabled={isLoading}
               >
-                <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-                Refresh Data
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -287,6 +298,9 @@ const DashboardHub: NextPage = () => {
               </div>
             </div>
           </div>
+          
+          {/* Enhanced Dashboard with Platform Components */}
+          <EnhancedDashboard organizationId={(user as any)?.organization_id || ''} />
           
           {/* Main content cards with modern styling */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
