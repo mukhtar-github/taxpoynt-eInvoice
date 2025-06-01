@@ -25,7 +25,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import transmissionApiService, { TransmissionDetail, TransmissionHistory, HistoryEvent } from '../../../services/transmissionApiService';
-import RetryConfirmationDialog from '../../../components/app/transmission/RetryConfirmationDialog';
+import RetryConfirmationDialog from '../../../components/platform/transmission/RetryConfirmationDialog';
 import { formatDateTime } from '@/utils/formatters';
 
 /**

@@ -10,13 +10,13 @@ import { Loader2, AlertTriangle, RefreshCw, Activity, BarChart3, RotateCw, Clock
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import AppDashboardLayout from '../../components/layouts/AppDashboardLayout';
-import RetryConfirmationDialog from '../../components/app/transmission/RetryConfirmationDialog';
-// Import APP-specific components from the app directory
+import RetryConfirmationDialog from '../../components/platform/transmission/RetryConfirmationDialog';
+// Import Platform-specific components from the platform directory
 import { 
   TransmissionStatsCard,
   TransmissionTimelineChart,
   TransmissionListTable
-} from '../../components/app';
+} from '../../components/platform';
 import transmissionApiService, { 
   TransmissionStatus, 
   TransmissionTimeline,

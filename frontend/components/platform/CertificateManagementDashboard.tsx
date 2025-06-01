@@ -3,10 +3,10 @@ import { useRouter } from 'next/router';
 import * as Tabs from '@radix-ui/react-tabs';
 import { isFeatureEnabled } from '../../config/featureFlags';
 import apiService from '../../utils/apiService';
-import CertificateCard from 'components/app/CertificateCard';
-import CertificateRequestTable from 'components/app/CertificateRequestTable';
-import CertificateRequestWizard from 'components/app/CertificateRequestWizard';
-import CSIDTable from 'components/app/CSIDTable';
+import CertificateCard from 'components/platform/CertificateCard';
+import CertificateRequestTable from 'components/platform/CertificateRequestTable';
+import CertificateRequestWizard from 'components/platform/CertificateRequestWizard';
+import CSIDTable from 'components/platform/CSIDTable';
 import { Certificate, CertificateRequest, CSID } from '../../types/app';
 import { cn } from '../../utils/cn';
 

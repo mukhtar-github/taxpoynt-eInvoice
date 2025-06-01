@@ -13,9 +13,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { ShieldCheck } from 'lucide-react';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import CertificateManager from '../components/app/crypto/CertificateManager';
-import CryptoStamping from '../components/app/crypto/CryptoStamping';
-import QRStampViewer from '../components/app/crypto/QRStampViewer';
+import CertificateManager from '../components/platform/crypto/CertificateManager';
+import CryptoStamping from '../components/platform/crypto/CryptoStamping';
+import QRStampViewer from '../components/platform/crypto/QRStampViewer';
 import MainLayout from '../components/layouts/MainLayout';
 
 /**
@@ -28,9 +28,9 @@ import MainLayout from '../components/layouts/MainLayout';
  * - Stamp verification
  * - QR code scanning and validation
  * 
- * This is an APP layer component that can be used by any SI layer integration.
+ * This is a Platform layer component that can be used by any SI layer integration.
  * 
- * @note This component follows the APP UI/UX guidelines with proper visual categorization
+ * @note This component follows the Platform UI/UX guidelines with proper visual categorization
  *       and uses the application's standard component system.
  */
 const CryptoManagementPage: React.FC = () => {
@@ -41,7 +41,7 @@ const CryptoManagementPage: React.FC = () => {
         <div className="border-l-4 border-cyan-500 pl-4 mb-6">
           <div className="flex items-center">
             <Heading>Cryptographic Stamping Management</Heading>
-            <Badge className="ml-3 bg-cyan-100 text-cyan-800">APP</Badge>
+            <Badge className="ml-3 bg-cyan-100 text-cyan-800">Platform</Badge>
           </div>
           <Text className="text-gray-600 mt-2">
             Manage cryptographic certificates, generate and verify FIRS-compliant stamps
