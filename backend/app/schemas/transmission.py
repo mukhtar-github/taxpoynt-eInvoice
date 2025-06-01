@@ -153,3 +153,49 @@ class TransmissionStatusNotification(BaseModel):
     status: TransmissionStatus
     timestamp: datetime
     details: Optional[Dict[str, Any]] = None
+
+
+# Schema for FIRS transmission request
+class FIRSTransmissionRequest(BaseModel):
+    payload: Dict[str, Any]
+    organization_id: UUID
+    certificate_id: Optional[UUID] = None
+    submission_id: Optional[UUID] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+# Schema for FIRS transmission retry request
+class FIRSTransmissionRetryRequest(BaseModel):
+    max_retries: int = 3
+    force: bool = False
+    immediate: bool = True
+    notes: Optional[str] = None
+
+
+# Response schema for transmission creation/retry
+class TransmissionResponse(BaseModel):
+    transmission_id: UUID
+    status: TransmissionStatus
+    message: str
+    details: Optional[Dict[str, Any]] = None
+
+
+# Response schema for transmission status
+class TransmissionStatusResponse(BaseModel):
+    transmission_id: UUID
+    status: str
+    last_updated: str
+    retry_count: Optional[int] = None
+    retry_history: Optional[List[Dict[str, Any]]] = None
+    verification_status: Optional[str] = None
+    firs_status: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+# Response schema for transmission receipt
+class TransmissionReceiptResponse(BaseModel):
+    receipt_id: str
+    transmission_id: UUID
+    timestamp: datetime
+    verification_status: str
+    receipt_data: Dict[str, Any]

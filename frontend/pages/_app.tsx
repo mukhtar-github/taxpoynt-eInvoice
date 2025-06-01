@@ -2,6 +2,7 @@ import React from 'react';
 import type { AppProps } from 'next/app';
 import { ToastProvider } from '../components/ui/Toast';
 import { AuthProvider } from '../context/AuthContext';
+import { TransmissionProvider } from '../context/TransmissionContext';
 import '../styles/globals.css';
 
 /**
@@ -14,9 +15,11 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ToastProvider position="top-right">
       <AuthProvider>
-        <div className="min-h-screen bg-background font-body text-text-primary">
-          <Component {...pageProps} />
-        </div>
+        <TransmissionProvider>
+          <div className="min-h-screen bg-background font-body text-text-primary">
+            <Component {...pageProps} />
+          </div>
+        </TransmissionProvider>
       </AuthProvider>
     </ToastProvider>
   );

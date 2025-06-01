@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '@/utils/apiClient';
 
 interface User {
+  organization_id: string;
   id: string;
   email: string;
   name?: string;

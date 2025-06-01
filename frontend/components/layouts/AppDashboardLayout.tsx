@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { 
   Home, TrendingUp, List, Settings, Menu, Bell, User, X, BarChart2,
-  FileText, Users, Link as LinkIcon, Compass, HardDrive
+  FileText, Users, Link as LinkIcon, Compass, HardDrive, Shield, Send
 } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
@@ -48,6 +48,7 @@ const NavItems = [
   { name: 'Company Dashboard', icon: Users, href: '/dashboard/company-home' },
   { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations' },
   { name: 'Submission', icon: BarChart2, href: '/dashboard/submission' },
+  { name: 'Secure Transmission', icon: Shield, href: '/firs-transmission' },
   { name: 'Organization', icon: Users, href: '/dashboard/organization' },
   { name: 'Metrics', icon: BarChart2, href: '/dashboard/metrics' },
   { name: 'ERP Connection', icon: LinkIcon, href: '/dashboard/erp-connection' },
