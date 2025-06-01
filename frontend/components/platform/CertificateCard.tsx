@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
+import { Download, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Card, CardContent } from '../ui/Card';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { Certificate } from '../../types/app';
 import apiService from '../../utils/apiService';
 import { cn } from '../../utils/cn';
@@ -7,12 +11,14 @@ import { cn } from '../../utils/cn';
 interface CertificateCardProps {
   certificate: Certificate;
   onRefresh: () => void;
+  onRevoke?: (certificate: Certificate) => void;
   className?: string;
 }
 
 const CertificateCard: React.FC<CertificateCardProps> = ({ 
   certificate, 
   onRefresh,
+  onRevoke,
   className = '' 
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
@@ -94,25 +100,15 @@ const CertificateCard: React.FC<CertificateCardProps> = ({
   };
   
   // Revoke certificate
-  const handleRevoke = async () => {
-    if (confirm('Are you sure you want to revoke this certificate? This action cannot be undone.')) {
-      try {
-        setIsRevoking(true);
-        await apiService.post(`/api/v1/certificates/${certificate.id}/revoke`, {
-          reason: 'User requested revocation'
-        });
-        onRefresh();
-      } catch (error) {
-        console.error('Failed to revoke certificate:', error);
-      } finally {
-        setIsRevoking(false);
-      }
+  const handleRevoke = () => {
+    if (onRevoke) {
+      onRevoke(certificate);
     }
   };
 
   return (
-    <div className={cn('border border-gray-200 rounded-md shadow-sm bg-white', className)}>
-      <div className="p-4">
+    <Card className={cn('border-l-4 border-cyan-500 overflow-hidden shadow-sm', className)}>
+      <CardContent className="p-4">
         {/* Status and Type Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center">
@@ -121,9 +117,9 @@ const CertificateCard: React.FC<CertificateCardProps> = ({
               {certificate.status.charAt(0).toUpperCase() + certificate.status.slice(1)}
             </span>
           </div>
-          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+          <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-200">
             {getCertificateTypeDisplay(certificate.certificate_type)}
-          </span>
+          </Badge>
         </div>
         
         {/* Certificate Subject */}
@@ -157,35 +153,57 @@ const CertificateCard: React.FC<CertificateCardProps> = ({
         </div>
         
         {/* Actions */}
-        <div className="mt-4 pt-3 border-t border-gray-100 flex">
-          <button
+        <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+          <Button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-sm text-gray-600 hover:text-blue-600 mr-3"
+            variant="ghost"
+            size="sm"
+            className="text-sm flex items-center text-gray-600 hover:text-cyan-600 mr-3 p-0 h-auto"
           >
-            {isExpanded ? 'Hide Details' : 'Show Details'}
-          </button>
-          <button
-            onClick={handleDownload}
-            disabled={isDownloading || certificate.status !== 'active'}
-            className="text-sm text-blue-600 hover:text-blue-800 mr-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDownloading ? 'Downloading...' : 'Download'}
-          </button>
-          {certificate.status === 'active' && (
-            <button
-              onClick={handleRevoke}
-              disabled={isRevoking}
-              className="text-sm text-red-600 hover:text-red-800 ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            {isExpanded ? (
+              <>
+                <ChevronUp className="h-4 w-4 mr-1" />
+                Hide Details
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4 mr-1" />
+                Show Details
+              </>
+            )}
+          </Button>
+          
+          <div className="flex">
+            <Button
+              onClick={handleDownload}
+              disabled={isDownloading || certificate.status !== 'active'}
+              variant="outline"
+              size="sm"
+              className="text-sm flex items-center text-cyan-600 hover:text-cyan-800 mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isRevoking ? 'Revoking...' : 'Revoke'}
-            </button>
-          )}
+              <Download className="h-4 w-4 mr-1" />
+              {isDownloading ? 'Downloading...' : 'Download'}
+            </Button>
+            
+            {certificate.status === 'active' && (
+              <Button
+                onClick={handleRevoke}
+                disabled={isRevoking}
+                variant="outline"
+                size="sm"
+                className="text-sm flex items-center text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                {isRevoking ? 'Revoking...' : 'Revoke'}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      </CardContent>
       
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="px-4 pb-4 border-t border-gray-100 pt-3 mt-2 text-sm">
+        <CardContent className="px-4 pb-4 border-t border-gray-100 pt-3 mt-0 text-sm bg-gray-50">
           <div className="space-y-2">
             <div>
               <p className="font-medium">Subject</p>
@@ -228,9 +246,9 @@ const CertificateCard: React.FC<CertificateCardProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </CardContent>
       )}
-    </div>
+    </Card>
   );
 };
 

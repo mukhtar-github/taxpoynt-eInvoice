@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import * as Tabs from '@radix-ui/react-tabs';
+import { Shield, Bell, History, Lock, CheckSquare, RefreshCw } from 'lucide-react';
+import { Badge } from '../ui/Badge';
 import { isFeatureEnabled } from '../../config/featureFlags';
 import apiService from '../../utils/apiService';
 import CertificateCard from 'components/platform/CertificateCard';
 import CertificateRequestTable from 'components/platform/CertificateRequestTable';
 import CertificateRequestWizard from 'components/platform/CertificateRequestWizard';
 import CSIDTable from 'components/platform/CSIDTable';
+import CertificateTimeline from 'components/platform/CertificateTimeline';
+import CertificateExpiryWarnings from 'components/platform/CertificateExpiryWarnings';
+import CertificateRevocationDialog from 'components/platform/CertificateRevocationDialog';
+import CertificateBackupRestore from 'components/platform/CertificateBackupRestore';
+import CertificateChainValidation from 'components/platform/CertificateChainValidation';
 import { Certificate, CertificateRequest, CSID } from '../../types/app';
 import { cn } from '../../utils/cn';
 
@@ -26,6 +33,9 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
+  const [isRevocationDialogOpen, setIsRevocationDialogOpen] = useState<boolean>(false);
+  const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('certificates');
   const router = useRouter();
   
   // Only render if APP certificate management features are enabled
@@ -90,6 +100,17 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
     router.reload();
   };
   
+  // Handle certificate revocation
+  const handleRevokeCertificate = (certificate: Certificate) => {
+    setSelectedCertificate(certificate);
+    setIsRevocationDialogOpen(true);
+  };
+  
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+  
   // Render loading state
   if (loading) {
     return (
@@ -117,21 +138,35 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
   }
   
   return (
-    <div className={cn('certificate-management-dashboard p-4', className)}>
+    <div className={cn('certificate-management-dashboard p-4 border-l-4 border-cyan-500', className)}>
       {/* Dashboard Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-xl font-semibold">Certificate Management</h2>
+          <h2 className="text-xl font-semibold flex items-center">
+            <Shield className="h-5 w-5 mr-2 text-cyan-500" />
+            Certificate Management
+            <Badge className="ml-2 bg-cyan-100 text-cyan-800 hover:bg-cyan-200">Platform</Badge>
+          </h2>
           <p className="mt-1 text-sm text-gray-600">
             Manage your organization's certificates and signing identifiers
           </p>
         </div>
-        <button
-          className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
-          onClick={handleNewRequest}
-        >
-          Request New Certificate
-        </button>
+        <div className="flex space-x-2">
+          <button
+            className="flex items-center bg-gray-100 text-gray-700 py-2 px-3 rounded hover:bg-gray-200"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh
+          </button>
+          <button
+            className="flex items-center bg-cyan-600 text-white py-2 px-4 rounded hover:bg-cyan-700"
+            onClick={handleNewRequest}
+          >
+            <Lock className="h-4 w-4 mr-1" />
+            Request New Certificate
+          </button>
+        </div>
       </div>
       
       {/* Status Overview */}
@@ -155,30 +190,58 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
       </div>
       
       {/* Tabs for Different Sections */}
-      <Tabs.Root defaultValue="certificates" className="w-full">
-        <Tabs.List className="flex border-b border-gray-200 mb-4">
+      <Tabs.Root defaultValue="certificates" className="w-full" onValueChange={handleTabChange}>
+        <Tabs.List className="flex border-b border-gray-200 mb-4 overflow-x-auto">
           <Tabs.Trigger 
             value="certificates"
-            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 whitespace-nowrap"
           >
             Certificates
           </Tabs.Trigger>
           <Tabs.Trigger 
             value="requests"
-            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 flex items-center"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 flex items-center whitespace-nowrap"
           >
             Requests
             {requests.length > 0 && (
-              <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+              <span className="ml-2 bg-cyan-100 text-cyan-800 text-xs font-medium px-2.5 py-0.5 rounded">
                 {requests.length}
               </span>
             )}
           </Tabs.Trigger>
           <Tabs.Trigger 
             value="csids"
-            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 whitespace-nowrap"
           >
             CSIDs
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="timeline"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 flex items-center whitespace-nowrap"
+          >
+            <History className="h-4 w-4 mr-1" />
+            Timeline
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="expiry-warnings"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 flex items-center whitespace-nowrap"
+          >
+            <Bell className="h-4 w-4 mr-1" />
+            Expiry Warnings
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="backup-restore"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 flex items-center whitespace-nowrap"
+          >
+            <Lock className="h-4 w-4 mr-1" />
+            Backup & Restore
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="validation"
+            className="px-4 py-2 border-b-2 border-transparent data-[state=active]:border-cyan-600 data-[state=active]:text-cyan-600 flex items-center whitespace-nowrap"
+          >
+            <CheckSquare className="h-4 w-4 mr-1" />
+            Chain Validation
           </Tabs.Trigger>
         </Tabs.List>
         
@@ -200,6 +263,7 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
                   key={certificate.id} 
                   certificate={certificate} 
                   onRefresh={handleRefresh}
+                  onRevoke={() => handleRevokeCertificate(certificate)}
                 />
               ))}
             </div>
@@ -220,6 +284,70 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
             onRefresh={handleRefresh}
           />
         </Tabs.Content>
+        
+        {/* Certificate Timeline Tab */}
+        <Tabs.Content value="timeline">
+          <CertificateTimeline 
+            certificate={certificates[0]}
+            events={certificates.map(cert => {
+              // Map CertificateStatus to valid CertificateEvent.eventType values
+              let eventType: 'created' | 'activated' | 'renewed' | 'revoked' | 'expired' | 'backed_up' | 'restored' | 'validated';
+              
+              switch(cert.status) {
+                case 'active':
+                  eventType = 'activated';
+                  break;
+                case 'pending':
+                  eventType = 'created';
+                  break;
+                case 'expired':
+                  eventType = 'expired';
+                  break;
+                case 'revoked':
+                  eventType = 'revoked';
+                  break;
+                default:
+                  eventType = 'created'; // Fallback value
+              }
+              
+              return {
+                id: cert.id,
+                certificateId: cert.id,
+                eventType: eventType,
+                timestamp: new Date(cert.valid_from).toISOString(), // Convert to string as expected by CertificateEvent
+              };
+            })}
+            className="mt-4"
+          />
+        </Tabs.Content>
+        
+        {/* Certificate Expiry Warnings Tab */}
+        <Tabs.Content value="expiry-warnings">
+          <CertificateExpiryWarnings 
+            certificates={certificates}
+            organizationId={organizationId}
+            className="mt-4"
+          />
+        </Tabs.Content>
+        
+        {/* Certificate Backup & Restore Tab */}
+        <Tabs.Content value="backup-restore">
+          <CertificateBackupRestore 
+            certificates={certificates}
+            organizationId={organizationId}
+            onBackupComplete={handleRefresh}
+            onRestoreComplete={handleRefresh}
+            className="mt-4"
+          />
+        </Tabs.Content>
+        
+        {/* Certificate Chain Validation Tab */}
+        <Tabs.Content value="validation">
+          <CertificateChainValidation 
+            organizationId={organizationId}
+            className="mt-4"
+          />
+        </Tabs.Content>
       </Tabs.Root>
       
       {/* Certificate Request Wizard */}
@@ -229,6 +357,16 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
           onClose={() => setIsWizardOpen(false)} 
           organizationId={organizationId}
           onRequestComplete={handleRefresh}
+        />
+      )}
+      
+      {/* Certificate Revocation Dialog */}
+      {isRevocationDialogOpen && selectedCertificate && (
+        <CertificateRevocationDialog
+          isOpen={isRevocationDialogOpen}
+          onClose={() => setIsRevocationDialogOpen(false)}
+          certificate={selectedCertificate}
+          onRevoked={handleRefresh}
         />
       )}
     </div>
