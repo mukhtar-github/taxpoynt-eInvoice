@@ -55,6 +55,8 @@ class TransmissionRecord(Base):
     certificate = relationship("Certificate")
     submission = relationship("Submission", back_populates="transmissions")
     created_by_user = relationship("User", foreign_keys=[created_by])
+    status_logs = relationship("TransmissionStatusLog", back_populates="transmission", cascade="all, delete-orphan")
+    errors = relationship("TransmissionError", back_populates="transmission", cascade="all, delete-orphan")
     
     def get_metadata(self) -> dict:
         """Get transmission metadata as a dictionary"""

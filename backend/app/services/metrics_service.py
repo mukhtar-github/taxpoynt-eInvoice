@@ -16,6 +16,10 @@ from app.models.validation import ValidationRecord
 from app.models.integration import Integration, IntegrationType
 from app.models.organization import Organization
 from app.models.api_keys import APIKey, APIKeyUsage
+from app.models.transmission import TransmissionRecord, TransmissionStatus
+from app.models.transmission_error import TransmissionError, ErrorCategory, ErrorSeverity
+from app.models.transmission_metrics import TransmissionDailyMetrics, TransmissionMetricsSnapshot
+from app.models.transmission_status_log import TransmissionStatusLog
 
 logger = logging.getLogger(__name__)
 
@@ -604,6 +608,462 @@ class MetricsService:
         }
     
     @staticmethod
+    def get_transmission_metrics(
+        db: Session, 
+        time_range: str = "24h",
+        organization_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get metrics about secure transmissions.
+        
+        Args:
+            db: Database session
+            time_range: Time range to consider ("24h", "7d", "30d", "all")
+            organization_id: Optional filter by organization ID
+            
+        Returns:
+            Dictionary with transmission metrics
+        """
+        # Calculate time threshold based on time_range
+        now = datetime.utcnow()
+        if time_range == "24h":
+            time_threshold = now - timedelta(hours=24)
+        elif time_range == "7d":
+            time_threshold = now - timedelta(days=7)
+        elif time_range == "30d":
+            time_threshold = now - timedelta(days=30)
+        else:
+            time_threshold = datetime.min  # All time
+            
+        # Base query
+        query = db.query(TransmissionRecord)
+        
+        # Add time and organization filters
+        if time_range != "all":
+            query = query.filter(TransmissionRecord.created_at >= time_threshold)
+            
+        if organization_id:
+            query = query.filter(TransmissionRecord.organization_id == organization_id)
+        
+        # Get total count
+        total_count = query.count()
+        
+        # Get count by status
+        status_counts = {}
+        for status in TransmissionStatus:
+            status_counts[status.value] = query.filter(
+                TransmissionRecord.status == status
+            ).count()
+        
+        # Get transmission rate (per hour) over time
+        hourly_transmission = []
+        for hour_offset in range(24):
+            hour_start = now - timedelta(hours=hour_offset + 1)
+            hour_end = now - timedelta(hours=hour_offset)
+            
+            hour_query = query.filter(
+                TransmissionRecord.created_at >= hour_start,
+                TransmissionRecord.created_at < hour_end
+            )
+            
+            hourly_transmission.append({
+                "hour": hour_offset,
+                "timestamp": hour_end.isoformat(),
+                "count": hour_query.count()
+            })
+            
+        # Get daily transmissions for the past 30 days
+        daily_transmission = []
+        for day_offset in range(30):
+            day_start = (now - timedelta(days=day_offset + 1)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            day_end = (now - timedelta(days=day_offset)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            
+            day_query = query.filter(
+                TransmissionRecord.created_at >= day_start,
+                TransmissionRecord.created_at < day_end
+            )
+            
+            daily_transmission.append({
+                "day": day_offset,
+                "date": day_end.date().isoformat(),
+                "count": day_query.count()
+            })
+        
+        # Get success rate
+        success_count = query.filter(
+            TransmissionRecord.status == TransmissionStatus.COMPLETED
+        ).count()
+        
+        success_rate = (success_count / total_count * 100) if total_count > 0 else 0
+        
+        # Get performance metrics
+        perf_data = None
+        try:
+            # Get average processing times from metrics snapshots
+            metrics_query = db.query(
+                func.avg(TransmissionMetricsSnapshot.total_processing_time_ms),
+                func.avg(TransmissionMetricsSnapshot.encryption_time_ms),
+                func.avg(TransmissionMetricsSnapshot.network_time_ms),
+                func.avg(TransmissionMetricsSnapshot.payload_size_bytes)
+            )
+            
+            if time_range != "all":
+                metrics_query = metrics_query.filter(
+                    TransmissionMetricsSnapshot.snapshot_time >= time_threshold
+                )
+                
+            if organization_id:
+                metrics_query = metrics_query.filter(
+                    TransmissionMetricsSnapshot.organization_id == organization_id
+                )
+                
+            avg_total_time, avg_encryption_time, avg_network_time, avg_payload_size = metrics_query.first()
+            
+            perf_data = {
+                "avg_total_processing_time_ms": avg_total_time or 0,
+                "avg_encryption_time_ms": avg_encryption_time or 0,
+                "avg_network_time_ms": avg_network_time or 0,
+                "avg_payload_size_bytes": avg_payload_size or 0
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get performance metrics: {str(e)}")
+            perf_data = {
+                "avg_total_processing_time_ms": 0,
+                "avg_encryption_time_ms": 0,
+                "avg_network_time_ms": 0,
+                "avg_payload_size_bytes": 0
+            }
+        
+        # Get error rates
+        error_data = None
+        try:
+            # Count errors by category
+            error_query = db.query(
+                TransmissionError.error_category,
+                func.count(TransmissionError.id).label("count")
+            ).group_by(TransmissionError.error_category)
+            
+            # Add time and organization filters for errors
+            if time_range != "all":
+                error_query = error_query.filter(TransmissionError.error_time >= time_threshold)
+                
+            if organization_id:
+                error_query = error_query.join(TransmissionRecord).filter(
+                    TransmissionRecord.organization_id == organization_id
+                )
+                
+            error_counts = {}
+            for category, count in error_query.all():
+                error_counts[category] = count
+            
+            # Count total errors
+            total_errors = sum(error_counts.values())
+            
+            error_data = {
+                "total_errors": total_errors,
+                "error_rate": (total_errors / total_count * 100) if total_count > 0 else 0,
+                "error_counts_by_category": error_counts
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get error metrics: {str(e)}")
+            error_data = {
+                "total_errors": 0,
+                "error_rate": 0,
+                "error_counts_by_category": {}
+            }
+            
+        return {
+            "total_count": total_count,
+            "status_counts": status_counts,
+            "success_rate": success_rate,
+            "hourly_transmission": sorted(hourly_transmission, key=lambda x: x["hour"]),
+            "daily_transmission": sorted(daily_transmission, key=lambda x: x["day"]),
+            "performance": perf_data,
+            "errors": error_data,
+            "time_range": time_range
+        }
+    
+    @staticmethod
+    def record_transmission_metrics(
+        db: Session,
+        transmission_id: str,
+        total_processing_time_ms: Optional[float] = None,
+        encryption_time_ms: Optional[float] = None,
+        network_time_ms: Optional[float] = None,
+        payload_size_bytes: Optional[int] = None,
+        api_endpoint: Optional[str] = None,
+        certificate_type: Optional[str] = None,
+        payload_type: Optional[str] = None,
+        transmission_mode: Optional[str] = None,
+        metric_details: Optional[Dict[str, Any]] = None
+    ) -> Optional[TransmissionMetricsSnapshot]:
+        """
+        Record metrics for a specific transmission.
+        
+        Args:
+            db: Database session
+            transmission_id: UUID of the transmission
+            total_processing_time_ms: Total processing time in milliseconds
+            encryption_time_ms: Encryption time in milliseconds
+            network_time_ms: Network request time in milliseconds
+            payload_size_bytes: Size of the payload in bytes
+            api_endpoint: API endpoint used for transmission
+            certificate_type: Type of certificate used
+            payload_type: Type of payload
+            transmission_mode: Mode of transmission (sync, async)
+            metric_details: Additional metric details
+            
+        Returns:
+            Created TransmissionMetricsSnapshot or None if failed
+        """
+        try:
+            # Get transmission to extract organization_id
+            transmission = db.query(TransmissionRecord).filter(
+                TransmissionRecord.id == transmission_id
+            ).first()
+            
+            if not transmission:
+                raise ValueError(f"Transmission with ID {transmission_id} not found")
+                
+            # Create metrics snapshot
+            metrics = TransmissionMetricsSnapshot(
+                organization_id=transmission.organization_id,
+                transmission_id=transmission_id,
+                snapshot_time=datetime.now(),
+                encryption_time_ms=encryption_time_ms,
+                network_time_ms=network_time_ms,
+                total_processing_time_ms=total_processing_time_ms,
+                payload_size_bytes=payload_size_bytes,
+                retry_count=transmission.retry_count or 0,
+                api_endpoint=api_endpoint,
+                certificate_type=certificate_type,
+                payload_type=payload_type,
+                transmission_mode=transmission_mode,
+                metric_details=metric_details or {}
+            )
+            
+            db.add(metrics)
+            db.commit()
+            db.refresh(metrics)
+            
+            logger.debug(f"Recorded metrics for transmission {transmission_id}")
+            
+            return metrics
+            
+        except Exception as e:
+            db.rollback()
+            logger.warning(f"Failed to record transmission metrics: {str(e)}")
+            # Don't re-raise, just log the error
+            return None
+    
+    @staticmethod
+    def update_daily_metrics(db: Session, date: Optional[datetime] = None):
+        """
+        Update or create daily metrics for all organizations.
+        This should be called by a scheduled task.
+        
+        Args:
+            db: Database session
+            date: Optional date to update metrics for (defaults to today)
+        """
+        try:
+            # Default to today's date
+            if not date:
+                date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                
+            metric_date = date.date()
+            
+            # Get all organizations
+            organizations = db.query(Organization).all()
+            
+            for org in organizations:
+                # Check if metrics already exist for this date and organization
+                existing_metrics = db.query(TransmissionDailyMetrics).filter(
+                    TransmissionDailyMetrics.organization_id == org.id,
+                    TransmissionDailyMetrics.metric_date == metric_date
+                ).first()
+                
+                # Set date range for the day
+                day_start = date
+                day_end = date + timedelta(days=1)
+                
+                # Base query for this organization and date
+                base_query = db.query(TransmissionRecord).filter(
+                    TransmissionRecord.organization_id == org.id,
+                    TransmissionRecord.created_at >= day_start,
+                    TransmissionRecord.created_at < day_end
+                )
+                
+                # Count transmissions by status
+                total_transmissions = base_query.count()
+                successful_transmissions = base_query.filter(
+                    TransmissionRecord.status == TransmissionStatus.COMPLETED
+                ).count()
+                failed_transmissions = base_query.filter(
+                    TransmissionRecord.status == TransmissionStatus.FAILED
+                ).count()
+                pending_transmissions = base_query.filter(
+                    TransmissionRecord.status.in_([
+                        TransmissionStatus.PENDING,
+                        TransmissionStatus.IN_PROGRESS
+                    ])
+                ).count()
+                
+                # Calculate performance metrics
+                metrics_query = db.query(
+                    func.avg(TransmissionMetricsSnapshot.total_processing_time_ms),
+                    func.avg(TransmissionMetricsSnapshot.encryption_time_ms),
+                    func.avg(TransmissionMetricsSnapshot.network_time_ms),
+                    func.avg(TransmissionMetricsSnapshot.payload_size_bytes)
+                ).filter(
+                    TransmissionMetricsSnapshot.organization_id == org.id,
+                    TransmissionMetricsSnapshot.snapshot_time >= day_start,
+                    TransmissionMetricsSnapshot.snapshot_time < day_end
+                )
+                
+                avg_processing_time, avg_encryption_time, avg_network_time, avg_payload_size = metrics_query.first()
+                
+                # Calculate success metrics
+                first_attempt_success = db.query(TransmissionRecord).filter(
+                    TransmissionRecord.organization_id == org.id,
+                    TransmissionRecord.created_at >= day_start,
+                    TransmissionRecord.created_at < day_end,
+                    TransmissionRecord.status == TransmissionStatus.COMPLETED,
+                    TransmissionRecord.retry_count == 0
+                ).count()
+                
+                first_attempt_success_rate = (
+                    first_attempt_success / total_transmissions * 100
+                ) if total_transmissions > 0 else 0
+                
+                # Calculate average attempts for successful transmissions
+                avg_attempts_query = db.query(
+                    func.avg(TransmissionRecord.retry_count + 1)
+                ).filter(
+                    TransmissionRecord.organization_id == org.id,
+                    TransmissionRecord.created_at >= day_start,
+                    TransmissionRecord.created_at < day_end,
+                    TransmissionRecord.status == TransmissionStatus.COMPLETED
+                )
+                
+                avg_attempts = avg_attempts_query.scalar() or 1.0
+                
+                # Find peak hour
+                peak_hour_data = {
+                    "hour": 0,
+                    "count": 0
+                }
+                
+                for hour in range(24):
+                    hour_start = day_start + timedelta(hours=hour)
+                    hour_end = day_start + timedelta(hours=hour + 1)
+                    
+                    hour_count = db.query(TransmissionRecord).filter(
+                        TransmissionRecord.organization_id == org.id,
+                        TransmissionRecord.created_at >= hour_start,
+                        TransmissionRecord.created_at < hour_end
+                    ).count()
+                    
+                    if hour_count > peak_hour_data["count"]:
+                        peak_hour_data = {
+                            "hour": hour,
+                            "count": hour_count
+                        }
+                
+                # Create or update metrics
+                if existing_metrics:
+                    # Update existing record
+                    existing_metrics.total_transmissions = total_transmissions
+                    existing_metrics.successful_transmissions = successful_transmissions
+                    existing_metrics.failed_transmissions = failed_transmissions
+                    existing_metrics.pending_transmissions = pending_transmissions
+                    existing_metrics.avg_processing_time_ms = avg_processing_time or 0.0
+                    existing_metrics.avg_encryption_time_ms = avg_encryption_time or 0.0
+                    existing_metrics.avg_network_time_ms = avg_network_time or 0.0
+                    existing_metrics.avg_payload_size_bytes = avg_payload_size or 0
+                    existing_metrics.first_attempt_success_rate = first_attempt_success_rate
+                    existing_metrics.avg_attempts_to_success = avg_attempts
+                    existing_metrics.peak_hour = peak_hour_data["hour"]
+                    existing_metrics.peak_hour_transmissions = peak_hour_data["count"]
+                    
+                    db.add(existing_metrics)
+                else:
+                    # Create new record
+                    new_metrics = TransmissionDailyMetrics(
+                        organization_id=org.id,
+                        metric_date=metric_date,
+                        total_transmissions=total_transmissions,
+                        successful_transmissions=successful_transmissions,
+                        failed_transmissions=failed_transmissions,
+                        pending_transmissions=pending_transmissions,
+                        avg_processing_time_ms=avg_processing_time or 0.0,
+                        avg_encryption_time_ms=avg_encryption_time or 0.0,
+                        avg_network_time_ms=avg_network_time or 0.0,
+                        avg_payload_size_bytes=avg_payload_size or 0,
+                        first_attempt_success_rate=first_attempt_success_rate,
+                        avg_attempts_to_success=avg_attempts,
+                        peak_hour=peak_hour_data["hour"],
+                        peak_hour_transmissions=peak_hour_data["count"]
+                    )
+                    
+                    db.add(new_metrics)
+            
+            db.commit()
+            logger.info(f"Updated daily transmission metrics for {len(organizations)} organizations on {metric_date}")
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to update daily transmission metrics: {str(e)}")
+            # Don't re-raise, just log the error
+    
+    @staticmethod
+    def get_transmission_metrics_summary(
+        db: Session, 
+        time_range: str = "24h",
+        organization_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get a summary of transmission metrics for dashboard display.
+        
+        Args:
+            db: Database session
+            time_range: Time range to consider
+            organization_id: Optional filter by organization ID
+            
+        Returns:
+            Dictionary with transmission summary metrics
+        """
+        try:
+            metrics = MetricsService.get_transmission_metrics(db, time_range, organization_id)
+            
+            # Extract key metrics for the summary
+            return {
+                "total_transmissions": metrics["total_count"],
+                "success_rate": metrics["success_rate"],
+                "completed": metrics["status_counts"].get(TransmissionStatus.COMPLETED.value, 0),
+                "failed": metrics["status_counts"].get(TransmissionStatus.FAILED.value, 0),
+                "pending": metrics["status_counts"].get(TransmissionStatus.PENDING.value, 0) + 
+                           metrics["status_counts"].get(TransmissionStatus.IN_PROGRESS.value, 0),
+                "avg_processing_time": metrics["performance"]["avg_total_processing_time_ms"],
+                "error_rate": metrics["errors"]["error_rate"]
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get transmission metrics summary: {str(e)}")
+            return {
+                "total_transmissions": 0,
+                "success_rate": 0,
+                "completed": 0,
+                "failed": 0,
+                "pending": 0,
+                "avg_processing_time": 0,
+                "error_rate": 0
+            }
+    
+    @staticmethod
     def get_dashboard_summary(
         db: Session,
         organization_id: Optional[str] = None
@@ -670,5 +1130,6 @@ class MetricsService:
                 "total_requests": system_metrics["total_requests"],
                 "error_rate": system_metrics["error_rate"],
                 "avg_response_time": system_metrics["avg_response_time"]
-            }
+            },
+            "transmission_summary": MetricsService.get_transmission_metrics_summary(db, "24h", organization_id)
         }

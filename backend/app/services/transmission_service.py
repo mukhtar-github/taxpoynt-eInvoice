@@ -852,95 +852,352 @@ class TransmissionService:
             
         return results
         
-    def process_transmission_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
+    def process_transmission_webhook(self, webhook_data: Dict[str, Any], 
+                              webhook_signature: Optional[str] = None,
+                              webhook_headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         Process webhook notifications for transmission status updates.
         
         Args:
             webhook_data: Dictionary with webhook payload
+            webhook_signature: Optional signature for verification
+            webhook_headers: Optional headers from the webhook request
             
         Returns:
             Dictionary with processing results
         """
-        # Extract required fields
-        transmission_id = webhook_data.get('transmission_id')
-        if not transmission_id:
-            raise ValueError("Missing transmission_id in webhook data")
-            
+        processing_start = datetime.now()
+        
+        # Extract client info for audit logging
+        client_ip = webhook_headers.get("X-Forwarded-For", "unknown") if webhook_headers else "unknown"
+        user_agent = webhook_headers.get("User-Agent", "unknown") if webhook_headers else "unknown"
+        
         try:
-            # Convert transmission_id to UUID
-            transmission_uuid = UUID(transmission_id)
-        except ValueError:
-            raise ValueError(f"Invalid transmission_id format: {transmission_id}")
+            logger.info(f"Processing webhook: {webhook_data}")
             
-        # Get transmission record
-        transmission = self.get_transmission(transmission_uuid)
-        if not transmission:
-            raise ValueError(f"Transmission with ID {transmission_id} not found")
+            # 1. Verify webhook signature if provided
+            if webhook_signature and webhook_headers:
+                from app.services.webhook_verification_service import WebhookVerificationService
+                webhook_verifier = WebhookVerificationService(self.db)
+                
+                if not webhook_verifier.verify_webhook_signature(
+                    payload=json.dumps(webhook_data),
+                    signature=webhook_signature,
+                    headers=webhook_headers
+                ):
+                    logger.warning(f"Invalid webhook signature for data: {webhook_data}")
+                    
+                    # Create audit log for failed signature verification
+                    try:
+                        from app.services.audit_service import AuditService
+                        from app.models.transmission_audit_log import AuditActionType
+                        
+                        audit_service = AuditService(self.db)
+                        audit_service.log_transmission_action(
+                            action_type=AuditActionType.WEBHOOK,
+                            transmission_id=webhook_data.get('transmission_id'),
+                            action_status="failure",
+                            ip_address=client_ip,
+                            user_agent=user_agent,
+                            error_message="Invalid webhook signature",
+                            context_data=webhook_data
+                        )
+                    except ImportError:
+                        # Continue if audit service not available
+                        pass
+                    
+                    return {
+                        'status': 'error',
+                        'error': 'Invalid webhook signature',
+                        'timestamp': datetime.now().isoformat()
+                    }
             
-        # Extract status update
-        new_status = webhook_data.get('status')
-        if not new_status:
-            raise ValueError("Missing status in webhook data")
+            # 2. Extract required fields
+            transmission_id = webhook_data.get('transmission_id')
+            if not transmission_id:
+                logger.error("Missing transmission_id in webhook data")
+                
+                # Log the missing transmission_id error
+                try:
+                    from app.services.audit_service import AuditService
+                    from app.models.transmission_audit_log import AuditActionType
+                    
+                    audit_service = AuditService(self.db)
+                    audit_service.log_transmission_action(
+                        action_type=AuditActionType.WEBHOOK,
+                        action_status="failure",
+                        ip_address=client_ip,
+                        user_agent=user_agent,
+                        error_message="Missing transmission_id in webhook data",
+                        context_data=webhook_data
+                    )
+                except ImportError:
+                    # Continue if audit service not available
+                    pass
+                
+                return {
+                    'status': 'error',
+                    'error': 'Missing transmission_id in webhook data',
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+            # Extract status from webhook data
+            new_status = webhook_data.get('status')
+            if not new_status:
+                logger.error("Missing status in webhook data")
+                
+                # Log the missing status error
+                try:
+                    from app.services.audit_service import AuditService
+                    from app.models.transmission_audit_log import AuditActionType
+                    
+                    audit_service = AuditService(self.db)
+                    audit_service.log_transmission_action(
+                        action_type=AuditActionType.WEBHOOK,
+                        transmission_id=transmission_id,
+                        action_status="failure",
+                        ip_address=client_ip,
+                        user_agent=user_agent,
+                        error_message="Missing status in webhook data",
+                        context_data=webhook_data
+                    )
+                except ImportError:
+                    # Continue if audit service not available
+                    pass
+                
+                return {
+                    'status': 'error',
+                    'error': 'Missing status in webhook data',
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+            # 3. Map webhook status to internal status if needed
+            status_mapping = {
+                "completed": TransmissionStatus.COMPLETED,
+                "failed": TransmissionStatus.FAILED,
+                "processing": TransmissionStatus.IN_PROGRESS,
+                "pending": TransmissionStatus.PENDING,
+                "rejected": TransmissionStatus.FAILED
+            }
+                
+            internal_status = status_mapping.get(new_status.lower(), None)
+            if not internal_status:
+                logger.warning(f"Unknown status in webhook: {new_status}")
+                # Default to the raw status if we can't map it
+                internal_status = new_status
+                
+            # 4. Find and update the transmission record
+            transmission = self.db.query(TransmissionRecord).filter(
+                TransmissionRecord.id == transmission_id
+            ).first()
+                
+            if not transmission:
+                # Audit log for missing transmission
+                try:
+                    from app.services.audit_service import AuditService
+                    from app.models.transmission_audit_log import AuditActionType
+                        
+                    audit_service = AuditService(self.db)
+                    audit_service.log_transmission_action(
+                        action_type=AuditActionType.WEBHOOK,
+                        transmission_id=transmission_id,
+                        action_status="failure",
+                        ip_address=client_ip,
+                        user_agent=user_agent,
+                        error_message=f"Transmission with ID {transmission_id} not found",
+                        context_data=webhook_data
+                    )
+                except ImportError:
+                    # Just continue if audit service not available
+                    pass
+                        
+                return {
+                    'status': 'error',
+                    'error': f"Transmission with ID {transmission_id} not found",
+                    'timestamp': datetime.now().isoformat()
+                }
             
-        # Map webhook status to system status
-        status_mapping = {
-            'received': TransmissionStatus.IN_PROGRESS,
-            'processing': TransmissionStatus.IN_PROGRESS,
-            'accepted': TransmissionStatus.COMPLETED,
-            'rejected': TransmissionStatus.FAILED,
-            'error': TransmissionStatus.FAILED
-        }
-        
-        system_status = status_mapping.get(new_status.lower())
-        if not system_status:
-            raise ValueError(f"Unknown status in webhook data: {new_status}")
+            # 5. Create audit log entry for webhook receipt
+            try:
+                from app.services.audit_service import AuditService
+                from app.models.transmission_audit_log import AuditActionType
+                    
+                audit_service = AuditService(self.db)
+                audit_service.log_transmission_action(
+                    action_type=AuditActionType.WEBHOOK,
+                    transmission_id=transmission_id,
+                    organization_id=transmission.organization_id,
+                    action_status="received",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    context_data={
+                        "webhook_status": new_status,
+                        "mapped_status": internal_status.value if isinstance(internal_status, TransmissionStatus) else internal_status,
+                        "webhook_data": webhook_data
+                    }
+                )
+            except ImportError:
+                # Just continue if audit service not available
+                pass
+                
+            # 6. Update transmission metadata with webhook info
+            metadata = transmission.transmission_metadata or {}
+            webhook_history = metadata.get("webhook_history", [])
+                
+            webhook_entry = {
+                "received_at": datetime.now().isoformat(),
+                "status": new_status,
+                "mapped_status": internal_status.value if isinstance(internal_status, TransmissionStatus) else internal_status,
+                "data": webhook_data
+            }
+                
+            if webhook_headers:
+                webhook_entry["headers"] = webhook_headers
+                    
+            webhook_history.append(webhook_entry)
+            metadata["webhook_history"] = webhook_history
+            metadata["last_webhook"] = webhook_entry
+                
+            # Only update status if it's a valid transition
+            previous_status = transmission.status
+            if internal_status != previous_status:
+                transmission.status = internal_status
+                    
+                # Create status log entry
+                status_log = TransmissionStatusLog(
+                    transmission_id=transmission_id,
+                    previous_status=previous_status,
+                    current_status=internal_status,
+                    change_reason="Webhook notification",
+                    change_source="webhook",
+                    change_timestamp=datetime.now(),
+                    processing_time_ms=(datetime.now() - processing_start).total_seconds() * 1000,
+                    change_detail=webhook_data
+                )
+                    
+                self.db.add(status_log)
             
-        # Prepare update data
-        update_data = {
-            'status': system_status,
-            'response_data': webhook_data.get('response_data', {})
-        }
-        
-        # Update transmission metadata
-        metadata = transmission.transmission_metadata or {}
-        webhook_history = metadata.get('webhook_history', [])
-        webhook_history.append({
-            'timestamp': datetime.now().isoformat(),
-            'webhook_data': webhook_data
-        })
-        
-        metadata['webhook_history'] = webhook_history
-        metadata['last_webhook_update'] = datetime.now().isoformat()
-        
-        if system_status == TransmissionStatus.COMPLETED:
-            metadata['completion_time'] = datetime.now().isoformat()
-            metadata['completion_details'] = webhook_data.get('details', 'Completed via webhook')
-        elif system_status == TransmissionStatus.FAILED:
-            metadata['error_details'] = webhook_data.get('error', {})
+            # Handle additional webhook data
+            if "receipt_data" in webhook_data:
+                metadata["receipt_data"] = webhook_data["receipt_data"]
+                    
+            if "error_details" in webhook_data:
+                metadata["error_details"] = webhook_data["error_details"]
+                    
+                # Record error details if present
+                try:
+                    from app.services.error_reporting_service import ErrorReportingService, ErrorCategory
+                        
+                    error_service = ErrorReportingService(self.db)
+                    error_message = webhook_data["error_details"].get("message", "Unknown error from webhook")
+                    error_code = webhook_data["error_details"].get("code")
+                    error_category = webhook_data["error_details"].get("category", ErrorCategory.OTHER)
+                        
+                    error_service.record_error(
+                        transmission_id=transmission_id,
+                        error_message=error_message,
+                        error_code=error_code,
+                        error_category=error_category,
+                        operation_phase="webhook-received",
+                        error_details=webhook_data["error_details"],
+                        update_transmission_status=(internal_status == TransmissionStatus.FAILED)
+                    )
+                except ImportError:
+                    # Just continue if error service not available
+                    pass
+                    
+            transmission.transmission_metadata = metadata
+                
+            # 7. Calculate processing time and record metrics
+            processing_time_ms = (datetime.now() - processing_start).total_seconds() * 1000
+            logger.info(f"Webhook processing completed in {processing_time_ms}ms")
+                
+            # Record performance metrics
+            try:
+                from app.services.metrics_service import MetricsService
+                    
+                MetricsService.record_transmission_metrics(
+                    db=self.db,
+                    transmission_id=str(transmission_id),
+                    total_processing_time_ms=processing_time_ms,
+                    api_endpoint="webhook-receiver",
+                    transmission_mode="async",
+                    metric_details={
+                        "webhook_source": webhook_headers.get("X-Webhook-Source") if webhook_headers else "unknown",
+                        "status": new_status,
+                        "mapped_status": internal_status.value if isinstance(internal_status, TransmissionStatus) else internal_status
+                    }
+                )
+            except ImportError:
+                # Just continue if metrics service not available
+                pass
+                
+            # 8. Update audit log with processing success
+            try:
+                from app.services.audit_service import AuditService
+                from app.models.transmission_audit_log import AuditActionType
+                    
+                audit_service = AuditService(self.db)
+                audit_service.log_transmission_action(
+                    action_type=AuditActionType.WEBHOOK,
+                    transmission_id=transmission_id,
+                    organization_id=transmission.organization_id,
+                    action_status="success",
+                    context_data={
+                        "processing_time_ms": processing_time_ms,
+                        "status_changed": internal_status != previous_status,
+                        "previous_status": previous_status.value if isinstance(previous_status, TransmissionStatus) else previous_status,
+                        "new_status": internal_status.value if isinstance(internal_status, TransmissionStatus) else internal_status
+                    }
+                )
+            except ImportError:
+                # Just continue if audit service not available
+                pass
+                
+            # 9. Commit the transaction
+            self.db.commit()
             
-        update_data['transmission_metadata'] = metadata
-        
-        # Update the transmission record
-        try:
-            self.update_transmission(transmission_uuid, update_data)
-            
-            # Return success response
+            # 10. Return success response
             return {
                 'status': 'success',
-                'transmission_id': str(transmission_uuid),
-                'updated_status': system_status,
+                'transmission_id': str(transmission_id),
+                'previous_status': previous_status.value if isinstance(previous_status, TransmissionStatus) else previous_status,
+                'updated_status': internal_status.value if isinstance(internal_status, TransmissionStatus) else internal_status,
+                'processing_time_ms': processing_time_ms,
                 'timestamp': datetime.now().isoformat()
             }
             
         except Exception as e:
-            # Log the error
-            logger.error(f"Error updating transmission from webhook: {str(e)}")
+            # Rollback transaction on error
+            self.db.rollback()
             
+            # Log the error
+            logger.error(f"Error processing webhook: {str(e)}")
+            
+            # Record error in audit log
+            try:
+                from app.services.audit_service import AuditService
+                from app.models.transmission_audit_log import AuditActionType
+                
+                transmission_id = webhook_data.get("transmission_id") if webhook_data else None
+                
+                audit_service = AuditService(self.db)
+                audit_service.log_transmission_action(
+                    action_type=AuditActionType.WEBHOOK,
+                    transmission_id=transmission_id,
+                    action_status="failure",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    error_message=str(e),
+                    context_data=webhook_data
+                )
+            except ImportError:
+                # Continue if audit service not available
+                pass
+                
             # Return error response
             return {
                 'status': 'error',
-                'transmission_id': str(transmission_uuid),
                 'error': str(e),
                 'timestamp': datetime.now().isoformat()
             }
