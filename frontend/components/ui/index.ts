@@ -1,6 +1,9 @@
 // Export UI components for use throughout the application
 
 // Import and re-export each component with its correct exports
+// Accordion component
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './Accordion';
+
 // Toast/Alert components
 import { ToastComponent, ToastContainer, ToastProvider, useToast } from './Toast';
 // Export Alert as an alias for ToastComponent for backward compatibility
@@ -64,6 +67,12 @@ import { TransactionTable } from './TransactionTable';
 
 // Re-export everything
 export {
+  // Accordion components
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+
   // Toast/Alert components
   ToastComponent,
   ToastContainer,
