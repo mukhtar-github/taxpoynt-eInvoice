@@ -7,10 +7,18 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
   description?: string;
   error?: boolean;
   errorMessage?: string;
+  /**
+   * Callback fired when the checkbox state changes
+   */
+  onCheckedChange?: (checked: boolean) => void;
+  /**
+   * Current checked state of the checkbox
+   */
+  checked?: boolean;
 }
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ className, label, description, error, errorMessage, disabled, ...props }, ref) => {
+  ({ className, label, description, error, errorMessage, disabled, checked, onCheckedChange, onChange, ...props }, ref) => {
     return (
       <div className="flex items-start space-x-2">
         <div className="relative flex items-center">
@@ -23,6 +31,11 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             )}
             ref={ref}
             disabled={disabled}
+            checked={checked}
+            onChange={(e) => {
+              onChange?.(e);
+              onCheckedChange?.(e.target.checked);
+            }}
             {...props}
           />
           <Check 

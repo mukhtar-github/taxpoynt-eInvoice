@@ -104,20 +104,7 @@ export interface TransmissionBatchUpdateResponse {
   errors: string[];
 }
 
-// For API requests, use backend endpoints
-const getApiBaseUrl = () => {
-  // Check if we're in development mode
-  const isDevelopment = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  
-  // In development, use relative paths
-  if (isDevelopment) {
-    return '';
-  }
-  
-  // Default - use environment variable or empty string (relative URL)
-  return process.env.NEXT_PUBLIC_API_URL || '';
-};
+// For API requests, use backend endpoints - moved to service object
 
 // Generic API response type
 interface ApiResponse<T> {
@@ -225,7 +212,107 @@ const apiRequest = async <T>(
 /**
  * Transmission API Service
  */
+// API interfaces for enhanced transmission API
+export interface BatchProcessingOptions {
+  organization_id?: string;
+  status_filter?: string[];
+  max_transmissions?: number;
+  batch_size?: number;
+  max_concurrent_batches?: number;
+  retry_strategy?: string;
+  prioritize_failed?: boolean;
+}
+
+export interface BatchProcessingResponse {
+  task_id: string;
+  status: string;
+  message: string;
+  config: {
+    batch_size: number;
+    max_concurrent_batches: number;
+    retry_strategy: string;
+    status_filter: string[];
+    max_transmissions: number;
+  };
+}
+
+export interface BatchMetrics {
+  total_transmissions: number;
+  successful_transmissions: number;
+  failed_transmissions: number;
+  average_processing_time_ms: number;
+  circuit_breaks: number;
+  active_jobs: number;
+  batch_sizes: number[];
+  retry_counts: Record<string, number>;
+  success_rates: Record<string, number>;
+}
+
+export interface AnalyticsOptions {
+  start_date?: Date;
+  end_date?: Date;
+  organization_id?: string;
+  interval?: 'hour' | 'day' | 'week' | 'month';
+  metrics?: string[];
+}
+
+export interface TransmissionAnalyticsData {
+  analytics: {
+    volume?: any;
+    success_rate?: any;
+    performance?: any;
+    retries?: any;
+    errors?: any;
+  };
+  metadata: {
+    start_date: string;
+    end_date: string;
+    interval: string;
+    organization_id?: string;
+  };
+}
+
+export interface TransmissionHealthData {
+  status: 'healthy' | 'degraded' | 'critical';
+  indicators: {
+    error_rate: number;
+    circuit_breaks: number;
+    active_batches: number;
+    average_processing_time_ms: number;
+  };
+  queues: {
+    pending: number;
+    in_progress: number;
+    failed: number;
+    retrying: number;
+  };
+  last_updated: string;
+}
+
+export interface RetryStrategyOptions {
+  strategy: string;
+  max_retries?: number;
+  base_delay_ms?: number;
+  force?: boolean;
+}
+
 const transmissionApiService = {
+  /**
+   * Get the API base URL based on environment
+   */
+  getApiBaseUrl: () => {
+    // Check if we're in development mode
+    const isDevelopment = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    // In development, use relative paths
+    if (isDevelopment) {
+      return '';
+    }
+    
+    // Default - use environment variable or empty string (relative URL)
+    return process.env.NEXT_PUBLIC_API_URL || '';
+  },
   /**
    * Get transmission statistics
    */
@@ -443,6 +530,7 @@ const transmissionApiService = {
     retryStrategy?: Record<string, any>,
     options?: ApiRequestOptions
   ): Promise<ApiResponse<TransmissionDetail>> => {
+    const url = `${transmissionApiService.getApiBaseUrl()}/transmission`;
     const data = {
       organization_id: organizationId,
       certificate_id: certificateId,
@@ -451,14 +539,142 @@ const transmissionApiService = {
       encrypt_payload: encryptPayload,
       retry_strategy: retryStrategy
     };
+
+    return apiRequest<TransmissionDetail>(
+      'post',
+      url,
+      data,
+      options
+    );
+  },
+
+  /**
+   * Start batch processing of transmissions
+   */
+  batchProcessTransmissions: (
+    batchOptions: BatchProcessingOptions,
+    options?: ApiRequestOptions
+  ): Promise<ApiResponse<BatchProcessingResponse>> => {
+    const url = `${transmissionApiService.getApiBaseUrl()}/platform/transmission/batch-process`;
+    
+    return apiRequest<BatchProcessingResponse>(
+      'post',
+      url,
+      batchOptions,
+      options
+    );
+  },
+
+  /**
+   * Get batch processing metrics
+   */
+  getBatchMetrics: (
+    options?: ApiRequestOptions
+  ): Promise<ApiResponse<BatchMetrics>> => {
+    const url = `${transmissionApiService.getApiBaseUrl()}/platform/transmission/batch-metrics`;
+    
+    return apiRequest<BatchMetrics>(
+      'get',
+      url,
+      undefined,
+      options
+    );
+  },
+
+  /**
+   * Apply advanced retry strategy to a transmission
+   */
+  applyRetryStrategy: (
+    transmissionId: string,
+    retryOptions: RetryStrategyOptions,
+    options?: ApiRequestOptions
+  ): Promise<ApiResponse<TransmissionDetail>> => {
+    const url = `${transmissionApiService.getApiBaseUrl()}/platform/transmission/retry-strategies/${transmissionId}`;
+    
+    const params = {
+      strategy: retryOptions.strategy,
+      max_retries: retryOptions.max_retries,
+      base_delay_ms: retryOptions.base_delay_ms,
+      force: retryOptions.force
+    };
+    
+    const reqOptions = {
+      ...options,
+      params
+    };
     
     return apiRequest<TransmissionDetail>(
       'post',
-      '/transmissions',
-      data,
+      url,
+      undefined,
+      reqOptions
+    );
+  },
+
+  /**
+   * Get transmission analytics data
+   */
+  getTransmissionAnalytics: (
+    startDate?: Date,
+    endDate?: Date,
+    organizationId?: string,
+    interval: 'hour' | 'day' | 'week' | 'month' = 'day',
+    metrics: string[] = ['volume', 'success_rate', 'performance'],
+    options?: ApiRequestOptions
+  ): Promise<ApiResponse<TransmissionAnalyticsData>> => {
+    const url = `${transmissionApiService.getApiBaseUrl()}/platform/transmission/analytics`;
+    
+    const params: Record<string, any> = {
+      interval,
+      metrics: metrics.join(',')
+    };
+    
+    if (startDate) {
+      params.start_date = startDate.toISOString();
+    }
+    
+    if (endDate) {
+      params.end_date = endDate.toISOString();
+    }
+    
+    if (organizationId) {
+      params.organization_id = organizationId;
+    }
+    
+    const reqOptions = {
+      ...options,
+      params
+    };
+    
+    return apiRequest<TransmissionAnalyticsData>(
+      'get',
+      url,
+      undefined,
+      reqOptions
+    );
+  },
+
+  /**
+   * Get transmission system health status
+   */
+  getTransmissionHealth: (
+    options?: ApiRequestOptions
+  ): Promise<ApiResponse<TransmissionHealthData>> => {
+    const url = `${transmissionApiService.getApiBaseUrl()}/platform/transmission/health`;
+    
+    return apiRequest<TransmissionHealthData>(
+      'get',
+      url,
+      undefined,
       options
     );
   }
 };
 
+
+
 export default transmissionApiService;
+function getApiBaseUrl() {
+  throw new Error('Function not implemented.');
+}
+

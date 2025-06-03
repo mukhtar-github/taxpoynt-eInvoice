@@ -1,0 +1,677 @@
+import React, { useState, useEffect } from 'react';
+import { NextPage } from 'next';
+import Head from 'next/head';
+import router, { useRouter } from 'next/router';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Loader2, AlertTriangle, RefreshCw, Activity, BarChart3, RotateCw, Clock, Layers } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/Toast';
+import AppDashboardLayout from '../../components/layouts/AppDashboardLayout';
+import RetryConfirmationDialog from '../../components/platform/transmission/RetryConfirmationDialog';
+// Import Platform-specific components from the platform directory
+import { 
+  TransmissionStatsCard,
+  TransmissionTimelineChart,
+  TransmissionListTable
+} from '../../components/platform';
+import TransmissionHealthStatus from '../../components/platform/transmission/TransmissionHealthStatus';
+import TransmissionAnalytics from '../../components/platform/transmission/TransmissionAnalytics';
+import BatchProcessingControls from '../../components/platform/transmission/BatchProcessingControls';
+import transmissionApiService, { 
+  TransmissionStatus, 
+  TransmissionTimeline,
+  TransmissionListItem,
+  BatchProcessingResponse,
+  TransmissionHealthData,
+  TransmissionAnalyticsData
+} from '../../services/transmissionApiService';
+import { interval } from 'date-fns';
+
+const timeRangeOptions = [
+  { value: '24h', label: 'Last 24 Hours' },
+  { value: '7d', label: 'Last 7 Days' },
+  { value: '30d', label: 'Last 30 Days' },
+  { value: 'all', label: 'All Time' }
+];
+
+const intervalOptions = [
+  { value: 'hour', label: 'Hourly' },
+  { value: 'day', label: 'Daily' },
+  { value: 'week', label: 'Weekly' },
+  { value: 'month', label: 'Monthly' }
+];
+
+/**
+ * Transmission Dashboard - Access Point Provider (APP) Feature
+ * 
+ * This dashboard is part of the APP functionality, which is separate from
+ * the System Integration (SI) service. It allows tracking and management
+ * of e-invoice transmissions between the APP and regulatory authorities.
+ */
+const TransmissionDashboard: NextPage = () => {
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const toast = useToast();
+  const [activeTab, setActiveTab] = useState<string>('monitoring');
+  
+  // State for filters and data
+  const [timeRange, setTimeRange] = useState<string>('7d');
+  const [interval, setInterval] = useState<string>('day');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [showRetryDialog, setShowRetryDialog] = useState<boolean>(false);
+  const [selectedTransmission, setSelectedTransmission] = useState<string | null>(null);
+  const [activeBatchTaskId, setActiveBatchTaskId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  
+  // State for metrics data
+  const [statistics, setStatistics] = useState<TransmissionStatus | null>(null);
+  const [timeline, setTimeline] = useState<TransmissionTimeline | null>(null);
+  const [recentTransmissions, setRecentTransmissions] = useState<TransmissionListItem[]>([]);
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login');
+    } else if (isAuthenticated) {
+      // Check if user has admin privileges
+      setIsAdmin(user?.role === 'admin' || false);
+      loadTransmissions();
+      loadStats();
+      loadTimeline();
+    }
+  }, [isAuthenticated, authLoading, timeRange, interval]);
+  
+  // Handle batch processing start
+  const handleBatchStarted = (taskId: string) => {
+    setActiveBatchTaskId(taskId);
+    toast({
+      title: 'Batch Processing Started',
+      description: `Task ID: ${taskId}`,
+      status: 'success'
+    });
+  };
+
+  // Handle batch error
+  const handleBatchError = (error: string) => {
+    toast({
+      title: 'Batch Processing Error',
+      description: error,
+      status: 'error'
+    });
+  };
+  
+  return (
+    <>
+      <Head>
+        <title>Transmission Dashboard | TaxPoynt</title>
+      </Head>
+      <AppDashboardLayout>
+        <div className="flex flex-col space-y-6">
+          <div className="flex flex-col space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Transmission Dashboard</h1>
+            <p className="text-muted-foreground">
+              Monitor and manage e-invoice transmissions between TaxPoynt and regulatory authorities
+            </p>
+          </div>
+          
+          {/* Main tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="grid grid-cols-4 lg:w-[600px]">
+              <TabsTrigger value="monitoring" className="flex items-center">
+                <Activity className="h-4 w-4 mr-1.5" />
+                Monitoring
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center">
+                <BarChart3 className="h-4 w-4 mr-1.5" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="batches" className="flex items-center">
+                <Layers className="h-4 w-4 mr-1.5" />
+                Batch Controls
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center">
+                <Clock className="h-4 w-4 mr-1.5" />
+                History
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Monitoring Tab Content */}
+            <TabsContent value="monitoring" className="space-y-6">
+              {/* Controls and filters */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center space-x-2">
+                  <Select value={timeRange} onValueChange={setTimeRange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select time range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeRangeOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={interval} onValueChange={setInterval}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Select interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {intervalOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={loadDashboardData}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Refresh
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Health Status Card */}
+              <TransmissionHealthStatus refreshInterval={60000} />
+              
+              {/* Stats and timeline */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <TransmissionStatsCard 
+                  stats={statistics} 
+                  loading={loading} 
+                  className="lg:col-span-2"
+                />
+                <TransmissionTimelineChart 
+                  timeline={timeline} 
+                  loading={loading} 
+                  className="lg:col-span-1"
+                />
+              </div>
+              
+              {/* Transmission list */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Activity className="h-5 w-5 text-cyan-600 mr-2" />
+                    Transmission List
+                  </CardTitle>
+                  <CardDescription>
+                    View and manage your e-invoice transmissions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="py-8 text-center">
+                      <Loader2 className="h-10 w-10 text-gray-500 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-500">Loading...</p>
+                    </div>
+                  ) : (
+                    <TransmissionListTable 
+                      transmissions={recentTransmissions} 
+                      loading={loading}
+                      onRetry={openRetryDialog}
+                      onView={(id) => router.push(`/dashboard/transmission/${id}`)}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Analytics Tab Content */}
+            <TabsContent value="analytics" className="space-y-6">
+              <TransmissionAnalytics 
+                refreshInterval={60000} 
+                defaultTimeRange={timeRange} 
+                defaultMetrics={['volume', 'success_rate', 'performance', 'retries', 'errors']} 
+              />
+            </TabsContent>
+            
+            {/* Batch Controls Tab Content */}
+            <TabsContent value="batches" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                  <BatchProcessingControls 
+                    onBatchStarted={handleBatchStarted} 
+                    onError={handleBatchError} 
+                  />
+                </div>
+                
+                <div className="md:col-span-1">
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Active Batches</CardTitle>
+                      <CardDescription>
+                        Currently running batch processes
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {activeBatchTaskId ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                          <div className="flex items-center space-x-2">
+                            <Loader2 className="h-4 w-4 text-amber-600 animate-spin" />
+                            <span className="font-medium text-amber-700">Active Batch:</span>
+                          </div>
+                          <div className="mt-2 text-sm font-mono text-gray-600 break-all">
+                            {activeBatchTaskId}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-8 text-center text-gray-500">
+                          No active batch processes
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+            
+            {/* History Tab Content */}
+            <TabsContent value="history" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Clock className="h-5 w-5 text-cyan-600 mr-2" />
+                    Transmission History
+                  </CardTitle>
+                  <CardDescription>
+                    View detailed history of past transmissions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="py-8 text-center">
+                      <Loader2 className="h-10 w-10 text-gray-500 mx-auto mb-4 animate-spin" />
+                      <p className="text-gray-500">Loading...</p>
+                    </div>
+                  ) : (
+                    <TransmissionListTable 
+                      transmissions={recentTransmissions} 
+                      loading={loading}
+                      onRetry={openRetryDialog}
+                      onView={(id) => router.push(`/dashboard/transmission/${id}`)}
+                      showDetailedView={true}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+        
+        {/* Retry confirmation dialog */}
+        {selectedTransmission && (
+          <RetryConfirmationDialog
+            isOpen={showRetryDialog}
+            onClose={() => setShowRetryDialog(false)}
+            onConfirm={handleRetryConfirm}
+            transmissionId={selectedTransmission}
+          />
+        )}
+      </AppDashboardLayout>
+    </>
+  );
+
+  // Load all dashboard data
+  const loadDashboardData = async () => {
+    setLoading(true);
+    
+    try {
+      const { startDate, endDate } = getDateRange(timeRange);
+      
+      // Load transmission statistics
+      const statsResponse = await transmissionApiService.getStatistics(
+        undefined, // organization ID - could filter by user.organizationId if needed
+        startDate,
+        endDate
+      );
+      
+      if (statsResponse.error) {
+        throw new Error(statsResponse.error);
+      }
+      
+      setStatistics(statsResponse.data);
+      
+      // Load timeline data
+      const timelineResponse = await transmissionApiService.getTimeline(
+        undefined, // organization ID
+        startDate,
+        endDate,
+        interval as 'hour' | 'day' | 'week' | 'month'
+      );
+      
+      if (timelineResponse.error) {
+        throw new Error(timelineResponse.error);
+      }
+      
+      setTimeline(timelineResponse.data);
+      
+      // Load recent transmissions
+      const recentResponse = await transmissionApiService.listTransmissions(
+        undefined, // organization ID
+        undefined, // certificate ID
+        undefined, // submission ID
+        undefined, // status
+        0, // skip
+        10 // limit - show top 10 recent transmissions
+      );
+      
+      if (recentResponse.error) {
+        throw new Error(recentResponse.error);
+      }
+      
+      setRecentTransmissions(recentResponse.data || []);
+      
+    } catch (err: any) {
+      console.error('Dashboard data loading error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert time range to date objects
+  const getDateRange = (range: string) => {
+    const endDate = new Date();
+    let startDate = new Date();
+    
+    switch(range) {
+      case '24h':
+        startDate.setHours(startDate.getHours() - 24);
+        break;
+      case '7d':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(startDate.getDate() - 30);
+        break;
+      case 'all':
+        // Set to distant past for "all time"
+        startDate = new Date(2020, 0, 1);
+        break;
+    }
+    
+    return { startDate, endDate };
+  };
+
+  // Open retry dialog for a specific transmission
+  const openRetryDialog = (id: string) => {
+    setSelectedTransmission(id);
+    setShowRetryDialog(true);
+  };
+
+  // Handle retry transmission with configurable parameters
+  const handleRetryConfirm = async (maxRetries: number, retryDelay: number, force: boolean) => {
+    if (!selectedTransmission) return;
+    
+    try {
+      const retryResponse = await transmissionApiService.retryTransmission(
+        selectedTransmission,
+        maxRetries,
+        retryDelay,
+        force
+      );
+      
+      if (retryResponse.error) {
+        throw new Error(retryResponse.error);
+      }
+      
+      // Refresh the data to show updated status
+      await loadDashboardData();
+      
+      toast({
+        title: "Transmission Retry Initiated",
+        description: retryDelay > 0 
+          ? `Retry scheduled with exponential backoff starting at ${retryDelay}s.`
+          : "The system is attempting to resend the transmission immediately.",
+        status: "success"
+      });
+    } catch (err) {
+      console.error('Error retrying transmission:', err);
+      toast({
+        title: "Retry Failed",
+        description: `Failed to retry the transmission: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        status: "error"
+      });
+    } finally {
+      setShowRetryDialog(false);
+      setSelectedTransmission(null);
+    }
+  };
+
+  // Load dashboard data (stats, timeline, transmissions)
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        loadTransmissions(),
+        loadStats(),
+        loadTimeline()
+      ]);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      toast({
+        title: 'Data Loading Error',
+        description: 'Failed to refresh transmission data',
+        status: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load transmission list
+  const loadTransmissions = async () => {
+    try {
+      const { data, error } = await transmissionApiService.listTransmissions();
+      if (error) {
+        throw new Error(error);
+      }
+      setRecentTransmissions(data || []);
+    } catch (error) {
+      console.error('Error loading transmissions:', error);
+    }
+  };
+
+  // Load transmission statistics
+  const loadStats = async () => {
+    try {
+      const { data, error } = await transmissionApiService.getTransmissionStatistics();
+      if (error) {
+        throw new Error(error);
+      }
+      setStatistics(data || null);
+    } catch (error) {
+      console.error('Error loading statistics:', error);
+    }
+  };
+
+  // Load transmission timeline
+  const loadTimeline = async () => {
+    const { startDate, endDate } = getDateRange(timeRange);
+    
+    try {
+      const { data, error } = await transmissionApiService.getTransmissionTimeline(
+        startDate,
+        endDate,
+        interval
+      );
+      
+      if (error) {
+        throw new Error(error);
+      }
+      
+      setTimeline(data || null);
+    } catch (error) {
+      console.error('Error loading timeline:', error);
+    }
+  };
+                          className="absolute inset-0 rounded-full border-8 border-transparent border-t-primary"
+                          style={{ 
+                            transform: `rotate(${statistics.success_rate * 360}deg)`,
+                            transition: 'transform 1s ease-out' 
+                          }}
+                        ></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Retry Statistics</CardTitle>
+                      <CardDescription>Retry information for transmissions</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-6">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-sm font-medium">Average Retries</p>
+                          <p className="text-2xl font-bold">{statistics.average_retries.toFixed(1)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Transmissions in Retry</p>
+                          <p className="text-2xl font-bold">{statistics.retrying}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Signed Transmissions</p>
+                          <p className="text-2xl font-bold">{statistics.signed_transmissions}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                <Card className="col-span-full">
+                  <CardContent className="p-6 text-center">
+                    <p className="text-gray-500">No transmission data available</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+          
+          {/* Timeline Tab */}
+          <TabsContent value="timeline" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Transmission Timeline</CardTitle>
+                  <CardDescription>View transmission trends over time</CardDescription>
+                </div>
+                <Select value={interval} onValueChange={setInterval}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select interval" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {intervalOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardHeader>
+              <CardContent className="p-6">
+                {isDataLoading ? (
+                  <div className="h-80 animate-pulse rounded bg-gray-100"></div>
+                ) : timeline && timeline.timeline.length > 0 ? (
+                  <div className="h-80">
+                    <TransmissionTimelineChart data={timeline} />
+                  </div>
+                ) : (
+                  <div className="flex h-80 items-center justify-center">
+                    <p className="text-gray-500">No timeline data available for selected period</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Recent Transmissions Tab */}
+          <TabsContent value="transmissions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Transmissions</CardTitle>
+                <CardDescription>Most recent transmission attempts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isDataLoading ? (
+                  <div className="h-96 animate-pulse rounded bg-gray-100"></div>
+                ) : recentTransmissions && recentTransmissions.length > 0 ? (
+                  <TransmissionListTable 
+                    transmissions={recentTransmissions}
+                    onViewDetails={(id) => router.push(`/dashboard/transmission/${id}`)}
+                    onRetry={openRetryDialog}
+                    isRetrying={isRetrying}
+                  />
+                ) : (
+                  <div className="flex h-40 items-center justify-center">
+                    <p className="text-gray-500">No recent transmissions found</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      {/* Retry Confirmation Dialog */}
+      {selectedTransmissionId && (
+        <RetryConfirmationDialog
+          isOpen={isRetryDialogOpen}
+          onClose={() => {
+            setIsRetryDialogOpen(false);
+            setSelectedTransmissionId(null);
+          }}
+          onConfirm={handleRetryConfirm}
+          transmissionId={selectedTransmissionId}
+          isLoading={isRetrying}
+        />
+      )}
+    </AppDashboardLayout>
+  );
+};
+
+export default TransmissionDashboard;
+
+function loadTransmissions() {
+  throw new Error('Function not implemented.');
+}
+
+function loadStats() {
+  throw new Error('Function not implemented.');
+}
+
+function loadTimeline() {
+  throw new Error('Function not implemented.');
+}
+
+function openRetryDialog(id: string): void {
+  throw new Error('Function not implemented.');
+}
+
+function setIsRetryDialogOpen(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}
+
+function setSelectedTransmissionId(arg0: null) {
+  throw new Error('Function not implemented.');
+}
+
+function handleRetryConfirm(maxRetries: number, retryDelay: number, force: boolean): void {
+  throw new Error('Function not implemented.');
+}
