@@ -60,6 +60,7 @@ const NavItems = [
   { name: 'Secure Transmission', icon: Shield, href: '/dashboard/transmission', isPlatform: true },
   { name: 'Certificate Management', icon: Key, href: '/dashboard/certificates', isPlatform: true },
   { name: 'Crypto Stamping', icon: ShieldCheck, href: '/dashboard/crypto-stamping', isPlatform: true },
+  { name: 'Signature Management', icon: ShieldCheck, href: '/platform/signature-management', isPlatform: true },
 ];
 
 // Simpler toggle button that matches the screenshot
