@@ -17,12 +17,14 @@ logger = logging.getLogger("signature_events")
 
 class SignatureEventType(str, Enum):
     """Types of signature events to track"""
-    GENERATION = "generation"
     VERIFICATION = "verification"
+    GENERATION = "generation"
     CACHE_HIT = "cache_hit"
     CACHE_MISS = "cache_miss"
     CACHE_CLEAR = "cache_clear"
     SETTINGS_CHANGE = "settings_change"
+    SETTINGS_RETRIEVAL = "settings_retrieval"
+    SETTINGS_ROLLBACK = "settings_rollback"
     ERROR = "error"
 
 class SignatureEventTracker:

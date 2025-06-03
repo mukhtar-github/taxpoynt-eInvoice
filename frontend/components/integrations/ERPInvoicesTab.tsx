@@ -3,6 +3,7 @@ import { Search, Filter, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/utils/apiClient';
 import { formatDate, formatCurrency } from '@/utils/dateUtils';
 import ErrorAlert from '@/components/common/ErrorAlert';
+import InvoiceSignatureVisualizer from '@/components/platform/signature/InvoiceSignatureVisualizer';
 
 // Generic invoice interface that can accommodate different ERP systems
 interface GenericInvoice {
@@ -15,6 +16,7 @@ interface GenericInvoice {
   currency?: string;
   // Additional fields that might be specific to certain ERPs
   [key: string]: any;
+  csid?: string;
 }
 
 // Props needed for any ERP invoice tab
@@ -255,6 +257,7 @@ const ERPInvoicesTab: React.FC<ERPInvoicesTabProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signature</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -273,12 +276,22 @@ const ERPInvoicesTab: React.FC<ERPInvoicesTabProps> = ({
                           {statusInfo.label}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {invoice.csid ? (
+                          <InvoiceSignatureVisualizer 
+                            invoiceData={invoice} 
+                            compact={true} 
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-500">No signature</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
                 {loading && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center">
+                    <td colSpan={6} className="px-6 py-4 text-center">
                       <Loader2 className="h-5 w-5 animate-spin text-gray-400 mx-auto" />
                     </td>
                   </tr>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart4, BookOpen, RefreshCw, Settings, ShieldCheck, Sliders } from 'lucide-react';
+import { BarChart4, BookOpen, RefreshCw, Settings, ShieldCheck, Sliders, Clock } from 'lucide-react';
 import axios from 'axios';
 
 import { Button } from '../../ui/Button';
@@ -13,6 +13,7 @@ import SignatureVisualizer from './SignatureVisualizer';
 import SignaturePerformanceMonitor from './SignaturePerformanceMonitor';
 import SignatureSettings from './SignatureSettings';
 import SignatureDocumentation from './SignatureDocumentation';
+import SignatureEventsMonitor from './SignatureEventsMonitor';
 
 /**
  * Comprehensive Signature Management Dashboard
@@ -99,6 +100,10 @@ const SignatureManagementDashboard: React.FC = () => {
             <BarChart4 size={16} />
             Performance
           </TabsTrigger>
+          <TabsTrigger value="events" className="flex items-center gap-2">
+            <Clock size={16} />
+            Events
+          </TabsTrigger>
           <TabsTrigger value="verification" className="flex items-center gap-2">
             <ShieldCheck size={16} />
             Verification
@@ -133,6 +138,11 @@ const SignatureManagementDashboard: React.FC = () => {
               </AlertDescription>
             </Alert>
           )}
+        </TabsContent>
+        
+        {/* Events monitoring tab */}
+        <TabsContent value="events">
+          <SignatureEventsMonitor />
         </TabsContent>
         
         {/* Verification tools tab */}
