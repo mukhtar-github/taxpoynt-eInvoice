@@ -16,6 +16,9 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap');
 
+/* Import platform-specific styles */
+@import './platform-components.css';
+
 :root {
   /* Color Palette */
   --color-primary: #3B82F6;         /* Brand blue */

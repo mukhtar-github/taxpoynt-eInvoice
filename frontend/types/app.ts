@@ -26,6 +26,8 @@ export interface Certificate {
 }
 
 export interface CertificateRequest {
+  subject: ReactNode;
+  requestDate: string | number | Date;
   id: string;
   organization_id: string;
   request_type: CertificateRequestType;

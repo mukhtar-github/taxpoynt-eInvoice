@@ -113,6 +113,19 @@ interface ApiResponse<T> {
   status: number;
 }
 
+// Dashboard analytics response type
+interface AnalyticsResponse {
+  total: number;
+  totalChange: number;
+  successful: number;
+  successfulChange: number;
+  failed: number;
+  failedChange: number;
+  pending: number;
+  pendingChange: number;
+  items: any;
+}
+
 // Error response from API
 interface ApiErrorResponse {
   detail?: string;
@@ -316,12 +329,12 @@ const transmissionApiService = {
   /**
    * Get transmission statistics
    */
-  getStatistics: (
+  getStatistics: async (
     organizationId?: string,
     startDate?: Date,
     endDate?: Date,
     options?: ApiRequestOptions
-  ): Promise<ApiResponse<TransmissionStatus>> => {
+  ): Promise<AnalyticsResponse> => {
     const params: Record<string, any> = {};
     
     if (organizationId) {
@@ -336,12 +349,40 @@ const transmissionApiService = {
       params.end_date = endDate.toISOString();
     }
     
-    return apiRequest<TransmissionStatus>(
+    const response = await apiRequest<TransmissionStatus>(
       'get',
       '/transmissions/statistics',
       undefined,
       { ...options, params }
     );
+    
+    // Transform the raw API response into the AnalyticsResponse format
+    if (response.data) {
+      return {
+        total: response.data.total || 0,
+        totalChange: 0, // We'll calculate this if backend doesn't provide
+        successful: response.data.completed || 0,
+        successfulChange: 0,
+        failed: response.data.failed || 0,
+        failedChange: 0,
+        pending: response.data.pending || 0,
+        pendingChange: 0,
+        items: null
+      };
+    }
+    
+    // Return default values if response has no data
+    return {
+      total: 0,
+      totalChange: 0,
+      successful: 0,
+      successfulChange: 0,
+      failed: 0,
+      failedChange: 0,
+      pending: 0,
+      pendingChange: 0,
+      items: null
+    };
   },
   
   /**
@@ -381,7 +422,7 @@ const transmissionApiService = {
   /**
    * List all transmissions with optional filtering
    */
-  listTransmissions: (
+  listTransmissions: async (
     organizationId?: string,
     certificateId?: string,
     submissionId?: string,
@@ -389,7 +430,7 @@ const transmissionApiService = {
     skip: number = 0,
     limit: number = 20,
     options?: ApiRequestOptions
-  ): Promise<ApiResponse<TransmissionListItem[]>> => {
+  ): Promise<{ data: TransmissionListItem[], total: number }> => {
     const params: Record<string, any> = {
       skip,
       limit
@@ -411,12 +452,18 @@ const transmissionApiService = {
       params.status = status;
     }
     
-    return apiRequest<TransmissionListItem[]>(
+    const response = await apiRequest<TransmissionListItem[]>(
       'get',
       '/transmissions',
       undefined,
       { ...options, params }
     );
+    
+    // Return structured response
+    return {
+      data: response.data || [],
+      total: Array.isArray(response.data) ? response.data.length : 0
+    };
   },
   
   /**
