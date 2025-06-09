@@ -1,8 +1,14 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": ".next",
   "regions": ["iad1"],
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max_old_space_size=4096 --resolve-node-modules-folder-to-folder"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
