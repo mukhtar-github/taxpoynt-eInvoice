@@ -5,7 +5,7 @@ starlette>=0.27.0
 python-multipart>=0.0.6
 
 # API documentation
-pydantic>=2.4.2
+pydantic==1.10.22
 
 # Database
 sqlalchemy>=2.0.22
@@ -48,7 +48,7 @@ httpx>=0.25.0
 
 # Utilities
 python-dotenv>=1.0.0
-pydantic-settings>=2.0.3
+# Removed pydantic-settings as it requires Pydantic V2
 email-validator>=2.0.0
 tenacity>=8.2.3
 uuid>=1.30
