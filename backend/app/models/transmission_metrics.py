@@ -52,11 +52,11 @@ class TransmissionDailyMetrics(Base):
     # Relationships
     organization = relationship("Organization")
     
-    # Composite unique constraint
+    # Table arguments
     __table_args__ = (
-        {'schema': 'public'},
-        {'comment': 'Daily aggregated transmission performance metrics'},
-        {'info': {'is_view': False}},
+        {'schema': 'public',
+         'comment': 'Daily aggregated transmission performance metrics',
+         'info': {'is_view': False}}
     )
 
 
