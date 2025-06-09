@@ -253,6 +253,23 @@ class CertificateManager:
         
         return cert_path
     
+    def list_certificates(self) -> List[str]:
+        """
+        Get a list of all certificate paths managed by this CertificateManager.
+        
+        Returns:
+            List of paths to certificate files
+        """
+        if not os.path.exists(self.certs_dir):
+            return []
+            
+        cert_files = []
+        for file in os.listdir(self.certs_dir):
+            if file.endswith('.crt') or file.endswith('.pem'):
+                cert_files.append(os.path.join(self.certs_dir, file))
+                
+        return cert_files
+
     def verify_stamped_document(self, document_data: bytes, signature: bytes, cert_path: str) -> bool:
         """
         Verify a signature on a document using a certificate.

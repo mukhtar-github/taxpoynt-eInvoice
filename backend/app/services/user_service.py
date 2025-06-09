@@ -4,7 +4,9 @@ from uuid import UUID # type: ignore
 
 from sqlalchemy.orm import Session # type: ignore
 
-from app.models.user import User, UserRole, Organization, OrganizationUser # type: ignore
+from app.models.user import User # type: ignore
+from app.models.user_role import UserRole # type: ignore
+from app.models.organization import Organization, OrganizationUser # type: ignore
 from app.schemas.user import UserCreate, UserUpdate, OrganizationCreate, OrganizationUpdate, OrganizationUserCreate # type: ignore
 from app.core.security import get_password_hash, verify_password # type: ignore
 

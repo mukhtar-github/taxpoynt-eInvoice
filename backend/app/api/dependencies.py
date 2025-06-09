@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session # type: ignore
 
 from app.db.session import get_db # type: ignore
 from app.core.config import settings # type: ignore
-from app.models.user import User, UserRole, OrganizationUser # type: ignore
+from app.models.user import User # type: ignore
+from app.models.user_role import UserRole # type: ignore
+from app.models.organization import OrganizationUser # type: ignore
 from app.schemas.user import TokenPayload # type: ignore
 from app.services.user_service import get_user_by_id # type: ignore
 

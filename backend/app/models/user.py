@@ -4,19 +4,15 @@ from app.db.base_class import Base
 from sqlalchemy.sql import func # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 import uuid
+from app.models.user_role import UserRole
 
 # Import models to avoid circular import issues
 # These are forward references to break the circular dependencies
 from app.models.certificate import Certificate as CertificateModel
 from app.models.encryption import EncryptionKey, EncryptionConfig
 from app.models.firs_credentials import FIRSCredentials
+from app.models.organization import Organization, OrganizationUser as OrgUser
 
-
-class UserRole(str, enum.Enum):
-    OWNER = "owner"
-    ADMIN = "admin"
-    MEMBER = "member"
-    SI_USER = "si_user"  # System Integrator User
 
 
 class User(Base):
@@ -48,39 +44,4 @@ class User(Base):
     api_keys = relationship("APIKey", back_populates="user")
 
 
-class Organization(Base):
-    __tablename__ = "organizations"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    name = Column(String(100), nullable=False)
-    tax_id = Column(String(50), unique=True, nullable=True)
-    address = Column(String(255), nullable=True)
-    phone = Column(String(20), nullable=True)
-    email = Column(String(100), nullable=True)
-    website = Column(String(255), nullable=True)
-    status = Column(String(20), default="active", nullable=False)
-    firs_service_id = Column(String(8), nullable=True)
-    
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationships
-    certificates = relationship("Certificate", back_populates="organization")
-    encryption_keys = relationship("EncryptionKey", back_populates="organization")
-    encryption_config = relationship("EncryptionConfig", back_populates="organization", uselist=False)
-    firs_credentials = relationship("FIRSCredentials", back_populates="organization")
-    api_keys = relationship("APIKey", back_populates="organization")
-
-
-class OrganizationUser(Base):
-    __tablename__ = "organization_users"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.MEMBER, nullable=False)
-    
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 
+# Organization and OrganizationUser models are now in organization.py

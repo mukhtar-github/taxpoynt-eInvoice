@@ -3,7 +3,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app.models.user import User, UserRole, OrganizationUser, Organization
+from app.models.user import User
+from app.models.user_role import UserRole
+from app.models.organization import Organization, OrganizationUser
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash
 
