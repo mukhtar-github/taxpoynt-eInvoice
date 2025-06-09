@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack: (config) => {
+    // Fix React dependency resolution issues with Radix UI
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'react': require.resolve('react'),
+      'react-dom': require.resolve('react-dom'),
+      'react/jsx-runtime': require.resolve('react/jsx-runtime')
+    };
+    return config;
+  },
   reactStrictMode: true,
   // Exclude Cypress files from the build process
   typescript: {
