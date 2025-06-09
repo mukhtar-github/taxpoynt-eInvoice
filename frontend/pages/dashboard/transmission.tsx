@@ -107,10 +107,7 @@ const TransmissionDashboard: NextPage = () => {
   // Load transmission list
   const loadTransmissions = async () => {
     try {
-      const { data, error } = await transmissionApiService.listTransmissions();
-      if (error) {
-        throw new Error(error);
-      }
+      const { data, total } = await transmissionApiService.listTransmissions();
       setRecentTransmissions(data || []);
     } catch (error) {
       console.error('Error loading transmissions:', error);
@@ -120,11 +117,8 @@ const TransmissionDashboard: NextPage = () => {
   // Load transmission statistics
   const loadStats = async () => {
     try {
-      const { data, error } = await transmissionApiService.getStatistics();
-      if (error) {
-        throw new Error(error);
-      }
-      setStatistics(data || null);
+      const analyticsData = await transmissionApiService.getStatistics();
+      setStatistics(analyticsData || null);
     } catch (error) {
       console.error('Error loading statistics:', error);
     }
@@ -135,18 +129,18 @@ const TransmissionDashboard: NextPage = () => {
     const { startDate, endDate } = getDateRange(timeRange);
     
     try {
-      const { data, error } = await transmissionApiService.getTimeline(
+      const response = await transmissionApiService.getTimeline(
         undefined, // organizationId
         startDate,
         endDate,
         interval as 'hour' | 'day' | 'week' | 'month'
       );
       
-      if (error) {
-        throw new Error(error);
+      if (response.error) {
+        throw new Error(response.error);
       }
       
-      setTimeline(data || null);
+      setTimeline(response.data || null);
     } catch (error) {
       console.error('Error loading timeline:', error);
     }

@@ -1,6 +1,7 @@
 /**
- * Type definitions for APP functionality
+ * Type definitions for Platform functionality
  */
+import { ReactNode } from 'react';
 
 export type CertificateType = 'access_point' | 'authentication' | 'signing';
 export type CertificateStatus = 'active' | 'expired' | 'revoked' | 'pending';
