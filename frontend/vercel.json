@@ -6,7 +6,7 @@
   "regions": ["iad1"],
   "build": {
     "env": {
-      "NODE_OPTIONS": "--max_old_space_size=4096 --resolve-node-modules-folder-to-folder"
+      "NODE_OPTIONS": "--max_old_space_size=4096"
     }
   },
   "headers": [
