@@ -56,10 +56,7 @@ const TransmissionStatusVisualization: React.FC<TransmissionStatusVisualizationP
           limit // show limited transmissions
         );
         
-        if (response.error) {
-          throw new Error(response.error);
-        }
-        
+        // The response directly contains data and total properties
         setTransmissions(response.data || []);
       } catch (err: any) {
         console.error('Error fetching transmissions:', err);

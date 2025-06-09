@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, Integer, String, Enum, ForeignKey, DateTime, UUID # type: ignore
 import enum
-from app.db.base import Base
+from app.db.base_class import Base
 from sqlalchemy.sql import func # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
 import uuid
