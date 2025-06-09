@@ -42,7 +42,7 @@ class CSIDRegistry(Base):
     
     # Additional metadata
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    metadata = Column(JSONB)
+    csid_metadata = Column(JSONB, name="metadata")  # Renamed to avoid collision with SQLAlchemy's reserved 'metadata' attribute
     
     # Relationships
     organization = relationship("Organization", back_populates="csids")

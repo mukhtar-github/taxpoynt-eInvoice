@@ -22,7 +22,7 @@ from app.schemas.certificate import (
 )
 from app.services.certificate_service import CertificateService
 from app.services.key_service import KeyManagementService, get_key_service
-from app.services.user_service import get_current_user
+from app.dependencies.auth import get_current_user
 from app.utils.certificate_signing import (
     sign_invoice, verify_invoice_signature, extract_certificate_info
 )

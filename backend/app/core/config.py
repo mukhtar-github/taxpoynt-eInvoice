@@ -1,10 +1,16 @@
-from typing import Any, Dict, List, Optional, Union # type: ignore
+from typing import Any, Dict, List, Optional, Union
 import os
-from pydantic import PostgresDsn, field_validator, EmailStr, AnyHttpUrl, validator # type: ignore
-from pydantic_settings import BaseSettings # type: ignore
+import pathlib
+from pydantic import PostgresDsn, validator, EmailStr, AnyHttpUrl
+from pydantic import BaseSettings
 import secrets
 
 class Settings(BaseSettings):
+    # Configuration for Pydantic V1
+    class Config:
+        case_sensitive = True
+        env_file = ".env"
+        extra = "ignore"  # Allow extra fields in environment variables
 
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "TaxPoynt eInvoice API"
@@ -52,8 +58,8 @@ class Settings(BaseSettings):
     # Reference Data
     REFERENCE_DATA_DIR: str = os.getenv("REFERENCE_DATA_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "reference_data"))
 
-    @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
-    def assemble_db_connection(cls, v: Optional[str], info: Dict[str, Any]) -> Any:
+    @validator("SQLALCHEMY_DATABASE_URI", pre=True)
+    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         # If DATABASE_URL is already provided via environment, use it directly
         # This is useful for Railway integration where the full URL is provided
         if isinstance(v, str) and v:
@@ -68,10 +74,10 @@ class Settings(BaseSettings):
             # Otherwise, build connection URL from individual components
             postgres_dsn = PostgresDsn.build(
                 scheme="postgresql",
-                username=info.data.get("POSTGRES_USER") or "postgres",
-                password=info.data.get("POSTGRES_PASSWORD") or "postgres",
-                host=info.data.get("POSTGRES_SERVER") or "localhost",
-                path=f"{info.data.get('POSTGRES_DB') or 'taxpoynt'}",
+                user=values.get("POSTGRES_USER") or "postgres",
+                password=values.get("POSTGRES_PASSWORD") or "postgres",
+                host=values.get("POSTGRES_SERVER") or "localhost",
+                path=f"{values.get('POSTGRES_DB') or 'taxpoynt'}",
             )
             # Convert PostgresDsn to string to avoid validation errors
             return str(postgres_dsn)
@@ -80,17 +86,17 @@ class Settings(BaseSettings):
             # Fallback to SQLite
             return "sqlite:///./fallback.db"
 
-    @field_validator("REDIS_URL", mode="before")
-    def assemble_redis_connection(cls, v: Optional[str], info: Dict[str, Any]) -> Any:
+    @validator("REDIS_URL", pre=True)
+    def assemble_redis_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
         
-        redis_url = f"redis://{info.data.get('REDIS_HOST')}:{info.data.get('REDIS_PORT')}"
-        if info.data.get("REDIS_PASSWORD"):
-            redis_url = f"redis://:{info.data.get('REDIS_PASSWORD')}@{info.data.get('REDIS_HOST')}:{info.data.get('REDIS_PORT')}"
+        redis_url = f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}"
+        if values.get("REDIS_PASSWORD"):
+            redis_url = f"redis://:{values.get('REDIS_PASSWORD')}@{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}"
         
-        if info.data.get("REDIS_DB"):
-            redis_url += f"/{info.data.get('REDIS_DB')}"
+        if values.get("REDIS_DB"):
+            redis_url += f"/{values.get('REDIS_DB')}"
         
         return redis_url
     
@@ -193,12 +199,6 @@ class Settings(BaseSettings):
     # Logging Configuration
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    # Configuration for Pydantic v2
-    model_config = {
-        "case_sensitive": True,
-        "env_file": ".env",
-        "extra": "allow",  # Allow extra fields in the settings to support flexible configuration
-        "arbitrary_types_allowed": True
-    }
+
 
 settings = Settings() 

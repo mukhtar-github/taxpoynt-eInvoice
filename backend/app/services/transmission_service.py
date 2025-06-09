@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from app.models.transmission import TransmissionRecord, TransmissionStatus
 from app.models.certificate import Certificate, CertificateStatus
 from app.models.csid import CSIDRegistry, CSIDStatus
-from app.models.submission import Submission
+from app.models.submission import SubmissionRecord
 from app.schemas.transmission import TransmissionCreate, TransmissionUpdate
 from app.services.key_service import KeyManagementService
 from app.services.transmission_key_service import TransmissionKeyService
@@ -248,8 +248,8 @@ class TransmissionService:
         payload = transmission_in.payload
         if transmission_in.submission_id and not payload:
             # Fetch submission data
-            submission = self.db.query(Submission).filter(
-                Submission.id == transmission_in.submission_id
+            submission = self.db.query(SubmissionRecord).filter(
+                SubmissionRecord.id == transmission_in.submission_id
             ).first()
             
             if not submission:
@@ -319,8 +319,8 @@ class TransmissionService:
         logger.info(f"Created new transmission record {db_transmission.id}")
         return db_transmission
         
-        submission = self.db.query(Submission).filter(
-            Submission.id == transmission_in.submission_id
+        submission = self.db.query(SubmissionRecord).filter(
+            SubmissionRecord.id == transmission_in.submission_id
         ).first()
         
         if not submission:

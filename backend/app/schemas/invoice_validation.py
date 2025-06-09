@@ -8,7 +8,7 @@ from enum import Enum
 from typing import List, Optional, Dict, Any, Union
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, Field, validator, model_validator, EmailStr, AnyHttpUrl
+from pydantic import BaseModel, Field, validator, root_validator, EmailStr, AnyHttpUrl
 
 
 class CurrencyCode(str, Enum):
@@ -116,12 +116,12 @@ class TaxSubtotal(BaseModel):
     tax_exemption_reason: Optional[str] = Field(None, max_length=255)
     tax_exemption_reason_code: Optional[str] = Field(None, max_length=50)
 
-    @model_validator(mode='after')
-    def validate_tax_amount(self) -> 'TaxSubtotal':
+    @root_validator
+    def validate_tax_amount(cls, values) -> 'TaxSubtotal':
         """Validate tax amount is calculated correctly"""
-        taxable_amount = self.taxable_amount
-        tax_percent = self.tax_percent
-        tax_amount = self.tax_amount
+        taxable_amount = values.get('taxable_amount')
+        tax_percent = values.get('tax_percent')
+        tax_amount = values.get('tax_amount')
         
         if all(v is not None for v in [taxable_amount, tax_percent, tax_amount]):
             expected_tax = taxable_amount * (tax_percent / 100)
@@ -164,13 +164,13 @@ class InvoiceLine(BaseModel):
     tax_total: Optional[TaxTotal] = Field(None, description="Tax information for the line")
     allowance_charge: Optional[List[Dict[str, Any]]] = Field(None, description="Allowances or charges")
 
-    @model_validator(mode='after')
-    def validate_line_amount(self) -> 'InvoiceLine':
+    @root_validator
+    def validate_line_amount(cls, values) -> Dict[str, Any]:
         """Validate line extension amount is calculated correctly"""
-        quantity = self.invoiced_quantity
-        price = self.price_amount
-        base_qty = self.base_quantity if self.base_quantity is not None else 1
-        line_amount = self.line_extension_amount
+        quantity = values.get('invoiced_quantity')
+        price = values.get('price_amount')
+        base_qty = values.get('base_quantity') if values.get('base_quantity') is not None else 1
+        line_amount = values.get('line_extension_amount')
         
         if all(v is not None for v in [quantity, price, line_amount]):
             expected_amount = (quantity * price) / base_qty
@@ -178,7 +178,7 @@ class InvoiceLine(BaseModel):
             if abs(expected_amount - line_amount) > 0.01:
                 raise ValueError(f"Line amount {line_amount} does not match the expected value {expected_amount}")
         
-        return self
+        return values
 
 
 class AllowanceCharge(BaseModel):
@@ -211,19 +211,19 @@ class LegalMonetaryTotal(BaseModel):
     prepaid_amount: Optional[Decimal] = Field(0, ge=0, decimal_places=2, description="Amount prepaid")
     payable_amount: Decimal = Field(..., ge=0, decimal_places=2, description="Amount due for payment")
 
-    @model_validator(mode='after')
-    def validate_amounts(self) -> 'LegalMonetaryTotal':
+    @root_validator
+    def validate_amounts(cls, values) -> Dict[str, Any]:
         """Validate the monetary totals are consistent"""
-        line_extension = self.line_extension_amount
-        allowance_total = self.allowance_total_amount if self.allowance_total_amount is not None else 0
-        charge_total = self.charge_total_amount if self.charge_total_amount is not None else 0
-        tax_exclusive = self.tax_exclusive_amount
-        prepaid = self.prepaid_amount if self.prepaid_amount is not None else 0
-        payable = self.payable_amount
-        tax_inclusive = self.tax_inclusive_amount
+        line_extension = values.get('line_extension_amount')
+        tax_exclusive = values.get('tax_exclusive_amount')
+        tax_inclusive = values.get('tax_inclusive_amount')
+        payable = values.get('payable_amount')
+        allowance = values.get('allowance_total_amount') or Decimal('0')
+        charge = values.get('charge_total_amount') or Decimal('0')
+        prepaid = values.get('prepaid_amount') or Decimal('0')
         
         # Validate tax_exclusive_amount
-        expected_tax_exclusive = line_extension - allowance_total + charge_total
+        expected_tax_exclusive = line_extension - allowance + charge
         if abs(expected_tax_exclusive - tax_exclusive) > 0.01:
             raise ValueError(f"Tax exclusive amount {tax_exclusive} does not match the expected value {expected_tax_exclusive}")
         
@@ -232,7 +232,7 @@ class LegalMonetaryTotal(BaseModel):
         if abs(expected_payable - payable) > 0.01:
             raise ValueError(f"Payable amount {payable} does not match the expected value {expected_payable}")
         
-        return self
+        return values
 
 
 class InvoiceValidationRequest(BaseModel):
@@ -265,18 +265,23 @@ class InvoiceValidationRequest(BaseModel):
             raise ValueError("Due date cannot be before invoice date")
         return v
     
-    @model_validator(mode='after')
-    def validate_totals(self) -> 'InvoiceValidationRequest':
+    @root_validator
+    def validate_totals(cls, values) -> Dict[str, Any]:
         """Validate that invoice line totals match document totals"""
-        invoice_lines = self.invoice_lines
-        legal_monetary_total = self.legal_monetary_total
+        invoice_lines = values.get('invoice_lines')
+        legal_monetary_total = values.get('legal_monetary_total')
         
         if invoice_lines and legal_monetary_total:
-            line_sum = sum(line.line_extension_amount for line in invoice_lines)
-            if abs(line_sum - legal_monetary_total.line_extension_amount) > 0.01:
-                raise ValueError(f"Sum of invoice lines ({line_sum}) does not match the document total ({legal_monetary_total.line_extension_amount})")
+            line_extension_total = sum(line.line_extension_amount for line in invoice_lines)
+            
+            # Check if line totals match the document total
+            if abs(line_extension_total - legal_monetary_total.line_extension_amount) > 0.01:
+                raise ValueError(
+                    f"Sum of invoice line amounts ({line_extension_total}) does not match "
+                    f"the document total ({legal_monetary_total.line_extension_amount})"
+                )
         
-        return self
+        return values
 
 
 class ValidationError(BaseModel):

@@ -19,7 +19,7 @@ from app.schemas.certificate import (
 )
 from app.services.document_signing_service import DocumentSigningService
 from app.services.deps import get_document_signing_service
-from app.services.user_service import get_current_user
+from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/signing", tags=["document-signing"])
 
