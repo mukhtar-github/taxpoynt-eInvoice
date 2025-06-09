@@ -11,7 +11,7 @@ from sqlalchemy import Column, String, DateTime, ForeignKey, Text, func, Integer
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 from app.models.transmission import TransmissionStatus
 
 

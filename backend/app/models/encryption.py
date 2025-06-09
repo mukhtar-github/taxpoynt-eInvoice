@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, func, Integer # type: ignore
 from sqlalchemy.dialects.postgresql import UUID, JSONB # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
-from app.db.base import Base # type: ignore
+from app.db.base_class import Base # type: ignore
 
 
 class EncryptionKey(Base):

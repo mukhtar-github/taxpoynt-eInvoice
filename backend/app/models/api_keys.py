@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, ForeignKey, DateTime, Boolean, Integer, Text, func # type: ignore
 from sqlalchemy.dialects.postgresql import UUID # type: ignore
 from sqlalchemy.orm import relationship # type: ignore
-from app.db.base import Base # type: ignore
+from app.db.base_class import Base # type: ignore
 
 
 class APIKey(Base):

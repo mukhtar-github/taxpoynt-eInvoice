@@ -6,7 +6,7 @@ import enum
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-from app.db.base import Base # type: ignore
+from app.db.base_class import Base # type: ignore
 
 
 class IRNStatus(str, enum.Enum):

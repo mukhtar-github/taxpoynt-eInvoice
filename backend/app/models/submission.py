@@ -15,7 +15,7 @@ from uuid import uuid4
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from app.db.base import Base # type: ignore
+from app.db.base_class import Base # type: ignore
 
 
 class SubmissionStatus(str, enum.Enum):

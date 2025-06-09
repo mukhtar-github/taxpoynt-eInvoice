@@ -12,7 +12,7 @@ from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Integer, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class ErrorSeverity(str, enum.Enum):
