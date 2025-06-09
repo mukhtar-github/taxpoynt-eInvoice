@@ -2,7 +2,13 @@ from typing import Any, Dict, List, Optional, Union
 import os
 import pathlib
 from pydantic import PostgresDsn, validator, EmailStr, AnyHttpUrl
-from pydantic import BaseSettings
+# Handle both Pydantic V1 and V2 compatibility
+try:
+    # Try importing from pydantic (V1)
+    from pydantic import BaseSettings
+except ImportError:
+    # Fall back to pydantic-settings (V2)
+    from pydantic_settings import BaseSettings
 import secrets
 
 class Settings(BaseSettings):
@@ -11,6 +17,13 @@ class Settings(BaseSettings):
         case_sensitive = True
         env_file = ".env"
         extra = "ignore"  # Allow extra fields in environment variables
+    
+    # Configuration for Pydantic V2
+    model_config = {
+        "case_sensitive": True,
+        "env_file": ".env",
+        "extra": "ignore"  # Allow extra fields in environment variables
+    }
 
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "TaxPoynt eInvoice API"

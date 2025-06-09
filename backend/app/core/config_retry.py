@@ -5,7 +5,15 @@ This module extends the core application configuration with settings
 specific to the retry mechanism and failure alerting system.
 """
 
-from pydantic import validator, Field, BaseSettings
+from pydantic import validator, Field
+
+# Handle both Pydantic V1 and V2 compatibility
+try:
+    # Try importing from pydantic (V1)
+    from pydantic import BaseSettings
+except ImportError:
+    # Fall back to pydantic-settings (V2)
+    from pydantic_settings import BaseSettings
 from typing import List, Dict, Any, Optional
 
 

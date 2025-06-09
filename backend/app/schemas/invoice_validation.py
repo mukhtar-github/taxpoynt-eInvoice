@@ -5,10 +5,43 @@ This module provides Pydantic models for validating invoice data against
 the BIS Billing 3.0 UBL schema and specific Nigerian tax/business rules.
 """
 from enum import Enum
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union, Callable, TypeVar, cast
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, Field, validator, root_validator, EmailStr, AnyHttpUrl
+from pydantic import BaseModel, Field, EmailStr, AnyHttpUrl
+
+# Version-aware imports for Pydantic validators
+try:
+    # Import Pydantic V1 validators
+    from pydantic import validator, root_validator
+    PYDANTIC_V1 = True
+except ImportError:
+    # Import Pydantic V2 validators
+    from pydantic import field_validator, model_validator
+    PYDANTIC_V1 = False
+
+# Helper method to determine Pydantic version
+def get_pydantic_version() -> int:
+    """Return 1 for Pydantic V1, 2 for Pydantic V2"""
+    return 1 if PYDANTIC_V1 else 2
+
+# Type variable for return type hinting
+T = TypeVar('T')
+
+# Version-aware validator decorators
+def compatible_validator(field_name: str) -> Callable:
+    """Provide a validator compatible with both Pydantic versions"""
+    if PYDANTIC_V1:
+        return validator(field_name, allow_reuse=True)
+    else:
+        return field_validator(field_name)
+
+def compatible_root_validator() -> Callable:
+    """Provide a root validator compatible with both Pydantic versions"""
+    if PYDANTIC_V1:
+        return root_validator()
+    else:
+        return model_validator(mode='after')
 
 
 class CurrencyCode(str, Enum):
@@ -116,9 +149,25 @@ class TaxSubtotal(BaseModel):
     tax_exemption_reason: Optional[str] = Field(None, max_length=255)
     tax_exemption_reason_code: Optional[str] = Field(None, max_length=50)
 
-    @root_validator
+    @compatible_root_validator()
     def validate_tax_amount(cls, values) -> 'TaxSubtotal':
         """Validate tax amount is calculated correctly"""
+        # For Pydantic V2 compatibility
+        if not PYDANTIC_V1:
+            # In V2 we need to return self, but with cls in function signature
+            self = values
+            taxable_amount = self.taxable_amount
+            tax_percent = self.tax_percent
+            tax_amount = self.tax_amount
+            
+            if all(v is not None for v in [taxable_amount, tax_percent, tax_amount]):
+                expected_tax = taxable_amount * (tax_percent / 100)
+                # Allow for small rounding differences
+                if abs(expected_tax - tax_amount) > 0.01:
+                    raise ValueError(f"Tax amount {tax_amount} does not match the expected value {expected_tax}")
+            return self
+        
+        # Original Pydantic V1 logic
         taxable_amount = values.get('taxable_amount')
         tax_percent = values.get('tax_percent')
         tax_amount = values.get('tax_amount')
@@ -128,8 +177,7 @@ class TaxSubtotal(BaseModel):
             # Allow for small rounding differences
             if abs(expected_tax - tax_amount) > 0.01:
                 raise ValueError(f"Tax amount {tax_amount} does not match the expected value {expected_tax}")
-        
-        return self
+        return values
 
 
 class TaxTotal(BaseModel):
@@ -137,7 +185,7 @@ class TaxTotal(BaseModel):
     tax_amount: Decimal = Field(..., ge=0, decimal_places=2)
     tax_subtotals: List[TaxSubtotal]
 
-    @validator('tax_amount')
+    @compatible_validator('tax_amount')
     def validate_tax_amount(cls, v, values):
         """Validate tax amount is the sum of subtotals"""
         if 'tax_subtotals' in values and values['tax_subtotals']:
@@ -164,9 +212,26 @@ class InvoiceLine(BaseModel):
     tax_total: Optional[TaxTotal] = Field(None, description="Tax information for the line")
     allowance_charge: Optional[List[Dict[str, Any]]] = Field(None, description="Allowances or charges")
 
-    @root_validator
+    @compatible_root_validator()
     def validate_line_amount(cls, values) -> Dict[str, Any]:
         """Validate line extension amount is calculated correctly"""
+        # For Pydantic V2 compatibility
+        if not PYDANTIC_V1:
+            # In V2 we need to return self, but with cls in function signature
+            self = values
+            quantity = self.invoiced_quantity
+            price = self.price_amount
+            base_qty = self.base_quantity if self.base_quantity is not None else 1
+            line_amount = self.line_extension_amount
+            
+            if all(v is not None for v in [quantity, price, line_amount]):
+                expected_amount = (quantity * price) / base_qty
+                # Allow for small rounding differences
+                if abs(expected_amount - line_amount) > 0.01:
+                    raise ValueError(f"Line amount {line_amount} does not match the expected value {expected_amount}")
+            return self
+        
+        # Original Pydantic V1 logic
         quantity = values.get('invoiced_quantity')
         price = values.get('price_amount')
         base_qty = values.get('base_quantity') if values.get('base_quantity') is not None else 1
