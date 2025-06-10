@@ -85,7 +85,7 @@ const SignatureSettings: React.FC = () => {
             Signature Settings
           </CardTitle>
           <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-            Platform
+            APP
           </Badge>
         </div>
       </CardHeader>

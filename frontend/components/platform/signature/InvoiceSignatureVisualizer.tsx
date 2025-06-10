@@ -186,7 +186,7 @@ const InvoiceSignatureVisualizer: React.FC<InvoiceSignatureVisualizerProps> = ({
             <ShieldCheck className="h-4 w-4 mr-2 text-green-500" />
             Digital Signature
             <Badge className="ml-2 bg-green-100 text-green-800">Valid</Badge>
-            <Badge className="ml-2 bg-cyan-100 text-cyan-800">Platform</Badge>
+            <Badge className="ml-2 bg-cyan-100 text-cyan-800">APP</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -229,7 +229,7 @@ const InvoiceSignatureVisualizer: React.FC<InvoiceSignatureVisualizerProps> = ({
           <ShieldCheck className="h-4 w-4 mr-2 text-red-500" />
           Digital Signature
           <Badge variant="destructive" className="ml-2">Invalid</Badge>
-          <Badge className="ml-2 bg-cyan-100 text-cyan-800">Platform</Badge>
+          <Badge className="ml-2 bg-cyan-100 text-cyan-800">APP</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>

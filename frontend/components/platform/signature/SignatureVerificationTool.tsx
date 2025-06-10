@@ -115,7 +115,7 @@ const SignatureVerificationTool: React.FC = () => {
             Signature Verification Tool
           </CardTitle>
           <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-            Platform
+            APP
           </Badge>
         </div>
       </CardHeader>
@@ -263,7 +263,7 @@ const SignatureVerificationTool: React.FC = () => {
       <CardFooter className="flex justify-between border-t pt-4 text-xs text-gray-500">
         <div className="flex items-center">
           <FileCheck className="h-3 w-3 mr-1" />
-          TaxPoynt Platform Signature Verification
+          TaxPoynt APP Signature Verification
         </div>
         
         <a href="/documentation/signatures" className="flex items-center hover:text-cyan-600">

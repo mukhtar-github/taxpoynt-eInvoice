@@ -15,7 +15,7 @@ The strategy adopts a "modular monolith" architecture rather than separate micro
 * Provides examples from Stack Overflow and Shopify demonstrating how well-designed monoliths can scale effectively
 * Enables faster MVP delivery while maintaining clear module boundaries for future extraction
 
-### Integration with Existing Platform
+### Integration with Existing Infrastructure
 
 The APP approach aligns with the previously established systems integration strategy:
 

@@ -354,7 +354,7 @@ const TransmissionAnalytics: React.FC<TransmissionAnalyticsProps> = ({
           <CardTitle className="text-lg flex items-center space-x-2">
             <BarChart className="h-5 w-5 text-cyan-600" />
             <span>Transmission Analytics</span>
-            <Badge variant="outline" className="ml-2 bg-cyan-50 text-cyan-800">Platform</Badge>
+            <Badge variant="outline" className="ml-2 bg-cyan-50 text-cyan-800">APP</Badge>
           </CardTitle>
           
           <div className="flex items-center space-x-2">

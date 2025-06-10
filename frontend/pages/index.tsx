@@ -64,10 +64,10 @@ const Home: React.FC = () => {
                 <span className="text-white font-medium">FIRS Compliant E-Invoicing</span>
               </div>
               <Typography.Heading level="h1" className="text-4xl md:text-6xl font-bold text-white drop-shadow-md">
-                Complete E-Invoicing Solution: From Integration to Transmission
+                Access Point Provider for Secure Nigerian E-Invoicing
               </Typography.Heading>
               <Typography.Text size="lg" className="text-white/90 leading-relaxed max-w-xl">
-                Our dual-certified platform offers both System Integration and Platform capabilities, automating your entire e-invoicing workflow from ERP integration to secure FIRS submission.
+                Nigeria's premier Access Point Provider (APP) for secure e-invoice transmission, with integrated systems connectivity to streamline your entire e-invoicing workflow from creation to FIRS submission.
               </Typography.Text>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button 
@@ -81,16 +81,16 @@ const Home: React.FC = () => {
                 <Button 
                   size="lg"
                   variant="outline" 
-                  className="border-white text-white hover:bg-white/30 group bg-primary-700/50 backdrop-blur-sm shadow-md font-semibold text-shadow-sm"
+                  className="border-cyan-300 text-white hover:bg-cyan-700/50 group bg-cyan-600/70 backdrop-blur-sm shadow-md font-semibold text-shadow-sm"
                   onClick={() => {
-                    // Smooth scroll to the Platform capabilities section
+                    // Smooth scroll to the APP capabilities section
                     const appSection = document.getElementById('app-capabilities');
                     if (appSection) {
                       appSection.scrollIntoView({ behavior: 'smooth' });
                     }
                   }}
                 >
-                  Explore Platform Features <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  Explore APP Features <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
             </div>
@@ -149,9 +149,9 @@ const Home: React.FC = () => {
                   <Shield className="h-8 w-8 text-cyan-700" />
                 </div>
                 <div>
-                  <Typography.Text className="text-gray-500 text-sm">Certified</Typography.Text>
-                  <Typography.Heading level="h3" className="text-lg font-semibold">
-                    Access Point Provider (Platform)
+                  <Typography.Text className="text-gray-500 text-sm font-medium">CERTIFIED</Typography.Text>
+                  <Typography.Heading level="h3" className="text-lg font-bold text-cyan-800">
+                    Access Point Provider (APP)
                   </Typography.Heading>
                 </div>
               </div>
@@ -255,18 +255,18 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* APP Capabilities Section */}
-        <div id="app-capabilities" className="py-16 bg-white">
+        {/* APP Capabilities Section - Enhanced & Prominent */}
+        <div id="app-capabilities" className="py-16 bg-gradient-to-r from-cyan-50 to-white border-t-4 border-cyan-500">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-10">
-              <div className="inline-block bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full mb-4">
-                <span className="font-medium">Platform Certified</span>
+              <div className="inline-block bg-cyan-600 text-white px-4 py-2 rounded-full mb-4 shadow-md">
+                <span className="font-semibold">APP Certified</span>
               </div>
-              <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Secure E-Invoice Transmission
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-cyan-800">
+                Access Point Provider Excellence
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-600 mb-4">
-                As a certified Access Point Provider, we handle the secure submission of your e-invoices directly to FIRS, ensuring compliance and validation at every step.
+              <Typography.Text size="lg" className="text-gray-700 mb-6">
+                As Nigeria's premier certified Access Point Provider (APP), we handle the complete e-invoice lifecycle—from secure cryptographic stamping to validated FIRS submission—with enterprise-grade security and real-time tracking.
               </Typography.Text>
             </div>
             
@@ -275,21 +275,26 @@ const Home: React.FC = () => {
                 { 
                   icon: <ShieldCheck className="h-12 w-12 text-cyan-600" />,
                   name: 'Certificate Management', 
-                  description: 'Automatic handling of digital certificates required for e-invoice validation and submission.' 
+                  description: 'Comprehensive digital certificate lifecycle management with automated renewal alerts, secure storage, and instant deployment for seamless e-invoice authentication.' 
                 },
                 { 
                   icon: <Lock className="h-12 w-12 text-cyan-600" />,
                   name: 'Secure Transmission', 
-                  description: 'Encrypted, compliant transmission of invoices to FIRS with complete audit trail.' 
+                  description: 'Enterprise-grade encrypted transmission with FIRS-compliant protocols, full audit trails, and guaranteed delivery confirmation for every invoice.' 
                 },
                 { 
                   icon: <FileCheck className="h-12 w-12 text-cyan-600" />,
-                  name: 'Validation & Verification', 
-                  description: 'Real-time validation ensures all invoices meet FIRS requirements before submission.' 
+                  name: 'Cryptographic Stamping', 
+                  description: 'Advanced QR code stamping with tamper-evident digital signatures that ensure invoice authenticity and compliance with Nigerian tax regulations.' 
                 },
               ].map((feature, index) => (
-                <Card key={index} className="platform-card shadow-sm hover:shadow-md transition-shadow h-full">
+                <Card key={index} className="shadow-sm hover:shadow-md transition-shadow h-full border-l-4 border-cyan-500 bg-cyan-50/50">                   
                   <CardContent className="pt-6">
+                    <div className="absolute top-3 right-3">
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                        APP
+                      </span>
+                    </div>
                     <div className="mb-4">{feature.icon}</div>
                     <Typography.Heading level="h3" className="text-xl font-semibold mb-2">
                       {feature.name}
@@ -300,53 +305,83 @@ const Home: React.FC = () => {
                   </CardContent>
                 </Card>
               ))}
+            
+            {/* Add APP-specific call-to-action */}
+            <div className="text-center mt-8">
+              <Button
+                size="lg"
+                variant="default"
+                className="bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg font-medium"
+                onClick={() => router.push("/auth/signup?focus=app")}
+              >
+                Start Using Access Point Provider
+              </Button>
+              
+              <div className="mt-3">
+                <Typography.Text size="sm" className="text-gray-600">
+                  Fully FIRS-compliant with enterprise-level security
+                </Typography.Text>
+              </div>
+            </div>
             </div>
           </div>
         </div>
 
-        {/* Why Choose Section - Enhanced with technical standards value */}
+        {/* Why Choose Section - Enhanced to emphasize APP benefits */}
         <div className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Why Choose Taxpoynt E-Invoice?
+                Why Choose TaxPoynt's Access Point Provider?
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-600">
-                Our platform combines business efficiency with enterprise-grade technical standards to future-proof your tax compliance.
+              <Typography.Text size="lg" className="text-gray-700">
+                Our certified APP solution goes beyond basic compliance, delivering enterprise-grade security and seamless transmission with full tracking capabilities.
               </Typography.Text>
             </div>
             
-            {/* Business Benefits */}
+            {/* APP Benefits */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-16">
               {[
                 { 
-                  icon: <FileCheck className="h-10 w-10 text-primary-600" />, 
+                  icon: <FileCheck className="h-10 w-10 text-cyan-600" />, 
                   title: 'FIRS Compliant', 
-                  description: 'Generate IRNs that meet all FIRS requirements automatically.' 
+                  description: 'Certified APP transmission guarantees all e-invoices meet FIRS requirements.', 
+                  isApp: true
                 },
                 { 
-                  icon: <Clock className="h-10 w-10 text-primary-600" />, 
-                  title: 'Saves Time', 
-                  description: 'Reduce manual processing time by up to 90% with our automated systems.' 
+                  icon: <Clock className="h-10 w-10 text-cyan-600" />, 
+                  title: 'Real-Time Delivery', 
+                  description: 'APP transmission with instant delivery confirmation and timestamp verification.', 
+                  isApp: true
                 },
                 { 
                   icon: <BarChart2 className="h-10 w-10 text-primary-600" />, 
-                  title: 'Real-Time Analytics', 
-                  description: 'Track compliance metrics and monitor your invoice status in real-time.' 
+                  title: 'Transmission Analytics', 
+                  description: 'Track all APP transmissions with audit trails and status monitoring.',
+                  isApp: true 
                 },
                 { 
                   icon: <CheckCircle className="h-10 w-10 text-primary-600" />, 
-                  title: 'Error Prevention', 
-                  description: 'Built-in validation catches errors before they become costly problems.' 
+                  title: 'Digital Authentication', 
+                  description: 'Secure APP verification ensures all documents are validated before transmission.',
+                  isApp: true 
                 },
                 { 
                   icon: <ShieldCheck className="h-10 w-10 text-cyan-600" />, 
-                  title: 'End-to-End Solution', 
-                  description: 'Complete e-invoicing solution from integration to secure FIRS transmission.' 
+                  title: 'Certified APP Security', 
+                  description: 'Enterprise-grade encryption and digital signatures meet international standards.',
+                  isApp: true 
                 },
               ].map((feature, index) => (
-                <Card key={index} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                  <CardContent className="pt-6">
+                <Card key={index} className={`border-none shadow-sm hover:shadow-md transition-shadow ${feature.isApp ? 'border-l-2 border-cyan-500 bg-cyan-50/30' : ''}`}>
+                  <CardContent className="pt-6 relative">
+                    {feature.isApp && (
+                      <div className="absolute top-2 right-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                          APP
+                        </span>
+                      </div>
+                    )}
                     <div className="mb-4">{feature.icon}</div>
                     <Typography.Heading level="h3" className="text-xl font-semibold mb-2">
                       {feature.title}
@@ -359,48 +394,63 @@ const Home: React.FC = () => {
               ))}
             </div>
             
-            {/* Technical Standards Value Section */}
+            {/* APP Technical Standards Section */}
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-8">
+                <div className="inline-block bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full mb-3">
+                  <span className="font-medium text-sm">APP Technical Excellence</span>
+                </div>
                 <Typography.Heading level="h3" className="text-2xl font-bold mb-2">
-                  Enterprise Standards That Matter
+                  Enterprise-Grade Access Point Provider
                 </Typography.Heading>
-                <Typography.Text size="lg" className="text-gray-600">
-                  Our adherence to global technical standards delivers tangible business value
+                <Typography.Text size="lg" className="text-gray-700">
+                  Our certified APP solution adheres to rigorous technical standards for maximum security and reliability
                 </Typography.Text>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-blue-50 rounded-lg p-6 border border-blue-100">
+                <div className="bg-cyan-50 rounded-lg p-6 border border-cyan-200 relative">
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    APP
+                  </span>
                   <div className="flex items-center mb-4">
-                    <Shield className="h-8 w-8 text-primary-600 mr-3" />
+                    <Shield className="h-8 w-8 text-cyan-600 mr-3" />
                     <Typography.Heading level="h4" className="text-lg font-semibold">
-                      Risk Reduction & Compliance
+                      APP Security & Compliance
                     </Typography.Heading>
                   </div>
-                  <ul className="space-y-2 pl-11">
+                  <ul className="space-y-3 pl-11">
                     <li className="text-gray-700 list-disc">
-                      <span className="font-medium">UBL 2.1 Compliance</span>: Ensures your e-invoices meet both FIRS requirements and global standards
+                      <span className="font-medium">Digital Certificate Lifecycle Management</span>: Automated renewal and secure certificate storage
                     </li>
                     <li className="text-gray-700 list-disc">
-                      <span className="font-medium">QR Verification</span>: Protects against fraud and simplifies invoice validation
+                      <span className="font-medium">Cryptographic Stamping</span>: Tamper-proof QR codes with FIRS standard signatures
+                    </li>
+                    <li className="text-gray-700 list-disc">
+                      <span className="font-medium">UBL 2.1 Compliance</span>: Ensures your e-invoices meet both FIRS requirements and global standards
                     </li>
                   </ul>
                 </div>
                 
-                <div className="bg-green-50 rounded-lg p-6 border border-green-100">
+                <div className="bg-cyan-50 rounded-lg p-6 border border-cyan-200 relative">
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    APP
+                  </span>
                   <div className="flex items-center mb-4">
-                    <Globe className="h-8 w-8 text-primary-600 mr-3" />
+                    <Globe className="h-8 w-8 text-cyan-600 mr-3" />
                     <Typography.Heading level="h4" className="text-lg font-semibold">
-                      Future-Proof Investment
+                      APP Transmission Excellence
                     </Typography.Heading>
                   </div>
-                  <ul className="space-y-2 pl-11">
+                  <ul className="space-y-3 pl-11">
                     <li className="text-gray-700 list-disc">
-                      <span className="font-medium">PEPPOL Compatibility</span>: Prepares Nigerian businesses for international trade documentation
+                      <span className="font-medium">Real-Time Transmission Status</span>: Monitor e-invoice processing through every stage of the APP pipeline
                     </li>
                     <li className="text-gray-700 list-disc">
-                      <span className="font-medium">API-First Design</span>: Ensures seamless integration with any current or future business system
+                      <span className="font-medium">PEPPOL-Ready Architecture</span>: Built on international transmission standards for future expansion
+                    </li>
+                    <li className="text-gray-700 list-disc">
+                      <span className="font-medium">Secure REST APIs</span>: Dedicated APP endpoints with comprehensive authentication
                     </li>
                   </ul>
                 </div>
@@ -409,23 +459,26 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Case Studies Section */}
-        <div className="py-16 bg-gray-50">
+        {/* APP Success Stories Section */}
+        <div className="py-16 bg-gradient-to-r from-cyan-50 to-white">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
-              <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Success Stories
+              <div className="inline-block bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full mb-4">
+                <span className="font-semibold">APP Success Stories</span>
+              </div>
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-800">
+                APP Excellence in Action
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-600">
-                See how businesses are benefiting from our combined System Integration and Platform solution
+              <Typography.Text size="lg" className="text-gray-700">
+                See how organizations are leveraging our Access Point Provider capabilities to transform their e-invoicing workflow
               </Typography.Text>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
               {/* Case Study 1 */}
-              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow">
+              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow border-t-4 border-cyan-500">
                 <div className="h-48 bg-gray-200 relative">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-primary-600 to-primary-700">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-cyan-600 to-cyan-700">
                     <Users className="h-12 w-12 text-white opacity-70" />
                   </div>
                 </div>
@@ -437,11 +490,11 @@ const Home: React.FC = () => {
                     <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Manufacturing</span>
                   </div>
                   <Typography.Text className="mb-4">
-                    Reduced invoice processing time by 85% and eliminated all compliance errors with our dual-certified solution. Their monthly tax filing now completes in just hours instead of days.
+                    Achieved 100% FIRS compliance with our APP transmission system. Securely processed over 5,000 monthly e-invoices with zero rejection rate and complete audit trail for tax authorities.
                   </Typography.Text>
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">SI Integration</span>
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Platform Certified</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200 font-medium">APP Certified</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Secure Transmission</span>
                   </div>
                   <Button variant="outline" size="sm" className="w-full mt-2">
                     Read Full Story
@@ -450,7 +503,7 @@ const Home: React.FC = () => {
               </Card>
 
               {/* Case Study 2 */}
-              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow">
+              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow border-t-4 border-cyan-500">
                 <div className="h-48 bg-gray-200 relative">
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-cyan-600 to-cyan-700">
                     <FileText className="h-12 w-12 text-white opacity-70" />
@@ -464,11 +517,11 @@ const Home: React.FC = () => {
                     <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">Finance</span>
                   </div>
                   <Typography.Text className="mb-4">
-                    Achieved 100% FIRS compliance rate with our platform's automated validation and secure transmission. Their audit preparation time decreased by 70% thanks to comprehensive reporting.
+                    Leveraged our APP certificate management to ensure uninterrupted e-invoice processing with 99.99% uptime. Automated certificate renewal and digital signature verification decreased audit preparation time by 70%.
                   </Typography.Text>
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">Odoo Integration</span>
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Platform Security</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200 font-medium">APP Certified</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Certificate Management</span>
                   </div>
                   <Button variant="outline" size="sm" className="w-full mt-2">
                     Read Full Story
@@ -477,9 +530,9 @@ const Home: React.FC = () => {
               </Card>
 
               {/* Case Study 3 */}
-              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow">
+              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow border-t-4 border-cyan-500">
                 <div className="h-48 bg-gray-200 relative">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-gray-700 to-gray-800">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-cyan-600 to-cyan-700">
                     <ShieldCheck className="h-12 w-12 text-white opacity-70" />
                   </div>
                 </div>
@@ -491,11 +544,11 @@ const Home: React.FC = () => {
                     <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium">Retail</span>
                   </div>
                   <Typography.Text className="mb-4">
-                    Seamlessly connected multiple ERPs to our platform for centralized e-invoice management. Cryptographic stamping and automated validation streamlined operations across 12 locations.
+                    Implemented our APP cryptographic stamping across 12 retail locations, generating tamper-proof QR codes for 20,000+ monthly invoices. Advanced APP analytics provided real-time visibility into transmission status.
                   </Typography.Text>
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">Multi-ERP</span>
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Platform Analytics</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200 font-medium">APP Certified</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Cryptographic Stamping</span>
                   </div>
                   <Button variant="outline" size="sm" className="w-full mt-2">
                     Read Full Story
@@ -516,30 +569,36 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Educational Resources Section */}
-        <div className="py-16 bg-white">
+        {/* APP Educational Resources Section */}
+        <div className="py-16 bg-gradient-to-b from-white to-cyan-50">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
+              <div className="inline-block bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full mb-4">
+                <span className="font-semibold">APP Resources</span>
+              </div>
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Educational Resources
+                Access Point Provider Knowledge Center
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-600">
-                Learn more about our Platform functionality and how it complements our System Integration capabilities
+              <Typography.Text size="lg" className="text-gray-700">
+                Learn more about our APP capabilities and how our certified e-invoice transmission solutions can transform your business
               </Typography.Text>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Resource 1 */}
               <Card className="overflow-hidden h-full shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-cyan-500">
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative">
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    APP
+                  </span>
                   <div className="mb-4">
                     <BookOpen className="h-8 w-8 text-cyan-600" />
                   </div>
                   <Typography.Heading level="h3" className="text-lg font-semibold mb-2">
-                    Platform Certification Guide
+                    APP Certification Guide
                   </Typography.Heading>
                   <Typography.Text className="text-gray-600 mb-4">
-                    Understanding the requirements and benefits of FIRS Access Point Provider certification.
+                    Complete guide to FIRS Access Point Provider certification requirements and compliance benefits.
                   </Typography.Text>
                   <Button variant="link" className="text-cyan-600 p-0 h-auto font-medium">
                     Read Guide <ArrowRight className="ml-1 h-4 w-4" />
@@ -549,7 +608,10 @@ const Home: React.FC = () => {
 
               {/* Resource 2 */}
               <Card className="overflow-hidden h-full shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-cyan-500">
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative">
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    APP
+                  </span>
                   <div className="mb-4">
                     <Lightbulb className="h-8 w-8 text-cyan-600" />
                   </div>
@@ -557,7 +619,7 @@ const Home: React.FC = () => {
                     Cryptographic Stamping Explained
                   </Typography.Heading>
                   <Typography.Text className="text-gray-600 mb-4">
-                    How our Platform securely stamps and validates your e-invoices for FIRS compliance.
+                    How our APP solution securely stamps and validates your e-invoices for FIRS compliance and authenticity verification.
                   </Typography.Text>
                   <Button variant="link" className="text-cyan-600 p-0 h-auto font-medium">
                     Learn More <ArrowRight className="ml-1 h-4 w-4" />
@@ -567,15 +629,18 @@ const Home: React.FC = () => {
 
               {/* Resource 3 */}
               <Card className="overflow-hidden h-full shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-cyan-500">
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative">
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    APP
+                  </span>
                   <div className="mb-4">
                     <Award className="h-8 w-8 text-cyan-600" />
                   </div>
                   <Typography.Heading level="h3" className="text-lg font-semibold mb-2">
-                    Certificate Management Best Practices
+                    APP Certificate Lifecycle Management
                   </Typography.Heading>
                   <Typography.Text className="text-gray-600 mb-4">
-                    Guidelines for maintaining and renewing your digital certificates for e-invoicing.
+                    Expert guidelines for maintaining, renewing and maximizing security of your APP digital certificates.
                   </Typography.Text>
                   <Button variant="link" className="text-cyan-600 p-0 h-auto font-medium">
                     View Guide <ArrowRight className="ml-1 h-4 w-4" />
@@ -585,15 +650,18 @@ const Home: React.FC = () => {
 
               {/* Resource 4 */}
               <Card className="overflow-hidden h-full shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-cyan-500">
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative">
+                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    APP
+                  </span>
                   <div className="mb-4">
                     <GraduationCap className="h-8 w-8 text-cyan-600" />
                   </div>
                   <Typography.Heading level="h3" className="text-lg font-semibold mb-2">
-                    Platform & SI Integration Tutorial
+                    APP Integration Masterclass
                   </Typography.Heading>
                   <Typography.Text className="text-gray-600 mb-4">
-                    Step-by-step guide to leveraging our combined solution for maximum e-invoicing efficiency.
+                    Complete APP implementation guide with best practices for secure e-invoice transmission and compliance.
                   </Typography.Text>
                   <Button variant="link" className="text-cyan-600 p-0 h-auto font-medium">
                     Start Tutorial <ArrowRight className="ml-1 h-4 w-4" />
@@ -602,19 +670,24 @@ const Home: React.FC = () => {
               </Card>
             </div>
 
-            <div className="mt-10 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg p-6 border border-cyan-100">
+            <div className="mt-10 bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-6 border-2 border-cyan-200">
               <div className="flex flex-col md:flex-row gap-6 items-center">
                 <div className="md:w-3/4">
-                  <Typography.Heading level="h3" className="text-xl font-bold mb-2">
-                    Expert Platform Implementation Support
-                  </Typography.Heading>
+                  <div className="flex items-center mb-2">
+                    <span className="inline-flex items-center px-2 py-1 mr-3 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                      APP
+                    </span>
+                    <Typography.Heading level="h3" className="text-xl font-bold">
+                      Expert APP Implementation Support
+                    </Typography.Heading>
+                  </div>
                   <Typography.Text className="text-gray-700">
-                    Need help understanding how our Platform functionality can transform your e-invoicing workflow? Our experts are ready to guide you through every step of the implementation process.
+                    Need help leveraging our APP capabilities for your e-invoicing compliance needs? Our certified experts are ready to guide you through every step of the implementation and certification process.
                   </Typography.Text>
                 </div>
                 <div className="md:w-1/4 flex justify-center">
-                  <Button className="bg-cyan-600 hover:bg-cyan-700 text-white">
-                    Schedule Consultation
+                  <Button className="bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm">
+                    Schedule APP Consultation
                   </Button>
                 </div>
               </div>

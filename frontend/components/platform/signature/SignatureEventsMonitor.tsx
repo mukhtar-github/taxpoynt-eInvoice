@@ -175,7 +175,7 @@ export const SignatureEventsMonitor: React.FC = () => {
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-cyan-500" />
               Signature Events Monitor
-              <Badge variant="outline" className="ml-2 bg-cyan-50 text-cyan-700 border-cyan-200">Platform</Badge>
+              <Badge variant="outline" className="ml-2 bg-cyan-50 text-cyan-700 border-cyan-200">APP</Badge>
             </CardTitle>
             <CardDescription>
               Track and monitor signature events across the system

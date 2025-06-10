@@ -56,7 +56,7 @@ const SignaturePerformanceMonitor: React.FC<SignaturePerformanceMonitorProps> = 
               Signature Generation Performance
             </CardTitle>
             <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-              Platform
+              APP
             </Badge>
           </div>
         </CardHeader>
@@ -118,7 +118,7 @@ const SignaturePerformanceMonitor: React.FC<SignaturePerformanceMonitorProps> = 
               Signature Cache Performance
             </CardTitle>
             <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-              Platform
+              APP
             </Badge>
           </div>
         </CardHeader>
@@ -167,7 +167,7 @@ const SignaturePerformanceMonitor: React.FC<SignaturePerformanceMonitorProps> = 
               Verification Performance
             </CardTitle>
             <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-              Platform
+              APP
             </Badge>
           </div>
         </CardHeader>

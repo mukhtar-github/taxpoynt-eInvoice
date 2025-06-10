@@ -145,7 +145,7 @@ const CertificateManagementDashboard: React.FC<CertificateManagementDashboardPro
           <h2 className="text-xl font-semibold flex items-center">
             <Shield className="h-5 w-5 mr-2 text-cyan-500" />
             Certificate Management
-            <Badge className="ml-2 bg-cyan-100 text-cyan-800 hover:bg-cyan-200">Platform</Badge>
+            <Badge className="ml-2 bg-cyan-100 text-cyan-800 hover:bg-cyan-200">APP</Badge>
           </h2>
           <p className="mt-1 text-sm text-gray-600">
             Manage your organization's certificates and signing identifiers

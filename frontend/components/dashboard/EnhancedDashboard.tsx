@@ -16,7 +16,7 @@ import {
   Send
 } from 'lucide-react';
 
-// Platform Component Imports
+// APP Component Imports
 import CertificateStatusCards from '../../components/platform/CertificateStatusCards';
 import TransmissionStatusVisualization from '../../components/platform/TransmissionStatusVisualization';
 
@@ -28,8 +28,8 @@ interface EnhancedDashboardProps {
 /**
  * Enhanced Dashboard Component
  * 
- * Combines both SI functionality and Platform features in a single dashboard view
- * with clear visual separation and indicators for Platform components.
+ * Combines both SI functionality and APP features in a single dashboard view
+ * with clear visual separation and indicators for APP components.
  */
 const EnhancedDashboard: React.FC<EnhancedDashboardProps> = ({ 
   className, 
@@ -71,8 +71,8 @@ const EnhancedDashboard: React.FC<EnhancedDashboardProps> = ({
     }
   ];
 
-  // Module definitions - Platform modules
-  const platformModules = [
+  // Module definitions - APP modules (Access Point Provider)
+  const appModules = [
     { 
       id: 'certificates', 
       name: 'Certificate Management', 
@@ -114,22 +114,22 @@ const EnhancedDashboard: React.FC<EnhancedDashboardProps> = ({
           </Button>
         </div>
         
-        {/* Certificate Status Cards - Platform Feature */}
+        {/* Certificate Status Cards - APP Feature */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <Badge variant="outline" className="mr-2 bg-cyan-50 text-cyan-700 border-cyan-200">
-              Platform
+              APP
             </Badge>
             <h3 className="text-lg font-medium">Certificate Status</h3>
           </div>
           <CertificateStatusCards organizationId={organizationId} />
         </div>
         
-        {/* Transmission Status Visualization - Platform Feature */}
+        {/* Transmission Status Visualization - APP Feature */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <Badge variant="outline" className="mr-2 bg-cyan-50 text-cyan-700 border-cyan-200">
-              Platform
+              APP
             </Badge>
             <h3 className="text-lg font-medium">Recent Transmissions</h3>
           </div>
@@ -137,16 +137,16 @@ const EnhancedDashboard: React.FC<EnhancedDashboardProps> = ({
         </div>
       </div>
 
-      {/* Platform Modules Section with visual indicators */}
-      <div className="mb-10">
+      {/* APP Modules Section with enhanced visual indicators */}
+      <div className="mb-10 border-l-4 border-cyan-500 pl-4 py-2">
         <div className="flex items-center mb-4">
-          <Badge variant="outline" className="mr-2 bg-cyan-50 text-cyan-700 border-cyan-200">
-            Platform
+          <Badge variant="outline" className="mr-2 bg-cyan-100 text-cyan-800 border-cyan-300 font-semibold">
+            APP
           </Badge>
-          <h3 className="text-xl font-semibold">Platform Modules</h3>
+          <h3 className="text-xl font-semibold">Access Point Provider Modules</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {platformModules.map(module => (
+          {appModules.map(module => (
             <Link href={module.path} key={module.id}>
               <Card className={cn(
                 "h-full hover:shadow-md transition-shadow cursor-pointer",

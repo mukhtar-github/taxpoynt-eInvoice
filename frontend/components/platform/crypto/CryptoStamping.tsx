@@ -217,7 +217,7 @@ const CryptoStamping: React.FC = () => {
     <div className="border-l-4 border-cyan-500 p-4">
       <div className="flex items-center mb-4">
         <Heading className="text-lg">Cryptographic Stamping</Heading>
-        <Badge className="ml-2 bg-cyan-100 text-cyan-800">Platform</Badge>
+        <Badge className="ml-2 bg-cyan-100 text-cyan-800">APP</Badge>
       </div>
       
       <Tabs defaultValue="generate" className="w-full">

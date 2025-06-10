@@ -7,7 +7,7 @@ import SignatureManagementDashboard from '../../components/platform/signature/Si
 /**
  * Signature Management Page
  * 
- * Platform interface for comprehensive management of 
+ * APP interface for comprehensive management of 
  * digital signatures, performance monitoring, verification,
  * and configuration.
  */
@@ -15,7 +15,7 @@ const SignatureManagementPage: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Signature Management | TaxPoynt eInvoice Platform</title>
+        <title>Signature Management | TaxPoynt eInvoice APP</title>
       </Head>
       
       <div className="container py-6 max-w-7xl">

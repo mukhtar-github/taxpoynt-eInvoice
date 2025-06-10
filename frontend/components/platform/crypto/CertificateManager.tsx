@@ -192,7 +192,7 @@ const CertificateManager: React.FC = () => {
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center">
           <Heading className="text-lg">Certificate Management</Heading>
-          <Badge className="ml-2 bg-cyan-100 text-cyan-800">Platform</Badge>
+          <Badge className="ml-2 bg-cyan-100 text-cyan-800">APP</Badge>
         </div>
         <div className="flex gap-2">
           <Button 

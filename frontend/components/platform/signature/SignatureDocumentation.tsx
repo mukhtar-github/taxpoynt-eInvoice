@@ -25,7 +25,7 @@ const SignatureDocumentation: React.FC = () => {
             Signature Documentation
           </CardTitle>
           <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-            Platform
+            APP
           </Badge>
         </div>
       </CardHeader>
@@ -34,7 +34,7 @@ const SignatureDocumentation: React.FC = () => {
         {/* Introduction */}
         <div className="prose max-w-none">
           <p className="text-gray-700">
-            The TaxPoynt eInvoice Platform provides a comprehensive suite of signature 
+            The TaxPoynt eInvoice APP provides a comprehensive suite of signature 
             management tools to ensure compliance, security, and auditability of 
             your electronic invoices. The following documentation will help you 
             understand how to effectively use these features.

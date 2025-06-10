@@ -257,7 +257,7 @@ const SecureTransmissionManager: React.FC<SecureTransmissionManagerProps> = ({ o
               <CardDescription>Secure data transmissions to FIRS</CardDescription>
             </div>
             <Badge variant="outline" className="border-cyan-500 text-cyan-500">
-              <Shield className="w-3 h-3 mr-1" /> Platform
+              <Shield className="w-3 h-3 mr-1" /> APP
             </Badge>
           </div>
         </CardHeader>
