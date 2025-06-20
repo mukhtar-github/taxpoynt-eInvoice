@@ -8,5 +8,7 @@ from app.models.encryption import EncryptionKey, EncryptionConfig
 from app.models.firs_credentials import FIRSCredentials
 from app.models.api_keys import APIKey
 from app.models.api_credential import ApiCredential, CredentialType
+from app.models.crm_connection import CRMConnection, CRMDeal, CRMType
+from app.models.pos_connection import POSConnection, POSTransaction, POSType
 
 # Add new models here when created

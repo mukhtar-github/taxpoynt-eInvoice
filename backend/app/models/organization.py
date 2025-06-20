@@ -45,6 +45,10 @@ class Organization(Base):
     encryption_config = relationship("EncryptionConfig", back_populates="organization", uselist=False)
     firs_credentials = relationship("FIRSCredentials", back_populates="organization")
     
+    # CRM and POS integrations relationships
+    crm_connections = relationship("CRMConnection", back_populates="organization", cascade="all, delete-orphan")
+    pos_connections = relationship("POSConnection", back_populates="organization", cascade="all, delete-orphan")
+    
 
 class OrganizationUser(Base):
     """
