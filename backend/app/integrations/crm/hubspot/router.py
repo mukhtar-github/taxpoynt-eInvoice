@@ -4,10 +4,11 @@ FastAPI router for HubSpot CRM integration.
 This module defines the API endpoints for HubSpot CRM integration.
 """
 
+import json
 import logging
 from typing import Dict, Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, Request, status
 
 from app.dependencies.auth import get_current_user
 from app.integrations.base.errors import IntegrationError, error_to_dict
@@ -17,6 +18,12 @@ from app.integrations.crm.hubspot.models import (
     HubSpotDeal,
     HubSpotDealInvoice,
     ConnectionTestResult,
+    HubSpotWebhookPayload,
+)
+from app.integrations.crm.hubspot.webhooks import (
+    HubSpotWebhookProcessor,
+    verify_hubspot_webhook,
+    create_webhook_processor
 )
 
 logger = logging.getLogger(__name__)
@@ -442,6 +449,103 @@ async def delete_hubspot_connection(
         )
     except Exception as e:
         logger.error(f"Unexpected error in delete_hubspot_connection: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+
+@router.post(
+    "/webhook/{connection_id}",
+    status_code=status.HTTP_200_OK,
+    summary="HubSpot webhook handler",
+    description="Handle webhook events from HubSpot for deal updates and other changes",
+)
+async def handle_hubspot_webhook(
+    connection_id: str = Path(..., description="HubSpot connection ID"),
+    request: Request = None,
+):
+    """
+    Handle webhook events from HubSpot.
+    
+    Args:
+        connection_id: HubSpot connection ID
+        request: FastAPI request object containing webhook payload
+        
+    Returns:
+        Dict with processing results
+        
+    Raises:
+        HTTPException: If webhook processing fails
+    """
+    try:
+        # TODO: Retrieve connection config from database using connection_id
+        # For now, use a mock config - this would be replaced with actual DB lookup
+        connection_config = {
+            "connection_id": connection_id,
+            "webhook_secret": "your_webhook_secret_here",  # Retrieved from DB
+            "auth": {
+                "auth_type": "oauth2",
+                "token_url": "https://api.hubapi.com/oauth/v1/token",
+                "credentials": {
+                    "client_id": "mock-client-id",
+                    "client_secret": "mock-client-secret",
+                    "refresh_token": "mock-refresh-token"
+                }
+            },
+            "settings": {
+                "deal_stage_mapping": {
+                    "closedwon": "generate_invoice",
+                    "closedlost": "cancel_invoice"
+                },
+                "auto_generate_invoice_on_creation": False
+            }
+        }
+        
+        # Get webhook secret from config
+        webhook_secret = connection_config.get("webhook_secret", "")
+        
+        # Verify webhook signature if secret is configured
+        if webhook_secret:
+            signature_valid = await verify_hubspot_webhook(request, webhook_secret)
+            if not signature_valid:
+                logger.warning(f"Invalid webhook signature for connection {connection_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid webhook signature"
+                )
+        
+        # Parse webhook payload
+        body = await request.body()
+        payload_data = json.loads(body.decode('utf-8'))
+        
+        try:
+            webhook_payload = HubSpotWebhookPayload(**payload_data)
+        except Exception as e:
+            logger.error(f"Invalid webhook payload format: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid webhook payload format: {str(e)}"
+            )
+        
+        # Create webhook processor
+        processor = create_webhook_processor(connection_config)
+        
+        # Process webhook events
+        results = await processor.process_webhook_events(webhook_payload.events)
+        
+        logger.info(f"Processed {results['processed']} webhook events for connection {connection_id}")
+        
+        return {
+            "message": "Webhook processed successfully",
+            "connection_id": connection_id,
+            "results": results
+        }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in handle_hubspot_webhook: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}"

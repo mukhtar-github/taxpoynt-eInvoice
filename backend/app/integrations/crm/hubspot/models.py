@@ -152,3 +152,66 @@ class ConnectionTestResult(BaseModel):
     success: bool
     message: str
     details: Optional[Dict[str, Any]] = None
+
+
+class HubSpotWebhookEvent(BaseModel):
+    """Model for HubSpot webhook event data."""
+    eventId: str
+    subscriptionId: str
+    portalId: int
+    appId: int
+    occurredAt: datetime
+    subscriptionType: str
+    attemptNumber: int
+    objectId: str
+    changeSource: str
+    changeFlag: str
+    propertyName: Optional[str] = None
+    propertyValue: Optional[str] = None
+    
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "eventId": "event-12345",
+                "subscriptionId": "sub-67890",
+                "portalId": 123456,
+                "appId": 789012,
+                "occurredAt": "2025-06-20T10:30:00Z",
+                "subscriptionType": "deal.propertyChange",
+                "attemptNumber": 1,
+                "objectId": "deal-123",
+                "changeSource": "CRM_UI",
+                "changeFlag": "UPDATED",
+                "propertyName": "dealstage",
+                "propertyValue": "closedwon"
+            }
+        }
+
+
+class HubSpotWebhookPayload(BaseModel):
+    """Model for complete HubSpot webhook payload."""
+    events: List[HubSpotWebhookEvent]
+    
+    class Config:
+        """Pydantic configuration."""
+        schema_extra = {
+            "example": {
+                "events": [
+                    {
+                        "eventId": "event-12345",
+                        "subscriptionId": "sub-67890",
+                        "portalId": 123456,
+                        "appId": 789012,
+                        "occurredAt": "2025-06-20T10:30:00Z",
+                        "subscriptionType": "deal.propertyChange",
+                        "attemptNumber": 1,
+                        "objectId": "deal-123",
+                        "changeSource": "CRM_UI",
+                        "changeFlag": "UPDATED",
+                        "propertyName": "dealstage",
+                        "propertyValue": "closedwon"
+                    }
+                ]
+            }
+        }
