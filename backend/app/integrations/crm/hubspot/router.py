@@ -25,6 +25,7 @@ from app.integrations.crm.hubspot.webhooks import (
     verify_hubspot_webhook,
     create_webhook_processor
 )
+from app.tasks.hubspot_tasks import process_hubspot_deal, sync_hubspot_deals
 
 logger = logging.getLogger(__name__)
 
@@ -546,6 +547,101 @@ async def handle_hubspot_webhook(
         raise
     except Exception as e:
         logger.error(f"Unexpected error in handle_hubspot_webhook: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+
+@router.post(
+    "/connections/{connection_id}/sync-deals",
+    status_code=status.HTTP_200_OK,
+    summary="Manually sync HubSpot deals",
+    description="Manually trigger a sync of deals from HubSpot for a specific connection",
+)
+async def manually_sync_hubspot_deals(
+    connection_id: str = Path(..., description="HubSpot connection ID"),
+    days_back: int = Query(30, description="Number of days to look back for deals"),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """
+    Manually trigger a sync of HubSpot deals.
+    
+    Args:
+        connection_id: HubSpot connection ID
+        days_back: Number of days to look back for deals
+        current_user: Current authenticated user
+        
+    Returns:
+        Dict with sync results
+        
+    Raises:
+        HTTPException: If sync fails
+    """
+    try:
+        logger.info(f"Manual HubSpot deals sync triggered for connection {connection_id} by user {current_user.get('id')}")
+        
+        # TODO: Verify user has access to this connection
+        
+        # Trigger the sync task
+        result = await sync_hubspot_deals(connection_id, days_back)
+        
+        return {
+            "message": "HubSpot deals sync completed",
+            "connection_id": connection_id,
+            "result": result
+        }
+            
+    except Exception as e:
+        logger.error(f"Error in manual sync for connection {connection_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+
+@router.post(
+    "/connections/{connection_id}/process-deal/{deal_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Manually process HubSpot deal",
+    description="Manually trigger processing of a specific HubSpot deal",
+)
+async def manually_process_hubspot_deal(
+    connection_id: str = Path(..., description="HubSpot connection ID"),
+    deal_id: str = Path(..., description="HubSpot deal ID"),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """
+    Manually trigger processing of a specific HubSpot deal.
+    
+    Args:
+        connection_id: HubSpot connection ID
+        deal_id: HubSpot deal ID
+        current_user: Current authenticated user
+        
+    Returns:
+        Dict with processing results
+        
+    Raises:
+        HTTPException: If processing fails
+    """
+    try:
+        logger.info(f"Manual HubSpot deal processing triggered for deal {deal_id}, connection {connection_id} by user {current_user.get('id')}")
+        
+        # TODO: Verify user has access to this connection
+        
+        # Trigger the deal processing task
+        result = await process_hubspot_deal(deal_id, connection_id)
+        
+        return {
+            "message": "HubSpot deal processing completed",
+            "connection_id": connection_id,
+            "deal_id": deal_id,
+            "result": result
+        }
+            
+    except Exception as e:
+        logger.error(f"Error processing deal {deal_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}"

@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     OAUTH_MAX_RETRY_ATTEMPTS: int = 3  # Maximum retries for token refresh
     OAUTH_RETRY_DELAY_SECONDS: int = 1  # Initial delay between retries
     
+    # HubSpot Integration
+    HUBSPOT_SYNC_INTERVAL: int = int(os.getenv("HUBSPOT_SYNC_INTERVAL", "3600"))  # Default: hourly
+    
     # FIRS Encryption and Cryptographic Signing
     CRYPTO_KEYS_PATH: str = os.getenv("CRYPTO_KEYS_PATH", "")
     SIGNING_PRIVATE_KEY_PATH: str = os.getenv("SIGNING_PRIVATE_KEY_PATH", "")

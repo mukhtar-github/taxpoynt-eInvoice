@@ -20,6 +20,7 @@ from app.utils.logger import get_logger
 from app.core.config import settings
 from app.core.config_retry import retry_settings
 from app.tasks.certificate_tasks import certificate_monitor_task
+from app.tasks.hubspot_tasks import hubspot_deal_processor_task
 
 logger = get_logger(__name__)
 
@@ -43,6 +44,13 @@ async def start_background_tasks():
         "certificate_monitor",
         certificate_monitor_task,
         interval_seconds=getattr(settings, "CERTIFICATE_MONITOR_INTERVAL", 3600)  # Default: hourly
+    )
+    
+    # Start the HubSpot deal processor task
+    start_task(
+        "hubspot_deal_processor",
+        hubspot_deal_processor_task,
+        interval_seconds=getattr(settings, "HUBSPOT_SYNC_INTERVAL", 3600)  # Default: hourly
     )
     
     # Add more background tasks here as needed

@@ -183,39 +183,43 @@ class HubSpotWebhookProcessor:
         stage_mapping = self.config.get("settings", {}).get("deal_stage_mapping", {})
         new_stage = event.propertyValue
         
-        # Check if this stage change should trigger invoice generation
-        if new_stage in stage_mapping:
-            invoice_action = stage_mapping[new_stage]
+        # Always trigger deal processing task for stage changes
+        # This will handle the invoice generation and database updates
+        try:
+            # Import here to avoid circular imports
+            from app.tasks.hubspot_tasks import process_hubspot_deal
             
-            if invoice_action == "generate_invoice":
-                try:
-                    # Generate invoice from deal
-                    invoice_data = await self.connector.transform_deal_to_invoice(deal_data)
-                    
-                    # TODO: Save invoice to database via invoice service
-                    # For now, just log the invoice generation
-                    logger.info(f"Generated invoice for deal {event.objectId}: {invoice_data['invoice_number']}")
-                    
-                    return {
-                        "status": "processed",
-                        "action": "invoice_generated",
-                        "invoice_number": invoice_data["invoice_number"],
-                        "deal_stage": new_stage
-                    }
-                except Exception as e:
-                    logger.error(f"Error generating invoice for deal {event.objectId}: {str(e)}")
-                    return {
-                        "status": "error",
-                        "action": "invoice_generation_failed",
-                        "error": str(e)
-                    }
-        
-        return {
-            "status": "processed",
-            "action": "stage_changed",
-            "new_stage": new_stage,
-            "mapping_found": new_stage in stage_mapping
-        }
+            # Trigger background processing of the deal
+            connection_id = self.config.get("connection_id")
+            if connection_id:
+                # Process the deal asynchronously
+                import asyncio
+                asyncio.create_task(process_hubspot_deal(event.objectId, connection_id))
+                
+                logger.info(f"Triggered background processing for deal {event.objectId} after stage change to {new_stage}")
+                
+                return {
+                    "status": "processed",
+                    "action": "deal_processing_triggered",
+                    "deal_stage": new_stage,
+                    "background_task_started": True
+                }
+            else:
+                logger.warning(f"No connection_id found in config for deal {event.objectId}")
+                return {
+                    "status": "error",
+                    "action": "missing_connection_id",
+                    "deal_stage": new_stage
+                }
+                
+        except Exception as e:
+            logger.error(f"Error triggering deal processing for {event.objectId}: {str(e)}")
+            return {
+                "status": "error",
+                "action": "deal_processing_failed",
+                "error": str(e),
+                "deal_stage": new_stage
+            }
     
     async def handle_deal_amount_change(self, event: HubSpotWebhookEvent, deal_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -250,34 +254,38 @@ class HubSpotWebhookProcessor:
             Dict with handling result
         """
         try:
-            # Get the new deal data
-            deal_data = await self.connector.get_deal_by_id(event.objectId)
+            # Always trigger deal processing for new deals
+            # This will handle the database creation and potential invoice generation
+            from app.tasks.hubspot_tasks import process_hubspot_deal
             
-            # Check if auto-invoice generation is enabled for new deals
-            auto_generate = self.config.get("settings", {}).get("auto_generate_invoice_on_creation", False)
-            
-            if auto_generate:
-                # Generate invoice from new deal
-                invoice_data = await self.connector.transform_deal_to_invoice(deal_data)
+            # Trigger background processing of the deal
+            connection_id = self.config.get("connection_id")
+            if connection_id:
+                # Process the deal asynchronously
+                import asyncio
+                asyncio.create_task(process_hubspot_deal(event.objectId, connection_id))
                 
-                # TODO: Save invoice to database
-                logger.info(f"Auto-generated invoice for new deal {event.objectId}: {invoice_data['invoice_number']}")
+                logger.info(f"Triggered background processing for new deal {event.objectId}")
                 
                 return {
                     "status": "processed",
-                    "action": "deal_created_with_invoice",
-                    "invoice_number": invoice_data["invoice_number"]
+                    "action": "deal_creation_processing_triggered",
+                    "background_task_started": True
                 }
-            
-            return {
-                "status": "processed",
-                "action": "deal_created",
-                "auto_invoice": False
-            }
+            else:
+                logger.warning(f"No connection_id found in config for new deal {event.objectId}")
+                return {
+                    "status": "error",
+                    "action": "missing_connection_id"
+                }
             
         except Exception as e:
             logger.error(f"Error handling deal creation: {str(e)}")
-            raise IntegrationError(f"Failed to handle deal creation: {str(e)}")
+            return {
+                "status": "error",
+                "action": "deal_creation_processing_failed",
+                "error": str(e)
+            }
     
     async def handle_deal_deletion(self, event: HubSpotWebhookEvent) -> Dict[str, Any]:
         """
