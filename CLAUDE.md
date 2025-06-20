@@ -435,6 +435,82 @@ cd frontend && DEBUG=true npm run dev
 - **Testing**: Maintain >85% code coverage
 - **Documentation**: Update API docs and README files
 
+## Background Task Processing Architecture
+
+### Current Implementation (Development)
+The platform currently uses an async task framework for background processing:
+
+```python
+# Current async task approach (app/services/background_tasks.py)
+async def start_background_tasks():
+    start_task("submission_retry_processor", submission_retry_processor, interval_seconds=retry_settings.RETRY_PROCESSOR_INTERVAL)
+    start_task("certificate_monitor", certificate_monitor_task, interval_seconds=3600)
+    start_task("hubspot_deal_processor", hubspot_deal_processor_task, interval_seconds=3600)
+```
+
+### Professional Recommendation: Celery Migration
+
+**For production environments, migrate to Celery for critical business operations:**
+
+#### **Phase 1: Hybrid Approach (Recommended)**
+```python
+# Keep async tasks for simple operations
+async def simple_background_tasks():
+    # Certificate monitoring, system cleanup, health checks
+    pass
+
+# Migrate critical tasks to Celery
+@celery_app.task(bind=True, max_retries=3)
+def process_hubspot_deal(self, deal_id, connection_id):
+    # Financial/integration tasks requiring reliability
+    pass
+
+@celery_app.task(bind=True, max_retries=5)
+def process_firs_submission(self, submission_id):
+    # Critical FIRS submissions
+    pass
+```
+
+#### **Production Celery Configuration**
+```python
+# celery_config.py
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+
+# Task routing for different priorities
+CELERY_ROUTES = {
+    'integrations.hubspot.process_deal': {'queue': 'crm_high'},
+    'integrations.hubspot.sync_deals': {'queue': 'crm_normal'},
+    'firs.submit_invoice': {'queue': 'firs_critical'},
+    'system.cleanup': {'queue': 'maintenance'},
+}
+
+# Worker specialization
+CELERY_WORKER_ROUTES = {
+    'worker_crm': ['crm_high', 'crm_normal'],
+    'worker_firs': ['firs_critical'],
+    'worker_maintenance': ['maintenance']
+}
+```
+
+#### **Why Celery for Production:**
+1. **Reliability**: Message persistence, guaranteed delivery, task state tracking
+2. **Scalability**: Horizontal worker scaling, load balancing
+3. **Monitoring**: Flower dashboard, task routing, priority queues
+4. **Financial Compliance**: Audit trails, guaranteed processing, systematic retries
+5. **Zero Downtime**: Tasks continue during deployments
+
+#### **Migration Strategy:**
+- **Immediate**: Keep current async tasks for certificates, cleanup
+- **Short-term**: Migrate CRM/POS processing to Celery
+- **Long-term**: Full Celery adoption with worker specialization
+
+#### **Current Async Framework Use Cases:**
+- Development environment and prototyping
+- Simple system maintenance tasks (< 100/hour)
+- Non-critical operations where task loss is acceptable
+- Single server deployments
+
 ## Support & Resources
 
 ### Documentation
@@ -448,5 +524,6 @@ cd frontend && DEBUG=true npm run dev
 - **FastAPI Docs**: https://fastapi.tiangolo.com/
 - **Next.js Docs**: https://nextjs.org/docs
 - **SQLAlchemy Docs**: https://docs.sqlalchemy.org/
+- **Celery Docs**: https://docs.celeryproject.org/
 
 This comprehensive guide covers all aspects of the TaxPoynt E-Invoice platform development. Refer to specific documentation files in the `/docs` directory for detailed implementation guides.
