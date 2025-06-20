@@ -32,9 +32,13 @@ aiosmtplib>=2.0.2
 qrcode>=7.4.2
 Pillow>=10.0.1
 
-# Redis for caching
+# Redis for caching & Task Queue
 redis>=5.0.1
 hiredis>=2.2.3
+
+# Background Task Queue
+celery>=5.3.0
+flower>=2.0.1
 
 # Integration & Validation
 jsonschema>=4.19.1

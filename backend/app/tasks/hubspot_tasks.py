@@ -15,7 +15,9 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from uuid import UUID
+from celery import current_task
 
+from app.core.celery import celery_app
 from app.db.session import SessionLocal
 from app.integrations.crm.hubspot.connector import HubSpotConnector, get_hubspot_connector
 from app.integrations.crm.hubspot.models import HubSpotDeal, HubSpotDealInvoice
@@ -26,7 +28,8 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-async def process_hubspot_deal(deal_id: str, connection_id: str) -> Dict[str, Any]:
+@celery_app.task(bind=True, name="app.tasks.hubspot_tasks.process_hubspot_deal")
+def process_hubspot_deal(self, deal_id: str, connection_id: str) -> Dict[str, Any]:
     """
     Process a single HubSpot deal and generate invoice if needed.
     
@@ -180,7 +183,8 @@ async def process_hubspot_deal(deal_id: str, connection_id: str) -> Dict[str, An
         db.close()
 
 
-async def sync_hubspot_deals(connection_id: str, days_back: int = 30) -> Dict[str, Any]:
+@celery_app.task(bind=True, name="app.tasks.hubspot_tasks.sync_hubspot_deals") 
+def sync_hubspot_deals(self, connection_id: str, days_back: int = 30) -> Dict[str, Any]:
     """
     Sync deals from HubSpot for a specific connection.
     
@@ -292,7 +296,7 @@ async def sync_hubspot_deals(connection_id: str, days_back: int = 30) -> Dict[st
             
             try:
                 # Process the deal
-                result = await process_hubspot_deal(deal_id, connection_id)
+                result = process_hubspot_deal.apply_async(args=[deal_id, connection_id]).get()
                 if result["success"]:
                     processed_count += 1
                 else:
@@ -345,7 +349,7 @@ async def sync_hubspot_deals(connection_id: str, days_back: int = 30) -> Dict[st
         db.close()
 
 
-async def batch_process_hubspot_deals(connection_ids: List[str], days_back: int = 30) -> Dict[str, Any]:
+def batch_process_hubspot_deals(connection_ids: List[str], days_back: int = 30) -> Dict[str, Any]:
     """
     Process HubSpot deals for multiple connections in batch.
     
@@ -376,7 +380,7 @@ async def batch_process_hubspot_deals(connection_ids: List[str], days_back: int 
             logger.info(f"Processing connection {connection_id}")
             
             # Sync deals for this connection
-            sync_result = await sync_hubspot_deals(connection_id, days_back)
+            sync_result = sync_hubspot_deals.apply_async(args=[connection_id, days_back]).get()
             
             if sync_result["success"]:
                 results["details"]["successful_connections"] += 1
@@ -441,7 +445,8 @@ def _parse_date(date_string: Optional[str]) -> Optional[datetime]:
 
 
 # Background task for automatic deal processing
-async def hubspot_deal_processor_task():
+@celery_app.task(bind=True, name="app.tasks.hubspot_tasks.hubspot_deal_processor_task")
+def hubspot_deal_processor_task(self):
     """
     Background task that periodically processes HubSpot deals for all active connections.
     
