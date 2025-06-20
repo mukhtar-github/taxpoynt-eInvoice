@@ -17,8 +17,134 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, Tuple
 
 import httpx
+import secrets
+import urllib.parse
+from cryptography.fernet import Fernet
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class SecureCredentialManager:
+    """Secure manager for integration credentials with encryption."""
+    
+    def __init__(self):
+        """Initialize with encryption key from settings."""
+        # Use the encryption key from settings or generate one
+        encryption_key = getattr(settings, 'CREDENTIAL_ENCRYPTION_KEY', None)
+        if not encryption_key:
+            # Generate a key for development (in production, this should be set in settings)
+            encryption_key = Fernet.generate_key()
+            logger.warning("No CREDENTIAL_ENCRYPTION_KEY found in settings. Using generated key.")
+        
+        if isinstance(encryption_key, str):
+            encryption_key = encryption_key.encode()
+            
+        self.cipher_suite = Fernet(encryption_key)
+        
+    def encrypt_credentials(self, credentials: Dict[str, Any]) -> str:
+        """
+        Encrypt credentials for secure storage.
+        
+        Args:
+            credentials: Dictionary of credential information
+            
+        Returns:
+            str: Encrypted credentials string
+        """
+        if not credentials:
+            return ""
+            
+        # Convert to JSON string
+        credentials_json = json.dumps(credentials, sort_keys=True)
+        
+        # Encrypt
+        encrypted_data = self.cipher_suite.encrypt(credentials_json.encode('utf-8'))
+        
+        return encrypted_data.decode('utf-8')
+        
+    def decrypt_credentials(self, encrypted_data: str) -> Dict[str, Any]:
+        """
+        Decrypt credentials for use.
+        
+        Args:
+            encrypted_data: Encrypted credentials string
+            
+        Returns:
+            Dict: Decrypted credentials dictionary
+        """
+        if not encrypted_data:
+            return {}
+            
+        try:
+            # Decrypt
+            decrypted_data = self.cipher_suite.decrypt(encrypted_data.encode('utf-8'))
+            
+            # Convert from JSON
+            return json.loads(decrypted_data.decode('utf-8'))
+        except Exception as e:
+            logger.error(f"Failed to decrypt credentials: {str(e)}")
+            return {}
+
+
+class OAuthHandler:
+    """OAuth 2.0 handler for external integrations."""
+    
+    def __init__(self, platform_name: str, credential_manager: SecureCredentialManager):
+        """
+        Initialize OAuth handler.
+        
+        Args:
+            platform_name: Name of the platform (e.g., 'hubspot', 'salesforce')
+            credential_manager: Secure credential manager instance
+        """
+        self.platform_name = platform_name
+        self.credential_manager = credential_manager
+        self.token_data = {}
+        self.token_expiry = None
+        
+    async def get_authorization_url(self, redirect_uri: str, scopes: Optional[str] = None, state: Optional[str] = None) -> str:
+        """
+        Generate OAuth authorization URL.
+        
+        Args:
+            redirect_uri: URI to redirect to after authorization
+            scopes: Optional space-separated list of scopes
+            state: Optional state parameter for CSRF protection
+            
+        Returns:
+            str: Authorization URL
+        """
+        # This method should be implemented by platform-specific subclasses
+        raise NotImplementedError("Must be implemented by platform-specific subclasses")
+        
+    async def exchange_code_for_token(self, code: str, redirect_uri: str) -> Dict[str, Any]:
+        """
+        Exchange authorization code for access token.
+        
+        Args:
+            code: Authorization code from OAuth provider
+            redirect_uri: URI that was used in authorization request
+            
+        Returns:
+            Dict containing token information
+        """
+        # This method should be implemented by platform-specific subclasses
+        raise NotImplementedError("Must be implemented by platform-specific subclasses")
+        
+    async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
+        """
+        Refresh access token using refresh token.
+        
+        Args:
+            refresh_token: Refresh token
+            
+        Returns:
+            Dict containing new token information
+        """
+        # This method should be implemented by platform-specific subclasses
+        raise NotImplementedError("Must be implemented by platform-specific subclasses")
 
 
 class IntegrationAuth:
@@ -72,7 +198,7 @@ class BasicAuth(IntegrationAuth):
 
 
 class OAuth2Auth(IntegrationAuth):
-    """OAuth2 authentication handler."""
+    """OAuth2 authentication handler with full OAuth 2.0 flow support."""
     
     def __init__(self, auth_config: Dict[str, Any]):
         """
@@ -84,6 +210,7 @@ class OAuth2Auth(IntegrationAuth):
         super().__init__(auth_config)
         self.token_data = {}
         self.token_expiry = None
+        self.credential_manager = SecureCredentialManager()
     
     async def get_access_token(self) -> Tuple[str, datetime]:
         """
@@ -149,6 +276,167 @@ class OAuth2Auth(IntegrationAuth):
         """
         token, _ = await self.get_access_token()
         return {"Authorization": f"Bearer {token}"}
+    
+    async def get_authorization_url(self, redirect_uri: str, scopes: Optional[str] = None, state: Optional[str] = None) -> str:
+        """
+        Generate OAuth authorization URL for the authorization code flow.
+        
+        Args:
+            redirect_uri: URI to redirect to after authorization
+            scopes: Optional space-separated list of scopes
+            state: Optional state parameter for CSRF protection
+            
+        Returns:
+            str: Authorization URL
+        """
+        auth_url = self.config.get("auth_url")
+        if not auth_url:
+            raise ValueError("Authorization URL not configured")
+            
+        client_id = self.credentials.get("client_id")
+        if not client_id:
+            raise ValueError("Client ID not configured")
+            
+        params = {
+            "response_type": "code",
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+        }
+        
+        if scopes:
+            params["scope"] = scopes
+        elif self.config.get("scope"):
+            params["scope"] = self.config["scope"]
+            
+        if state:
+            params["state"] = state
+        else:
+            # Generate a random state for CSRF protection
+            params["state"] = secrets.token_urlsafe(32)
+            
+        # Add any additional authorization parameters
+        extra_params = self.config.get("auth_params", {})
+        params.update(extra_params)
+        
+        query_string = urllib.parse.urlencode(params)
+        return f"{auth_url}?{query_string}"
+    
+    async def exchange_code_for_token(self, code: str, redirect_uri: str, state: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Exchange authorization code for access token.
+        
+        Args:
+            code: Authorization code from OAuth provider
+            redirect_uri: URI that was used in authorization request
+            state: State parameter for verification
+            
+        Returns:
+            Dict containing token information
+        """
+        token_url = self.config.get("token_url")
+        if not token_url:
+            raise ValueError("Token URL not configured")
+            
+        client_id = self.credentials.get("client_id")
+        client_secret = self.credentials.get("client_secret")
+        
+        if not client_id or not client_secret:
+            raise ValueError("Client credentials not configured")
+            
+        data = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": client_id,
+            "client_secret": client_secret,
+        }
+        
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(token_url, data=data, headers=headers)
+            
+            if not response.is_success:
+                error_detail = response.text
+                logger.error(f"Token exchange failed: {response.status_code} - {error_detail}")
+                raise ValueError(f"Token exchange failed: {response.status_code}")
+                
+            token_data = response.json()
+            
+        # Store token data and calculate expiry
+        self.token_data = token_data
+        expires_in = token_data.get("expires_in", 3600)
+        self.token_expiry = datetime.now() + timedelta(seconds=expires_in)
+        
+        # Update credentials with new tokens
+        if token_data.get("refresh_token"):
+            self.credentials["refresh_token"] = token_data["refresh_token"]
+            
+        return token_data
+    
+    async def refresh_token(self, refresh_token: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Refresh access token using refresh token.
+        
+        Args:
+            refresh_token: Optional refresh token (uses stored one if not provided)
+            
+        Returns:
+            Dict containing new token information
+        """
+        token_url = self.config.get("token_url")
+        if not token_url:
+            raise ValueError("Token URL not configured")
+            
+        client_id = self.credentials.get("client_id")
+        client_secret = self.credentials.get("client_secret")
+        
+        if not client_id or not client_secret:
+            raise ValueError("Client credentials not configured")
+            
+        refresh_token = refresh_token or self.credentials.get("refresh_token")
+        if not refresh_token:
+            raise ValueError("No refresh token available")
+            
+        data = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": client_id,
+            "client_secret": client_secret,
+        }
+        
+        # Add scope if configured
+        if self.config.get("scope"):
+            data["scope"] = self.config["scope"]
+            
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(token_url, data=data, headers=headers)
+            
+            if not response.is_success:
+                error_detail = response.text
+                logger.error(f"Token refresh failed: {response.status_code} - {error_detail}")
+                raise ValueError(f"Token refresh failed: {response.status_code}")
+                
+            token_data = response.json()
+            
+        # Update stored token data
+        self.token_data = token_data
+        expires_in = token_data.get("expires_in", 3600)
+        self.token_expiry = datetime.now() + timedelta(seconds=expires_in)
+        
+        # Update credentials with new tokens
+        if token_data.get("refresh_token"):
+            self.credentials["refresh_token"] = token_data["refresh_token"]
+            
+        return token_data
 
 
 class TokenAuth(IntegrationAuth):

@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "development_encryption_key_please_change_in_production")
     
+    # Integration Authentication
+    CREDENTIAL_ENCRYPTION_KEY: str = os.getenv("CREDENTIAL_ENCRYPTION_KEY", "")
+    OAUTH_TOKEN_REFRESH_BUFFER_MINUTES: int = 5  # Refresh tokens 5 minutes before expiry
+    OAUTH_MAX_RETRY_ATTEMPTS: int = 3  # Maximum retries for token refresh
+    OAUTH_RETRY_DELAY_SECONDS: int = 1  # Initial delay between retries
+    
     # FIRS Encryption and Cryptographic Signing
     CRYPTO_KEYS_PATH: str = os.getenv("CRYPTO_KEYS_PATH", "")
     SIGNING_PRIVATE_KEY_PATH: str = os.getenv("SIGNING_PRIVATE_KEY_PATH", "")
