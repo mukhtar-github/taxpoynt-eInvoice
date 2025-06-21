@@ -57,12 +57,15 @@ export class CRMService {
   /**
    * Get all CRM connections with optional filters
    */
-  static async getConnections(params?: {
-    page?: number;
-    page_size?: number;
-    platform?: string;
-    active_only?: boolean;
-  }): Promise<{ connections: CRMConnection[]; pagination: PaginationMeta }> {
+  static async getConnections(
+    organizationId?: string,
+    params?: {
+      page?: number;
+      page_size?: number;
+      platform?: string;
+      active_only?: boolean;
+    }
+  ): Promise<{ connections: CRMConnection[]; pagination: PaginationMeta }> {
     try {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.append('page', params.page.toString());
@@ -80,8 +83,10 @@ export class CRMService {
           page: response.data.connections.page,
           page_size: response.data.connections.page_size,
           total: response.data.connections.total,
-          total_pages: response.data.connections.pages,
-        } as PaginationMeta
+          pages: response.data.connections.pages,
+          has_next: response.data.connections.page < response.data.connections.pages,
+          has_prev: response.data.connections.page > 1
+        }
       };
     } catch (error: any) {
       this.handleApiError(error);
@@ -92,12 +97,15 @@ export class CRMService {
   /**
    * Get a specific CRM connection by ID
    */
-  static async getConnection(connectionId: string): Promise<CRMConnection> {
+  static async getConnection(
+    organizationId: string,
+    connectionId: string
+  ): Promise<{ connection: CRMConnection }> {
     try {
       const response = await apiService.get<CRMConnectionResponse>(
         `${this.BASE_PATH}/connections/${connectionId}`
       );
-      return response.data.connection;
+      return { connection: response.data.connection };
     } catch (error: any) {
       this.handleApiError(error);
       throw error;
@@ -126,7 +134,10 @@ export class CRMService {
   /**
    * Delete a CRM connection
    */
-  static async deleteConnection(connectionId: string): Promise<void> {
+  static async deleteConnection(
+    organizationId: string,
+    connectionId: string
+  ): Promise<void> {
     try {
       await apiService.delete(`${this.BASE_PATH}/connections/${connectionId}`);
     } catch (error: any) {
@@ -468,6 +479,21 @@ export class CRMService {
     }
     
     return true;
+  }
+
+  /**
+   * Sync deals from CRM platform
+   */
+  static async syncDeals(connectionId: string): Promise<ConnectionSyncResponse> {
+    try {
+      const response = await apiService.post<ConnectionSyncResponse>(
+        `${this.BASE_PATH}/connections/${connectionId}/sync-deals`
+      );
+      return response.data;
+    } catch (error: any) {
+      this.handleApiError(error);
+      throw error;
+    }
   }
 }
 

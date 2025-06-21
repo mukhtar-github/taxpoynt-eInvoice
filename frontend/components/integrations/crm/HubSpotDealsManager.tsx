@@ -53,6 +53,7 @@ interface HubSpotDealsManagerProps {
   connection: CRMConnection;
   onDealSelect?: (deal: CRMDeal) => void;
   onDealsSelect?: (deals: CRMDeal[]) => void;
+  onDealsUpdate?: () => void;
   className?: string;
 }
 

@@ -62,10 +62,11 @@ type HubSpotFormData = yup.InferType<typeof hubspotConnectionSchema>;
 
 interface HubSpotConnectorProps {
   organizationId: string;
-  userId: string;
+  userId?: string;
   existingConnection?: CRMConnection;
   onConnectionSuccess?: (connection: CRMConnection) => void;
   onConnectionError?: (error: string) => void;
+  onCancel?: () => void;
   className?: string;
 }
 
@@ -77,6 +78,7 @@ const HubSpotConnector: React.FC<HubSpotConnectorProps> = ({
   existingConnection,
   onConnectionSuccess,
   onConnectionError,
+  onCancel,
   className = ''
 }) => {
   // ==================== STATE MANAGEMENT ====================

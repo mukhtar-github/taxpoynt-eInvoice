@@ -60,12 +60,17 @@ export interface CRMConnection {
   id: string;
   crm_type: CRMType;
   connection_name: string;
+  name: string; // Alias for connection_name for compatibility
   is_active: boolean;
+  status: 'connected' | 'connecting' | 'failed' | 'pending';
   last_sync_at?: string;
+  last_sync?: string; // Alias for last_sync_at for compatibility
   created_at: string;
   updated_at?: string;
   webhook_url?: string;
   connection_settings?: Record<string, any>;
+  total_deals?: number;
+  total_invoices?: number;
 }
 
 export interface CRMConnectionTestResult {

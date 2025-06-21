@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   Home, TrendingUp, List, Settings, Menu, Bell, User, X, BarChart2,
   FileText, Users, Link as LinkIcon, Compass, HardDrive, Shield, Send,
-  Key, ShieldCheck
+  Key, ShieldCheck, UserPlus
 } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
@@ -50,7 +50,8 @@ const NavItems = [
   // System Integration (SI) Items
   { name: 'Dashboard', icon: Home, href: '/dashboard', isPlatform: false },
   { name: 'Company Dashboard', icon: Users, href: '/dashboard/company-home', isPlatform: false },
-  { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations', isPlatform: false },
+  { name: 'ERP Integrations', icon: LinkIcon, href: '/dashboard/integrations', isPlatform: false },
+  { name: 'CRM Integrations', icon: UserPlus, href: '/dashboard/crm', isPlatform: false },
   { name: 'Submission', icon: BarChart2, href: '/dashboard/submission', isPlatform: false },
   { name: 'Organization', icon: Users, href: '/dashboard/organization', isPlatform: false },
   { name: 'Metrics', icon: BarChart2, href: '/dashboard/metrics', isPlatform: false },
