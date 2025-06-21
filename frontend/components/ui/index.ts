@@ -25,7 +25,7 @@ import {
   CardFooter,
 } from './Card';
 import { CardGrid } from './Card';
-import { MetricCard } from './Card';
+import { MetricCard } from './Card'; // @deprecated - Use EnhancedMetricCard from dashboard/ instead
 
 // Typography components
 import TypographyObj, { Heading, Text, Typography, Label as TypographyLabel } from './Typography';

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   Home, TrendingUp, List, Settings, Menu, Bell, User, X, BarChart2,
   FileText, Users, Link as LinkIcon, Compass, HardDrive, Shield, Send,
-  Key, ShieldCheck, UserPlus
+  Key, ShieldCheck, UserPlus, Activity, Zap
 } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
@@ -264,6 +264,56 @@ const Header = () => {
   );
 };
 
+// Mobile Bottom Navigation Component
+const MobileBottomNav = () => {
+  const router = useRouter();
+  
+  const bottomNavItems = [
+    { name: 'Home', icon: Home, href: '/dashboard', label: 'Home' },
+    { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations', label: 'Integrations' },
+    { name: 'Activity', icon: Activity, href: '/dashboard/metrics', label: 'Activity' },
+    { name: 'Platform', icon: Zap, href: '/dashboard/transmission', label: 'Platform' },
+    { name: 'More', icon: Menu, href: '/dashboard/organization', label: 'More' },
+  ];
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-1 z-30">
+      <div className="flex justify-around">
+        {bottomNavItems.map((item) => {
+          const isActive = router.pathname === item.href || 
+                          (item.href !== '/dashboard' && router.pathname.startsWith(item.href));
+          
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 text-xs transition-colors duration-200",
+                isActive 
+                  ? "text-indigo-600" 
+                  : "text-gray-600 hover:text-indigo-600"
+              )}
+            >
+              <item.icon 
+                className={cn(
+                  "h-5 w-5 mb-1 transition-colors duration-200",
+                  isActive ? "text-indigo-600" : "text-gray-600"
+                )} 
+              />
+              <span className={cn(
+                "font-medium transition-colors duration-200 truncate",
+                isActive ? "text-indigo-600" : "text-gray-600"
+              )}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // Main App Dashboard Layout
 const AppDashboardLayout = ({ 
   children, 
@@ -379,10 +429,13 @@ const AppDashboardLayout = ({
           
           <Header />
           
-          <main className="p-6">
+          <main className="p-6 pb-20 md:pb-6">
             {children}
           </main>
         </div>
+        
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
       </div>
     </MainLayout>
   );

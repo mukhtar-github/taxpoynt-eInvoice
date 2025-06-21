@@ -1,11 +1,12 @@
 import React from 'react';
 import { Container, Row, Col, Grid } from '../components/ui/Grid';
-import { Card, CardHeader, CardContent, CardFooter, MetricCard } from '../components/ui/Card';
+import { Card, CardHeader, CardContent, CardFooter } from '../components/ui/Card';
+import { EnhancedMetricCard, MetricCardGrid } from '../components/dashboard/EnhancedMetricCard';
 import { Button } from '../components/ui/Button';
 import { Typography } from '../components/ui/Typography';
 import { ColorPalette } from '../components/ui/ColorPalette';
 import { Badge } from '../components/ui/Badge';
-import { Download, Settings, ChevronRight, Bell, Mail, User } from 'lucide-react';
+import { Download, Settings, ChevronRight, Bell, Mail, User, TrendingUp, Users, FileText, CheckCircle } from 'lucide-react';
 
 /**
  * UI System Demo Page
@@ -187,49 +188,45 @@ const UISystemPage: React.FC = () => {
               This example demonstrates a typical dashboard layout with various card components:
             </Typography.Text>
             
-            {/* Metric Cards */}
-            <Row gap={6} className="mb-8">
-              <Col span={12} md={6} lg={3}>
-                <MetricCard
-                  title="Total Invoices"
-                  value="2,547"
-                  change={{
-                    value: "12.5%",
-                    type: "increase"
-                  }}
-                />
-              </Col>
-              <Col span={12} md={6} lg={3}>
-                <MetricCard
-                  title="Pending Invoices"
-                  value="128"
-                  change={{
-                    value: "3.2%",
-                    type: "decrease"
-                  }}
-                />
-              </Col>
-              <Col span={12} md={6} lg={3}>
-                <MetricCard
-                  title="Success Rate"
-                  value="98.4%"
-                  change={{
-                    value: "0.7%",
-                    type: "increase"
-                  }}
-                />
-              </Col>
-              <Col span={12} md={6} lg={3}>
-                <MetricCard
-                  title="Total Value"
-                  value="₦ 4.5M"
-                  change={{
-                    value: "15.3%",
-                    type: "increase"
-                  }}
-                />
-              </Col>
-            </Row>
+            {/* Enhanced Metric Cards with Animations */}
+            <MetricCardGrid className="mb-8">
+              <EnhancedMetricCard
+                title="Total Invoices"
+                value={2547}
+                previousValue={2270}
+                icon={<FileText className="w-6 h-6" />}
+                countUp={true}
+                animationDuration={2000}
+              />
+              <EnhancedMetricCard
+                title="Pending Invoices"
+                value={128}
+                previousValue={132}
+                icon={<Users className="w-6 h-6" />}
+                countUp={true}
+                animationDuration={1800}
+              />
+              <EnhancedMetricCard
+                title="Success Rate"
+                value={98.4}
+                previousValue={97.7}
+                suffix="%"
+                precision={1}
+                icon={<CheckCircle className="w-6 h-6" />}
+                countUp={true}
+                animationDuration={2200}
+              />
+              <EnhancedMetricCard
+                title="Total Value"
+                value={4500000}
+                previousValue={3900000}
+                prefix="₦"
+                icon={<TrendingUp className="w-6 h-6" />}
+                formatValue={(value) => `${(value / 1000000).toFixed(1)}M`}
+                countUp={true}
+                animationDuration={2500}
+              />
+            </MetricCardGrid>
             
             {/* Main Dashboard Content */}
             <Row gap={6}>

@@ -2,7 +2,8 @@ import { NextPage } from 'next';
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import CompanyDashboardLayout from '../../components/layouts/CompanyDashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardGrid, MetricCard } from '../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { EnhancedMetricCard, MetricCardGrid } from '../../components/dashboard/EnhancedMetricCard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Table, TableContainer, TableHeader, TableRow, TableHead, TableBody, TableCell, TableEmpty } from '../../components/ui/Table';
@@ -17,8 +18,9 @@ import {
   Layers,
   Settings,
   RefreshCw,
-  TrendingUp,
-  Users
+  Users,
+  FileText,
+  CheckCircle
 } from 'lucide-react';
 import EnhancedDashboard from '../../components/dashboard/EnhancedDashboard';
 import { useAuth } from '../../context/AuthContext';
@@ -242,62 +244,50 @@ const DashboardHub: NextPage = () => {
             </div>
           </div>
 
-          {/* Enhanced metric cards with gradients and icons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
-                <h3 className="text-white font-medium text-sm">Total Invoices (Today)</h3>
-              </div>
-              <div className="p-6 flex justify-between items-center">
-                <div className="text-3xl font-bold text-gray-800">{summary?.irn_summary?.total_irns?.toString() || "1245"}</div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <FileBarChart className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
+          {/* Enhanced metric cards with animations and mobile-first design */}
+          <MetricCardGrid className="mb-8">
+            <EnhancedMetricCard
+              title="Total Invoices (Today)"
+              value={summary?.irn_summary?.total_irns || 1245}
+              previousValue={summary?.irn_summary?.total_irns ? Math.floor(summary.irn_summary.total_irns * 0.92) : 1145}
+              icon={<FileText className="w-6 h-6" />}
+              countUp={true}
+              animationDuration={2000}
+              onClick={() => window.location.href = '/dashboard/metrics'}
+            />
             
-            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-              <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-4">
-                <h3 className="text-white font-medium text-sm">Weekly Transactions</h3>
-              </div>
-              <div className="p-6 flex justify-between items-center">
-                <div className="text-3xl font-bold text-gray-800">{summary?.odoo_summary?.total_invoices?.toString() || "1028"}</div>
-                <div className="p-3 bg-indigo-100 rounded-full">
-                  <BarChart3 className="h-6 w-6 text-indigo-600" />
-                </div>
-              </div>
-            </div>
+            <EnhancedMetricCard
+              title="Weekly Transactions"
+              value={summary?.odoo_summary?.total_invoices || 1028}
+              previousValue={summary?.odoo_summary?.total_invoices ? Math.floor(summary.odoo_summary.total_invoices * 0.88) : 905}
+              icon={<BarChart3 className="w-6 h-6" />}
+              countUp={true}
+              animationDuration={2200}
+              onClick={() => window.location.href = '/dashboard/integrations'}
+            />
             
-            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-              <div className="bg-gradient-to-r from-violet-500 to-violet-600 p-4">
-                <h3 className="text-white font-medium text-sm">Monthly Transactions</h3>
-              </div>
-              <div className="p-6 flex justify-between items-center">
-                <div className="text-3xl font-bold text-gray-800">{summary?.system_summary?.total_requests?.toString() || "2456"}</div>
-                <div className="p-3 bg-violet-100 rounded-full">
-                  <LineChart className="h-6 w-6 text-violet-600" />
-                </div>
-              </div>
-            </div>
+            <EnhancedMetricCard
+              title="Monthly Transactions"
+              value={summary?.system_summary?.total_requests || 2456}
+              previousValue={summary?.system_summary?.total_requests ? Math.floor(summary.system_summary.total_requests * 0.85) : 2088}
+              icon={<LineChart className="w-6 h-6" />}
+              countUp={true}
+              animationDuration={2400}
+              onClick={() => window.location.href = '/dashboard/metrics'}
+            />
             
-            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-4">
-                <h3 className="text-white font-medium text-sm">Success Rate</h3>
-              </div>
-              <div className="p-6 flex justify-between items-center">
-                <div className="flex flex-col">
-                  <div className="text-3xl font-bold text-gray-800">{summary?.validation_summary?.success_rate || "94.6"}%</div>
-                  <div className="flex items-center text-sm text-emerald-600">
-                    <TrendingUp className="h-4 w-4 mr-1" />
-                    <span>0.8% increase</span>
-                  </div>
-                </div>
-                <div className="p-3 bg-emerald-100 rounded-full">
-                  <Activity className="h-6 w-6 text-emerald-600" />
-                </div>
-              </div>
-            </div>
-          </div>
+            <EnhancedMetricCard
+              title="Success Rate"
+              value={summary?.validation_summary?.success_rate || 94.6}
+              previousValue={summary?.validation_summary?.success_rate ? summary.validation_summary.success_rate - 0.8 : 93.8}
+              suffix="%"
+              precision={1}
+              icon={<CheckCircle className="w-6 h-6" />}
+              countUp={true}
+              animationDuration={1800}
+              onClick={() => window.location.href = '/dashboard/validation-stats'}
+            />
+          </MetricCardGrid>
           
           {/* Enhanced Dashboard with Platform Components */}
           <EnhancedDashboard organizationId={(user as any)?.organization_id || ''} />
