@@ -13,7 +13,12 @@ import {
   FeatureShowcase, 
   BenefitsVisualization, 
   PlatformCapabilities, 
-  IntegrationEcosystem 
+  IntegrationEcosystem,
+  TrustBadges,
+  SecurityIndicators,
+  TestimonialsCarousel,
+  UsageStatistics,
+  SuccessStories
 } from '../components/landing';
 import { 
   ArrowRight, 
@@ -60,6 +65,47 @@ const Home: React.FC = () => {
       <MainLayout>
         {/* Enhanced Hero Section with Week 5 Improvements */}
         <EnhancedHero />
+
+        {/* Day 5: Trust & Social Proof Section */}
+        <div className="py-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-y border-blue-200">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-8">
+              <Typography.Heading level="h2" className="text-2xl font-bold text-gray-900 mb-2">
+                Trusted by Thousands of Nigerian Businesses
+              </Typography.Heading>
+              <Typography.Text className="text-gray-600">
+                Join the growing community of businesses achieving FIRS compliance effortlessly
+              </Typography.Text>
+            </div>
+            
+            {/* Trust Badges */}
+            <TrustBadges 
+              variant="inline" 
+              animated={true}
+              showFIRSBadges={true}
+              showSecurityBadges={true}
+            />
+            
+            {/* Usage Statistics */}
+            <div className="mt-12">
+              <UsageStatistics 
+                layout="hero"
+                animated={true}
+                theme="light"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Security Status Banner */}
+        <div className="bg-white border-b border-gray-200 py-4">
+          <div className="container mx-auto px-4">
+            <SecurityIndicators 
+              layout="banner"
+              animated={true}
+            />
+          </div>
+        </div>
 
         {/* Dual Certification Highlight */}
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-y border-gray-200 py-8">
@@ -278,118 +324,55 @@ const Home: React.FC = () => {
           showMetrics={true}
         />
 
+        {/* Customer Testimonials Section */}
+        <div className="py-16 bg-gradient-to-b from-white to-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-900">
+                What Our Customers Say
+              </Typography.Heading>
+              <Typography.Text size="lg" className="text-gray-600">
+                Real experiences from businesses that have transformed their e-invoicing with TaxPoynt
+              </Typography.Text>
+            </div>
+            
+            <TestimonialsCarousel 
+              autoPlay={true}
+              interval={6000}
+              showMetrics={true}
+              showRating={true}
+              layout="single"
+              animated={true}
+            />
+          </div>
+        </div>
+
         {/* Platform Capabilities Overview - Day 3-4 Enhancement */}
         <PlatformCapabilities 
           defaultExpanded={['data-processing']}
         />
 
-        {/* APP Success Stories Section */}
+        {/* Success Stories Section - Enhanced with Day 5 Component */}
         <div className="py-16 bg-gradient-to-r from-cyan-50 to-white">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <div className="inline-block bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full mb-4">
-                <span className="font-semibold">APP Success Stories</span>
+                <span className="font-semibold">Success Stories</span>
               </div>
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-800">
-                APP Excellence in Action
+                Real Results from Real Businesses
               </Typography.Heading>
               <Typography.Text size="lg" className="text-gray-700">
-                See how organizations are leveraging our Access Point Provider capabilities to transform their e-invoicing workflow
+                See how organizations across Nigeria are transforming their e-invoicing operations with TaxPoynt
               </Typography.Text>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-              {/* Case Study 1 */}
-              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow border-t-4 border-cyan-500">
-                <div className="h-48 bg-gray-200 relative">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-cyan-600 to-cyan-700">
-                    <Users className="h-12 w-12 text-white opacity-70" />
-                  </div>
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Typography.Heading level="h3" className="text-xl font-bold">
-                      XYZ Manufacturing
-                    </Typography.Heading>
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Manufacturing</span>
-                  </div>
-                  <Typography.Text className="mb-4">
-                    Achieved 100% FIRS compliance with our APP transmission system. Securely processed over 5,000 monthly e-invoices with zero rejection rate and complete audit trail for tax authorities.
-                  </Typography.Text>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200 font-medium">APP Certified</span>
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Secure Transmission</span>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full mt-2">
-                    Read Full Story
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Case Study 2 */}
-              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow border-t-4 border-cyan-500">
-                <div className="h-48 bg-gray-200 relative">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-cyan-600 to-cyan-700">
-                    <FileText className="h-12 w-12 text-white opacity-70" />
-                  </div>
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Typography.Heading level="h3" className="text-xl font-bold">
-                      ABC Financial Services
-                    </Typography.Heading>
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">Finance</span>
-                  </div>
-                  <Typography.Text className="mb-4">
-                    Leveraged our APP certificate management to ensure uninterrupted e-invoice processing with 99.99% uptime. Automated certificate renewal and digital signature verification decreased audit preparation time by 70%.
-                  </Typography.Text>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200 font-medium">APP Certified</span>
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Certificate Management</span>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full mt-2">
-                    Read Full Story
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Case Study 3 */}
-              <Card className="overflow-hidden h-full shadow-md hover:shadow-lg transition-shadow border-t-4 border-cyan-500">
-                <div className="h-48 bg-gray-200 relative">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-cyan-600 to-cyan-700">
-                    <ShieldCheck className="h-12 w-12 text-white opacity-70" />
-                  </div>
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Typography.Heading level="h3" className="text-xl font-bold">
-                      Global Retail Corp
-                    </Typography.Heading>
-                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium">Retail</span>
-                  </div>
-                  <Typography.Text className="mb-4">
-                    Implemented our APP cryptographic stamping across 12 retail locations, generating tamper-proof QR codes for 20,000+ monthly invoices. Advanced APP analytics provided real-time visibility into transmission status.
-                  </Typography.Text>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200 font-medium">APP Certified</span>
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-50 text-cyan-700">Cryptographic Stamping</span>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full mt-2">
-                    Read Full Story
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="text-center mt-8">
-              <Button
-                variant="outline"
-                size="lg"
-                className="bg-white border-primary-600 text-primary-700 hover:bg-primary-50"
-              >
-                View All Case Studies
-              </Button>
-            </div>
+            <SuccessStories 
+              showFilters={true}
+              layout="grid"
+              maxStories={6}
+              animated={true}
+            />
           </div>
         </div>
 
@@ -398,6 +381,50 @@ const Home: React.FC = () => {
           showFilters={true}
           maxIntegrations={8}
         />
+
+        {/* Security & Trust Section - Day 5 Enhancement */}
+        <div className="py-16 bg-gradient-to-b from-gray-50 to-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-900">
+                Enterprise-Grade Security & Reliability
+              </Typography.Heading>
+              <Typography.Text size="lg" className="text-gray-600">
+                Your data security and system reliability are our top priorities. See how we protect your business.
+              </Typography.Text>
+            </div>
+            
+            <SecurityIndicators 
+              showRealTimeStatus={true}
+              showSecurityMetrics={true}
+              showUptime={true}
+              animated={true}
+              layout="detailed"
+            />
+          </div>
+        </div>
+
+        {/* Trust Badges & Certifications */}
+        <div className="py-16 bg-white border-t border-gray-200">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-900">
+                Certifications & Compliance
+              </Typography.Heading>
+              <Typography.Text size="lg" className="text-gray-600">
+                Our comprehensive certifications ensure your e-invoicing meets all regulatory requirements
+              </Typography.Text>
+            </div>
+            
+            <TrustBadges 
+              variant="horizontal"
+              animated={true}
+              showFIRSBadges={true}
+              showSecurityBadges={true}
+              showCertifications={true}
+            />
+          </div>
+        </div>
 
         {/* APP Educational Resources Section */}
         <div className="py-16 bg-gradient-to-b from-white to-cyan-50">
