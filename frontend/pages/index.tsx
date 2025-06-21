@@ -5,21 +5,25 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Typography } from '../components/ui/Typography';
 import { Card, CardContent } from '../components/ui/Card';
-import Image from 'next/image';
 import Head from 'next/head';
+import { 
+  EnhancedHero, 
+  ValuePropositions, 
+  CallToAction, 
+  FeatureShowcase, 
+  BenefitsVisualization, 
+  PlatformCapabilities, 
+  IntegrationEcosystem 
+} from '../components/landing';
 import { 
   ArrowRight, 
   FileCheck, 
-  Clock, 
-  BarChart2, 
-  CheckCircle,
   Database,
   Server,
   HardDrive,
   GitMerge,
   Layers,
   Shield,
-  Globe,
   ShieldCheck,
   Lock,
   Award,
@@ -45,8 +49,8 @@ const Home: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Taxpoynt E-Invoice | Automated Tax Compliance for Nigerian Businesses</title>
-        <meta name="description" content="Transform your tax compliance with Nigeria's premier e-invoicing platform. Save time, eliminate errors, and stay compliant with FIRS regulations." />
+        <title>Taxpoynt E-Invoice | Advanced E-Invoicing Platform with Comprehensive Features & Integrations</title>
+        <meta name="description" content="Nigeria's most advanced e-invoicing platform with interactive features showcase, comprehensive benefits visualization, and seamless system integrations. FIRS certified APP solution." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Using consistent favicon implementation from MainLayout */}
         <link rel="icon" href="/icons/logo.svg" type="image/svg+xml" />
@@ -54,75 +58,8 @@ const Home: React.FC = () => {
         <link rel="manifest" href="/site.webmanifest" />
       </Head>
       <MainLayout>
-        {/* Hero Section - Enhanced with image and better layout */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-16 md:py-24 relative">
-          {/* Add a subtle overlay pattern for better text readability */}
-          <div className="absolute inset-0 bg-black bg-opacity-20 z-0"></div>
-          <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-            <div className="space-y-6">
-              <div className="inline-block bg-primary-500 bg-opacity-30 px-4 py-2 rounded-full">
-                <span className="text-white font-medium">FIRS Compliant E-Invoicing</span>
-              </div>
-              <Typography.Heading level="h1" className="text-4xl md:text-6xl font-bold text-white drop-shadow-md">
-                Access Point Provider for Secure Nigerian E-Invoicing
-              </Typography.Heading>
-              <Typography.Text size="lg" className="text-white/90 leading-relaxed max-w-xl">
-                Nigeria's premier Access Point Provider (APP) for secure e-invoice transmission, with integrated systems connectivity to streamline your entire e-invoicing workflow from creation to FIRS submission.
-              </Typography.Text>
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Button 
-                  size="lg"
-                  variant="default" 
-                  className="bg-white text-primary-700 hover:bg-gray-100 font-bold shadow-lg tracking-wide border-2 border-white text-shadow-sm"
-                  onClick={() => router.push('/auth/signup')}
-                >
-                  Start Your Free Trial
-                </Button>
-                <Button 
-                  size="lg"
-                  variant="outline" 
-                  className="border-cyan-300 text-white hover:bg-cyan-700/50 group bg-cyan-600/70 backdrop-blur-sm shadow-md font-semibold text-shadow-sm"
-                  onClick={() => {
-                    // Smooth scroll to the APP capabilities section
-                    const appSection = document.getElementById('app-capabilities');
-                    if (appSection) {
-                      appSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                >
-                  Explore APP Features <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </div>
-            </div>
-            <div className="hidden lg:flex justify-end">
-              <div className="relative w-full max-w-xl h-96 bg-white/10 rounded-lg overflow-hidden backdrop-blur-sm border-2 border-white/20 shadow-2xl">
-                {/* Dashboard Screenshot */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent">
-                  <div className="relative h-full w-full overflow-hidden">
-                    {/* Create a browser window frame effect */}
-                    <div className="h-6 bg-gray-800 flex items-center px-2">
-                      <div className="flex space-x-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                      </div>
-                    </div>
-                    {/* Dashboard screenshot fills the frame */}
-                    <div className="h-[calc(100%-24px)] w-full">
-                      <Image 
-                        src="/icons/dashboard-screenshot.webp" 
-                        alt="TaxPoynt E-Invoice Dashboard" 
-                        width={600} 
-                        height={400}
-                        className="w-full h-full object-cover object-top" 
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Enhanced Hero Section with Week 5 Improvements */}
+        <EnhancedHero />
 
         {/* Dual Certification Highlight */}
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-y border-gray-200 py-8">
@@ -255,6 +192,12 @@ const Home: React.FC = () => {
           </div>
         </div>
 
+        {/* Feature Showcase System - Day 3-4 Enhancement */}
+        <FeatureShowcase 
+          showCategories={true}
+          maxFeatures={6}
+        />
+
         {/* APP Capabilities Section - Enhanced & Prominent */}
         <div id="app-capabilities" className="py-16 bg-gradient-to-r from-cyan-50 to-white border-t-4 border-cyan-500">
           <div className="container mx-auto px-4">
@@ -327,137 +270,18 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Why Choose Section - Enhanced to emphasize APP benefits */}
-        <div className="py-16 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto mb-10">
-              <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
-                Why Choose TaxPoynt's Access Point Provider?
-              </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-700">
-                Our certified APP solution goes beyond basic compliance, delivering enterprise-grade security and seamless transmission with full tracking capabilities.
-              </Typography.Text>
-            </div>
-            
-            {/* APP Benefits */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-16">
-              {[
-                { 
-                  icon: <FileCheck className="h-10 w-10 text-cyan-600" />, 
-                  title: 'FIRS Compliant', 
-                  description: 'Certified APP transmission guarantees all e-invoices meet FIRS requirements.', 
-                  isApp: true
-                },
-                { 
-                  icon: <Clock className="h-10 w-10 text-cyan-600" />, 
-                  title: 'Real-Time Delivery', 
-                  description: 'APP transmission with instant delivery confirmation and timestamp verification.', 
-                  isApp: true
-                },
-                { 
-                  icon: <BarChart2 className="h-10 w-10 text-primary-600" />, 
-                  title: 'Transmission Analytics', 
-                  description: 'Track all APP transmissions with audit trails and status monitoring.',
-                  isApp: true 
-                },
-                { 
-                  icon: <CheckCircle className="h-10 w-10 text-primary-600" />, 
-                  title: 'Digital Authentication', 
-                  description: 'Secure APP verification ensures all documents are validated before transmission.',
-                  isApp: true 
-                },
-                { 
-                  icon: <ShieldCheck className="h-10 w-10 text-cyan-600" />, 
-                  title: 'Certified APP Security', 
-                  description: 'Enterprise-grade encryption and digital signatures meet international standards.',
-                  isApp: true 
-                },
-              ].map((feature, index) => (
-                <Card key={index} className={`border-none shadow-sm hover:shadow-md transition-shadow ${feature.isApp ? 'border-l-2 border-cyan-500 bg-cyan-50/30' : ''}`}>
-                  <CardContent className="pt-6 relative">
-                    {feature.isApp && (
-                      <div className="absolute top-2 right-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
-                          APP
-                        </span>
-                      </div>
-                    )}
-                    <div className="mb-4">{feature.icon}</div>
-                    <Typography.Heading level="h3" className="text-xl font-semibold mb-2">
-                      {feature.title}
-                    </Typography.Heading>
-                    <Typography.Text className="text-gray-600">
-                      {feature.description}
-                    </Typography.Text>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            
-            {/* APP Technical Standards Section */}
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-block bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full mb-3">
-                  <span className="font-medium text-sm">APP Technical Excellence</span>
-                </div>
-                <Typography.Heading level="h3" className="text-2xl font-bold mb-2">
-                  Enterprise-Grade Access Point Provider
-                </Typography.Heading>
-                <Typography.Text size="lg" className="text-gray-700">
-                  Our certified APP solution adheres to rigorous technical standards for maximum security and reliability
-                </Typography.Text>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-cyan-50 rounded-lg p-6 border border-cyan-200 relative">
-                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
-                    APP
-                  </span>
-                  <div className="flex items-center mb-4">
-                    <Shield className="h-8 w-8 text-cyan-600 mr-3" />
-                    <Typography.Heading level="h4" className="text-lg font-semibold">
-                      APP Security & Compliance
-                    </Typography.Heading>
-                  </div>
-                  <ul className="space-y-3 pl-11">
-                    <li className="text-gray-700 list-disc">
-                      <span className="font-medium">Digital Certificate Lifecycle Management</span>: Automated renewal and secure certificate storage
-                    </li>
-                    <li className="text-gray-700 list-disc">
-                      <span className="font-medium">Cryptographic Stamping</span>: Tamper-proof QR codes with FIRS standard signatures
-                    </li>
-                    <li className="text-gray-700 list-disc">
-                      <span className="font-medium">UBL 2.1 Compliance</span>: Ensures your e-invoices meet both FIRS requirements and global standards
-                    </li>
-                  </ul>
-                </div>
-                
-                <div className="bg-cyan-50 rounded-lg p-6 border border-cyan-200 relative">
-                  <span className="absolute top-3 right-3 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
-                    APP
-                  </span>
-                  <div className="flex items-center mb-4">
-                    <Globe className="h-8 w-8 text-cyan-600 mr-3" />
-                    <Typography.Heading level="h4" className="text-lg font-semibold">
-                      APP Transmission Excellence
-                    </Typography.Heading>
-                  </div>
-                  <ul className="space-y-3 pl-11">
-                    <li className="text-gray-700 list-disc">
-                      <span className="font-medium">Real-Time Transmission Status</span>: Monitor e-invoice processing through every stage of the APP pipeline
-                    </li>
-                    <li className="text-gray-700 list-disc">
-                      <span className="font-medium">PEPPOL-Ready Architecture</span>: Built on international transmission standards for future expansion
-                    </li>
-                    <li className="text-gray-700 list-disc">
-                      <span className="font-medium">Secure REST APIs</span>: Dedicated APP endpoints with comprehensive authentication
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Enhanced Value Propositions Section - Week 5 */}
+        <ValuePropositions />
+
+        {/* Benefits Visualization - Day 3-4 Enhancement */}
+        <BenefitsVisualization 
+          showMetrics={true}
+        />
+
+        {/* Platform Capabilities Overview - Day 3-4 Enhancement */}
+        <PlatformCapabilities 
+          defaultExpanded={['data-processing']}
+        />
 
         {/* APP Success Stories Section */}
         <div className="py-16 bg-gradient-to-r from-cyan-50 to-white">
@@ -568,6 +392,12 @@ const Home: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Integration Ecosystem Preview - Day 3-4 Enhancement */}
+        <IntegrationEcosystem 
+          showFilters={true}
+          maxIntegrations={8}
+        />
 
         {/* APP Educational Resources Section */}
         <div className="py-16 bg-gradient-to-b from-white to-cyan-50">
@@ -694,6 +524,15 @@ const Home: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Enhanced Call-to-Action Section - Week 5 */}
+        <CallToAction 
+          title="Ready to Transform Your E-Invoicing?"
+          description="Join hundreds of Nigerian businesses already saving time and ensuring compliance with TaxPoynt. Get started in minutes with our guided setup process."
+          trackingId="landing-main"
+          showStats={true}
+          showTestimonial={true}
+        />
       </MainLayout>
     </>
   );
