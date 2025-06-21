@@ -1,152 +1,72 @@
-// Export UI components for use throughout the application
+/**
+ * UI Components - Week 3 Enhanced Export Index
+ * 
+ * Provides clean imports for all UI components including Week 3 enhancements.
+ */
 
-// Import and re-export each component with its correct exports
-// Accordion component
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './Accordion';
+// Enhanced Form Components (Week 3)
+export { 
+  EnhancedFormField, 
+  EnhancedInput, 
+  EnhancedTextarea 
+} from './EnhancedFormField';
 
-// Toast/Alert components
-import { ToastComponent, ToastContainer, ToastProvider, useToast } from './Toast';
-// Export Alert as an alias for ToastComponent for backward compatibility
-const Alert = ToastComponent;
+export type { 
+  ValidationResult,
+  EnhancedFormFieldProps,
+  EnhancedInputProps,
+  EnhancedTextareaProps 
+} from './EnhancedFormField';
 
-// Badge component
-import { Badge, badgeVariants } from './Badge';
+// Enhanced Loading Components (Week 3)
+export { 
+  LoadingSpinner,
+  LoadingButton,
+  Skeleton,
+  IntegrationCardSkeleton,
+  MetricsCardSkeleton,
+  TableSkeleton,
+  ProgressBar,
+  CircularProgress,
+  PulseIndicator,
+  LoadingOverlay,
+  AnimatedState
+} from './LoadingStates';
 
-// Button component
-import { Button, buttonVariants } from './Button';
+export type {
+  LoadingSpinnerProps,
+  LoadingButtonProps,
+  SkeletonProps,
+  ProgressBarProps,
+  CircularProgressProps,
+  LoadingOverlayProps,
+  AnimatedStateProps
+} from './LoadingStates';
 
-// Card components
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
-  CardFooter,
-} from './Card';
-import { CardGrid } from './Card';
-import { MetricCard } from './Card'; // @deprecated - Use EnhancedMetricCard from dashboard/ instead
+// Core UI Components (Existing)
+export { FormField } from './FormField';
+export { Button } from './Button';
+export { Card, CardContent, CardHeader, CardTitle } from './Card';
+export { Badge } from './Badge';
+export { Typography } from './Typography';
 
-// Typography components
-import TypographyObj, { Heading, Text, Typography, Label as TypographyLabel } from './Typography';
+// Type exports for core components
+export type { FormFieldProps } from './FormField';
+export type { ButtonProps } from './Button';
 
-// Import other components
-import { BarChart, LineChart, chartThemes, createDataset } from './Charts';
-import Checkbox from './Checkbox';
-import ColorPalette from './ColorPalette';
-import Container from './Container';
-import { Divider, dividerVariants } from './Divider';
-import FormField from './FormField';
-import { Grid } from './Grid';
-import { IconButton } from './IconButton';
-import { Input, inputVariants } from './Input';
-import { Label, labelVariants } from './Label';
-import MainNav from './MainNav';
-import MobileNav from './MobileNav';
-import Modal, { modalVariants, modalContentVariants } from './Modal';
-import { Progress } from './Progress';
-import ResponsiveTable from './ResponsiveTable';
-import { 
-  Select, 
-  LegacySelect, 
-  selectVariants,
-  SelectRoot, 
-  SelectTrigger, 
-  SelectValue, 
-  SelectContent, 
-  SelectItem 
-} from './Select';
-import Spinner from './Spinner';
-import StandardCard from './StandardCard';
-import { Switch } from './Switch';
-import { Table } from './Table';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
-import Textarea from './Textarea';
-import { Tooltip } from './Tooltip';
-import { TransactionTable } from './TransactionTable';
-
-// Re-export everything
-export {
-  // Accordion components
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-
-  // Toast/Alert components
-  ToastComponent,
-  ToastContainer,
-  ToastProvider,
-  useToast,
-  Alert,
-  
-  // Badge
-  Badge,
-  badgeVariants,
-  
-  // Button
-  Button,
-  buttonVariants,
-  
-  // Card components
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-  CardGrid,
-  MetricCard,
-  
-  // Typography
-  Typography,
-  Heading,
-  Text,
-  TypographyLabel,
-  
-  // All other components
-  BarChart,
-  LineChart,
-  chartThemes,
-  createDataset,
-  Checkbox,
-  ColorPalette,
-  Container,
-  Divider,
-  dividerVariants,
-  FormField,
-  Grid,
-  IconButton,
-  Input,
-  inputVariants,
-  Label,
-  labelVariants,
-  MainNav,
-  MobileNav,
-  Modal,
-  modalVariants,
-  modalContentVariants,
-  Progress,
-  ResponsiveTable,
-  Select,
-  LegacySelect,
-  selectVariants,
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-  Spinner,
-  StandardCard,
-  Switch,
-  Table,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  Textarea,
-  Tooltip,
-  TransactionTable
-};
-
-// Typography is already exported from the imported module
+/**
+ * Recommended Usage:
+ * 
+ * // Week 3 Enhanced Components (Preferred)
+ * import { 
+ *   EnhancedInput, 
+ *   LoadingButton, 
+ *   ProgressBar 
+ * } from '@/components/ui';
+ * 
+ * // Legacy Components (Backward Compatibility)
+ * import { 
+ *   FormField, 
+ *   Button 
+ * } from '@/components/ui';
+ */

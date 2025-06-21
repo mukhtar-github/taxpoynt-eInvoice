@@ -1,3 +1,12 @@
+/**
+ * @deprecated This component is deprecated as of Week 3. 
+ * Use `EnhancedIntegrationStatusCard` from `/components/integrations/EnhancedIntegrationStatusCard.tsx` instead.
+ * 
+ * Migration Guide: See `/docs/Week3_Component_Migration_Guide.md`
+ * 
+ * This component will be removed in v2.0
+ */
+
 import React from 'react';
 import { Card, CardContent } from '../ui/Card';
 import { Typography } from '../ui/Typography';
@@ -13,6 +22,14 @@ const IntegrationStatusCard: React.FC<IntegrationStatusCardProps> = ({
   status, 
   colorScheme 
 }) => {
+  // Deprecation warning
+  React.useEffect(() => {
+    console.warn(
+      '⚠️ IntegrationStatusCard is deprecated. Use EnhancedIntegrationStatusCard instead. ' +
+      'See /docs/Week3_Component_Migration_Guide.md for migration instructions.'
+    );
+  }, []);
+
   // Define color variants based on the colorScheme prop
   const getColors = () => {
     switch (colorScheme) {
