@@ -3,14 +3,23 @@ import { cva, type VariantProps } from 'class-variance-authority';
 
 // Define card variants using class-variance-authority
 const cardVariants = cva(
-  "rounded-lg border border-border bg-white shadow-sm",
+  "rounded-lg border border-border bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1",
   {
     variants: {
       variant: {
         default: "p-4",
-        compact: "p-3",
-        spacious: "p-6",
-        elevated: "p-4 shadow-md border-none",
+        compact: "p-3 xs:p-4",
+        spacious: "p-6 xs:p-8",
+        elevated: "p-4 shadow-md border-none hover:shadow-lg",
+        interactive: "p-4 cursor-pointer hover:shadow-lg hover:-translate-y-2 hover:border-primary/20",
+        status: "p-4 border-l-4", // For status indicators
+      },
+      size: {
+        default: "w-full",
+        sm: "max-w-sm",
+        md: "max-w-md", 
+        lg: "max-w-lg",
+        full: "w-full",
       },
     },
     defaultVariants: {
@@ -21,13 +30,31 @@ const cardVariants = cva(
 
 export interface CardProps 
   extends HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof cardVariants> {}
+    VariantProps<typeof cardVariants> {
+  loading?: boolean;
+  statusColor?: 'primary' | 'success' | 'warning' | 'error';
+}
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant, ...props }, ref) => {
+  ({ className, variant, size, loading = false, statusColor, ...props }, ref) => {
+    const statusBorderColor = statusColor ? {
+      primary: 'border-l-primary',
+      success: 'border-l-success', 
+      warning: 'border-l-warning',
+      error: 'border-l-error',
+    }[statusColor] : '';
+
+    const cardClass = cardVariants({ 
+      variant, 
+      size, 
+      className: `${loading ? 'animate-pulse-subtle' : ''} ${
+        variant === 'status' && statusBorderColor ? statusBorderColor : ''
+      } ${className || ''}` 
+    });
+
     return (
       <div
-        className={cardVariants({ variant, className })}
+        className={cardClass}
         ref={ref}
         {...props}
       />

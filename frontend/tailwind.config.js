@@ -112,6 +112,24 @@ module.exports = {
         'slide-out-down': 'slide-out-down 0.3s ease-in',
         'fade-in': 'fade-in 0.2s ease-out',
         'fade-out': 'fade-out 0.2s ease-in',
+        'bounce-subtle': 'bounce 1s ease-in-out 1',
+        'pulse-subtle': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      // Mobile-first responsive utilities
+      screens: {
+        'xs': '475px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
+      },
+      // Touch-friendly spacing
+      minHeight: {
+        'touch': '44px', // Minimum touch target size
+      },
+      minWidth: {
+        'touch': '44px',
       },
     },
   },
