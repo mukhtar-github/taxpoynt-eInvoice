@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
-// Using Card component for error display instead of Alert
 import { Button } from '../../components/ui/Button';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Badge } from '../../components/ui/Badge';
+import { Switch } from '../../components/ui/Switch';
+import { Loader2, AlertTriangle, RefreshCw, Wifi, WifiOff, Bell, Activity, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import AppDashboardLayout from '../../components/layouts/AppDashboardLayout';
 import SubmissionMetricsCard from '../../components/dashboard/SubmissionMetricsCard';
 import RetryMetricsCard from '../../components/dashboard/RetryMetricsCard';
@@ -20,6 +22,8 @@ import {
   SubmissionMetrics,
   RetryMetrics
 } from '../../services/submissionDashboardService';
+import { cn } from '../../utils/cn';
+import { format } from 'date-fns';
 
 const timeRangeOptions = [
   { value: '24h', label: 'Last 24 Hours' },
@@ -44,11 +48,17 @@ const SubmissionDashboard: NextPage = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   
   // State for metrics data
   const [submissionMetrics, setSubmissionMetrics] = useState<SubmissionMetrics | null>(null);
   const [retryMetrics, setRetryMetrics] = useState<RetryMetrics | null>(null);
   const [odooMetrics, setOdooMetrics] = useState<SubmissionMetrics | null>(null);
+  const [realTimeSubmissionMetrics, setRealTimeSubmissionMetrics] = useState<SubmissionMetrics | null>(null);
+  const [realTimeRetryMetrics, setRealTimeRetryMetrics] = useState<RetryMetrics | null>(null);
 
   // Create safe default data to prevent undefined errors
   const defaultSubmissionMetrics: SubmissionMetrics = {
@@ -85,7 +95,69 @@ const SubmissionDashboard: NextPage = () => {
     time_range: '24h'
   };
 
+  // WebSocket connection for real-time updates
+  const {
+    isConnected,
+    isConnecting,
+    error: wsError,
+    lastMessage,
+    connectionCount,
+    connect,
+    disconnect,
+    subscribe,
+    requestUpdate
+  } = useWebSocket({
+    autoConnect: autoRefresh,
+    subscriptions: ['submissions', 'retries', 'alerts', 'odoo_submissions']
+  });
 
+
+
+  // Handle real-time updates
+  useEffect(() => {
+    const unsubscribeSubmissions = subscribe('submission_update', (data) => {
+      console.log('Received submission update:', data);
+      if (data && data.submission_metrics) {
+        setRealTimeSubmissionMetrics(data.submission_metrics);
+        setLastUpdated(new Date());
+      }
+    });
+
+    const unsubscribeRetries = subscribe('retry_update', (data) => {
+      console.log('Received retry update:', data);
+      if (data && data.retry_metrics) {
+        setRealTimeRetryMetrics(data.retry_metrics);
+        setLastUpdated(new Date());
+      }
+    });
+
+    const unsubscribeAlerts = subscribe('critical_alert', (data) => {
+      console.log('Received critical alert:', data);
+      const notification = {
+        id: Date.now(),
+        type: data.alert_type || 'alert',
+        title: data.title || 'Alert',
+        message: data.message || '',
+        severity: data.severity || 'medium',
+        timestamp: new Date().toISOString()
+      };
+      
+      setNotifications(prev => [notification, ...prev.slice(0, 9)]);
+      
+      if (Notification.permission === 'granted') {
+        new Notification(notification.title, {
+          body: notification.message,
+          icon: '/icons/favicon.svg'
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeSubmissions();
+      unsubscribeRetries();
+      unsubscribeAlerts();
+    };
+  }, [subscribe]);
 
   // Create a function to fetch all dashboard data
   const fetchDashboardData = async () => {
@@ -127,6 +199,12 @@ const SubmissionDashboard: NextPage = () => {
           odooResult.value || defaultSubmissionMetrics : 
           defaultSubmissionMetrics
       );
+
+      // Request real-time updates
+      requestUpdate('submissions');
+      requestUpdate('retries');
+      requestUpdate('odoo_submissions');
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Unable to fetch dashboard data. Please try again later.');
@@ -134,6 +212,74 @@ const SubmissionDashboard: NextPage = () => {
       setIsDataLoading(false);
     }
   };
+
+  // Handle auto-refresh toggle
+  const handleAutoRefreshToggle = useCallback(() => {
+    setAutoRefresh(prev => {
+      const newValue = !prev;
+      if (newValue) {
+        connect();
+      } else {
+        disconnect();
+      }
+      return newValue;
+    });
+  }, [connect, disconnect]);
+
+  // Connection status indicator
+  const getConnectionStatus = () => {
+    if (isConnecting) {
+      return {
+        icon: RefreshCw,
+        color: 'text-yellow-500',
+        bgColor: 'bg-yellow-100',
+        label: 'Connecting...',
+        description: 'Establishing real-time connection'
+      };
+    }
+    
+    if (isConnected) {
+      return {
+        icon: Wifi,
+        color: 'text-green-500',
+        bgColor: 'bg-green-100',
+        label: 'Live',
+        description: `Real-time updates active • ${connectionCount} connections`
+      };
+    }
+    
+    if (wsError) {
+      return {
+        icon: WifiOff,
+        color: 'text-red-500',
+        bgColor: 'bg-red-100',
+        label: 'Error',
+        description: wsError
+      };
+    }
+    
+    return {
+      icon: WifiOff,
+      color: 'text-gray-500',
+      bgColor: 'bg-gray-100',
+      label: 'Offline',
+      description: 'Real-time updates disabled'
+    };
+  };
+
+  const connectionStatus = getConnectionStatus();
+  const StatusIcon = connectionStatus.icon;
+
+  // Use real-time data if available, fallback to fetched data
+  const displaySubmissionMetrics = realTimeSubmissionMetrics || submissionMetrics;
+  const displayRetryMetrics = realTimeRetryMetrics || retryMetrics;
+
+  // Request notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Call the fetch function when component mounts or filters change
   useEffect(() => {
@@ -163,46 +309,136 @@ const SubmissionDashboard: NextPage = () => {
 
       <AppDashboardLayout>
         <div className="space-y-6">
-          {/* Header with filters */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Submission Dashboard</h1>
-              <p className="text-sm text-gray-500">Monitor your e-invoice submission metrics and status</p>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="w-[150px]">
-                <Select
-                  value={timeRange}
-                  onValueChange={(value) => setTimeRange(value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select time range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeRangeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Real-Time Status Header */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    'flex items-center justify-center w-10 h-10 rounded-lg',
+                    connectionStatus.bgColor
+                  )}>
+                    <StatusIcon className={cn('w-5 h-5', connectionStatus.color)} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                      Submission Dashboard
+                      <Badge 
+                        variant={isConnected ? 'success' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {connectionStatus.label}
+                      </Badge>
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                      {connectionStatus.description}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  {/* Notifications */}
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowNotifications(!showNotifications)}
+                      className="relative"
+                    >
+                      <Bell className="w-4 h-4" />
+                      {notifications.length > 0 && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                          {notifications.length > 9 ? '9+' : notifications.length}
+                        </div>
+                      )}
+                    </Button>
+                    
+                    {showNotifications && (
+                      <div className="absolute right-0 top-full mt-2 w-80 bg-white border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                        <div className="p-3 border-b">
+                          <h3 className="font-semibold">Recent Notifications</h3>
+                        </div>
+                        {notifications.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">
+                            No notifications
+                          </div>
+                        ) : (
+                          notifications.map(notification => (
+                            <div key={notification.id} className="p-3 border-b last:border-b-0">
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm">{notification.title}</div>
+                                  <div className="text-xs text-gray-600">{notification.message}</div>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    {new Date(notification.timestamp).toLocaleTimeString()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Auto-refresh toggle */}
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={autoRefresh}
+                      onCheckedChange={handleAutoRefreshToggle}
+                    />
+                    <span className="text-sm text-gray-600">
+                      {autoRefresh ? 'Live' : 'Manual'}
+                    </span>
+                  </div>
+
+                  <div className="w-[150px]">
+                    <Select
+                      value={timeRange}
+                      onValueChange={(value) => setTimeRange(value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select time range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeRangeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button 
+                    variant="outline"
+                    size="icon"
+                    onClick={() => fetchDashboardData()}
+                    disabled={isDataLoading}
+                    title="Refresh data"
+                  >
+                    {isDataLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-              
-              <Button 
-                variant="outline"
-                size="icon"
-                onClick={() => fetchDashboardData()}
-                disabled={isDataLoading}
-                title="Refresh data"
-              >
-                {isDataLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+            </CardHeader>
+          </Card>
+
+          {/* Status indicators */}
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">Last updated: {format(lastUpdated, 'HH:mm:ss')}</Badge>
+            <Badge variant="secondary">Time range: {timeRangeOptions.find(o => o.value === timeRange)?.label}</Badge>
+            {(realTimeSubmissionMetrics || realTimeRetryMetrics) && (
+              <Badge variant="success" className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Real-time Data
+              </Badge>
+            )}
           </div>
 
           {/* Error display */}
@@ -228,8 +464,8 @@ const SubmissionDashboard: NextPage = () => {
               <ApiStatusOverview />
               
               {/* Submission Metrics */}
-              {submissionMetrics ? (
-                <SubmissionMetricsCard metrics={submissionMetrics} isLoading={isDataLoading} />
+              {displaySubmissionMetrics ? (
+                <SubmissionMetricsCard metrics={displaySubmissionMetrics} isLoading={isDataLoading} />
               ) : (
                 <div className="text-center py-12">
                   <p>No submission metrics available. Try changing the filters or refreshing the page.</p>
@@ -293,7 +529,7 @@ const SubmissionDashboard: NextPage = () => {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <RetryMetricsCard metrics={retryMetrics} isLoading={isDataLoading} />
+                      <RetryMetricsCard metrics={displayRetryMetrics} isLoading={isDataLoading} />
                       
                       <div className="flex space-x-4 justify-end mt-6">
                         <Button 

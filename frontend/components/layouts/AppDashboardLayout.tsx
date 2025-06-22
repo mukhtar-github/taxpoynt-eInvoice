@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   Home, TrendingUp, List, Settings, Menu, Bell, User, X, BarChart2,
   FileText, Users, Link as LinkIcon, Compass, HardDrive, Shield, Send,
-  Key, ShieldCheck, UserPlus, Activity, Zap
+  Key, ShieldCheck, UserPlus, Activity, Zap, Database
 } from 'lucide-react';
 import { Typography } from '../ui/Typography';
 import { Button } from '../ui/Button';
@@ -22,6 +22,10 @@ interface NavItemProps {
   isActive?: boolean;
   className?: string;
   isPlatform?: boolean;
+  isMain?: boolean;
+  isSI?: boolean;
+  isAPP?: boolean;
+  isShared?: boolean;
 }
 
 interface SidebarProps {
@@ -47,21 +51,27 @@ interface AppDashboardLayoutProps {
 
 // Navigation Items - separated by Platform and SI functionality
 const NavItems = [
-  // System Integration (SI) Items
-  { name: 'Dashboard', icon: Home, href: '/dashboard', isPlatform: false },
-  { name: 'Company Dashboard', icon: Users, href: '/dashboard/company-home', isPlatform: false },
-  { name: 'ERP Integrations', icon: LinkIcon, href: '/dashboard/integrations', isPlatform: false },
-  { name: 'CRM Integrations', icon: UserPlus, href: '/dashboard/crm', isPlatform: false },
-  { name: 'Submission', icon: BarChart2, href: '/dashboard/submission', isPlatform: false },
-  { name: 'Organization', icon: Users, href: '/dashboard/organization', isPlatform: false },
-  { name: 'Metrics', icon: BarChart2, href: '/dashboard/metrics', isPlatform: false },
-  { name: 'ERP Connection', icon: LinkIcon, href: '/dashboard/erp-connection', isPlatform: false },
+  // Main Navigation
+  { name: 'Service Hub', icon: Home, href: '/dashboard', isPlatform: false, isMain: true },
   
-  // Platform Items (formerly APP) - with visual indicators
-  { name: 'Secure Transmission', icon: Shield, href: '/dashboard/transmission', isPlatform: true },
-  { name: 'Certificate Management', icon: Key, href: '/dashboard/certificates', isPlatform: true },
-  { name: 'Crypto Stamping', icon: ShieldCheck, href: '/dashboard/crypto-stamping', isPlatform: true },
-  { name: 'Signature Management', icon: ShieldCheck, href: '/platform/signature-management', isPlatform: true },
+  // System Integration (SI) Items
+  { name: 'SI Dashboard', icon: Users, href: '/dashboard/si', isPlatform: false, isSI: true },
+  { name: 'Company Home', icon: Users, href: '/dashboard/company-home', isPlatform: false, isSI: true },
+  { name: 'ERP Integrations', icon: LinkIcon, href: '/dashboard/integrations', isPlatform: false, isSI: true },
+  { name: 'CRM Integrations', icon: UserPlus, href: '/dashboard/crm', isPlatform: false, isSI: true },
+  { name: 'ERP Connection', icon: LinkIcon, href: '/dashboard/erp-connection', isPlatform: false, isSI: true },
+  
+  // Access Point Provider (APP) Items - Platform Services
+  { name: 'APP Dashboard', icon: Shield, href: '/dashboard/app', isPlatform: true, isAPP: true },
+  { name: 'Platform Services', icon: Shield, href: '/dashboard/platform', isPlatform: true, isAPP: true },
+  { name: 'Transmission', icon: Send, href: '/dashboard/transmission', isPlatform: true, isAPP: true },
+  { name: 'Certificates', icon: Key, href: '/dashboard/certificates', isPlatform: true, isAPP: true },
+  { name: 'Signature Management', icon: ShieldCheck, href: '/platform/signature-management', isPlatform: true, isAPP: true },
+  
+  // Shared Services
+  { name: 'Metrics & Analytics', icon: BarChart2, href: '/dashboard/metrics', isPlatform: false, isShared: true },
+  { name: 'FIRS Submissions', icon: FileText, href: '/dashboard/submission', isPlatform: false, isShared: true },
+  { name: 'Organization', icon: Users, href: '/dashboard/organization', isPlatform: false, isShared: true },
 ];
 
 // Simpler toggle button that matches the screenshot
@@ -79,28 +89,72 @@ const SidebarToggle = ({ onClick }: { onClick: () => void }) => {
   );
 };
 
-// Sidebar Navigation Item with active state detection and platform indicators
-const NavItem = ({ icon: Icon, children, href, isActive: forcedActive, isPlatform, className }: NavItemProps) => {
+// Sidebar Navigation Item with active state detection and service indicators
+const NavItem = ({ icon: Icon, children, href, isActive: forcedActive, isPlatform, isMain, isSI, isAPP, isShared, className }: NavItemProps) => {
   const router = useRouter();
   const isActive = forcedActive !== undefined ? forcedActive : 
                   router.pathname === href || router.pathname.startsWith(`${href}/`);
+  
+  // Determine styling based on service type
+  const getServiceStyling = () => {
+    if (isMain) {
+      return {
+        borderClass: "border-l-4 border-yellow-500",
+        iconClass: "text-yellow-400",
+        badgeClass: "bg-yellow-200 text-yellow-800",
+        badgeText: "Hub"
+      };
+    }
+    if (isSI) {
+      return {
+        borderClass: "border-l-4 border-blue-500",
+        iconClass: "text-blue-400",
+        badgeClass: "bg-blue-200 text-blue-800",
+        badgeText: "SI"
+      };
+    }
+    if (isAPP || isPlatform) {
+      return {
+        borderClass: "border-l-4 border-cyan-500",
+        iconClass: "text-cyan-400",
+        badgeClass: "bg-cyan-200 text-cyan-800",
+        badgeText: "APP"
+      };
+    }
+    if (isShared) {
+      return {
+        borderClass: "border-l-4 border-green-500",
+        iconClass: "text-green-400",
+        badgeClass: "bg-green-200 text-green-800",
+        badgeText: "Shared"
+      };
+    }
+    return {
+      borderClass: "",
+      iconClass: "",
+      badgeClass: "",
+      badgeText: ""
+    };
+  };
+
+  const styling = getServiceStyling();
   
   return (
     <Link href={href} className={cn(
       "flex items-center py-3 px-6 cursor-pointer transition-all duration-200",
       isActive ? "bg-indigo-800 text-white" : "text-indigo-200 hover:text-white hover:bg-indigo-800/70",
-      isPlatform && "border-l-4 border-cyan-500",
+      styling.borderClass,
       className
     )}>
       <div className="flex items-center flex-1">
         {Icon && (
-          <Icon className={cn("mr-3 h-5 w-5", isPlatform && "text-cyan-400")} />
+          <Icon className={cn("mr-3 h-5 w-5", styling.iconClass)} />
         )}
         <span>{children}</span>
       </div>
-      {isPlatform && (
-        <Badge className="ml-2 bg-cyan-200 text-cyan-800 text-xs">
-          Platform
+      {styling.badgeText && (
+        <Badge className={cn("ml-2 text-xs", styling.badgeClass)}>
+          {styling.badgeText}
         </Badge>
       )}
     </Link>
@@ -142,35 +196,68 @@ const Sidebar = ({ onClose, branding, className }: SidebarProps) => {
       </div>
       
       <nav className="mt-4">
-        {/* Divider and heading for SI section */}
-        <div className="px-6 py-2 text-xs font-semibold text-indigo-300 uppercase tracking-wider">
-          System Integration
-        </div>
-        
-        {/* SI Nav Items */}
-        {NavItems.filter(item => !item.isPlatform).map(item => (
+        {/* Main Service Hub */}
+        {NavItems.filter(item => item.isMain).map(item => (
           <NavItem
             key={item.name}
             icon={item.icon}
             href={item.href}
             isPlatform={item.isPlatform}
+            isMain={item.isMain}
           >
             {item.name}
           </NavItem>
         ))}
         
-        {/* Divider and heading for Platform section */}
-        <div className="mt-6 mb-2 px-6 py-2 text-xs font-semibold text-cyan-300 uppercase tracking-wider border-t border-indigo-800">
-          Platform
+        {/* Divider and heading for SI section */}
+        <div className="mt-6 px-6 py-2 text-xs font-semibold text-blue-300 uppercase tracking-wider border-t border-indigo-800">
+          System Integration (SI)
         </div>
         
-        {/* Platform Nav Items */}
-        {NavItems.filter(item => item.isPlatform).map(item => (
+        {/* SI Nav Items */}
+        {NavItems.filter(item => item.isSI).map(item => (
           <NavItem
             key={item.name}
             icon={item.icon}
             href={item.href}
             isPlatform={item.isPlatform}
+            isSI={item.isSI}
+          >
+            {item.name}
+          </NavItem>
+        ))}
+        
+        {/* Divider and heading for APP section */}
+        <div className="mt-6 mb-2 px-6 py-2 text-xs font-semibold text-cyan-300 uppercase tracking-wider border-t border-indigo-800">
+          Access Point Provider (APP)
+        </div>
+        
+        {/* APP Nav Items */}
+        {NavItems.filter(item => item.isAPP || item.isPlatform).map(item => (
+          <NavItem
+            key={item.name}
+            icon={item.icon}
+            href={item.href}
+            isPlatform={item.isPlatform}
+            isAPP={item.isAPP}
+          >
+            {item.name}
+          </NavItem>
+        ))}
+        
+        {/* Divider and heading for Shared section */}
+        <div className="mt-6 mb-2 px-6 py-2 text-xs font-semibold text-green-300 uppercase tracking-wider border-t border-indigo-800">
+          Shared Services
+        </div>
+        
+        {/* Shared Nav Items */}
+        {NavItems.filter(item => item.isShared).map(item => (
+          <NavItem
+            key={item.name}
+            icon={item.icon}
+            href={item.href}
+            isPlatform={item.isPlatform}
+            isShared={item.isShared}
           >
             {item.name}
           </NavItem>
@@ -264,16 +351,16 @@ const Header = () => {
   );
 };
 
-// Mobile Bottom Navigation Component
+// Mobile Bottom Navigation Component - Reflects Service Structure
 const MobileBottomNav = () => {
   const router = useRouter();
   
   const bottomNavItems = [
-    { name: 'Home', icon: Home, href: '/dashboard', label: 'Home' },
-    { name: 'Integrations', icon: LinkIcon, href: '/dashboard/integrations', label: 'Integrations' },
-    { name: 'Activity', icon: Activity, href: '/dashboard/metrics', label: 'Activity' },
-    { name: 'Platform', icon: Zap, href: '/dashboard/transmission', label: 'Platform' },
-    { name: 'More', icon: Menu, href: '/dashboard/organization', label: 'More' },
+    { name: 'Hub', icon: Home, href: '/dashboard', label: 'Hub', color: 'text-yellow-600' },
+    { name: 'SI', icon: Database, href: '/dashboard/si', label: 'SI', color: 'text-blue-600' },
+    { name: 'APP', icon: Shield, href: '/dashboard/app', label: 'APP', color: 'text-cyan-600' },
+    { name: 'Analytics', icon: BarChart2, href: '/dashboard/metrics', label: 'Analytics', color: 'text-green-600' },
+    { name: 'More', icon: Menu, href: '/dashboard/organization', label: 'More', color: 'text-gray-600' },
   ];
 
   return (
@@ -290,22 +377,28 @@ const MobileBottomNav = () => {
               className={cn(
                 "flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 text-xs transition-colors duration-200",
                 isActive 
-                  ? "text-indigo-600" 
+                  ? item.color || "text-indigo-600"
                   : "text-gray-600 hover:text-indigo-600"
               )}
             >
               <item.icon 
                 className={cn(
                   "h-5 w-5 mb-1 transition-colors duration-200",
-                  isActive ? "text-indigo-600" : "text-gray-600"
+                  isActive ? (item.color || "text-indigo-600") : "text-gray-600"
                 )} 
               />
               <span className={cn(
                 "font-medium transition-colors duration-200 truncate",
-                isActive ? "text-indigo-600" : "text-gray-600"
+                isActive ? (item.color || "text-indigo-600") : "text-gray-600"
               )}>
                 {item.label}
               </span>
+              {isActive && (
+                <div className={cn(
+                  "absolute -top-0.5 w-1 h-1 rounded-full",
+                  item.color?.replace('text-', 'bg-') || "bg-indigo-600"
+                )} />
+              )}
             </Link>
           );
         })}
