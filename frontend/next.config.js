@@ -19,15 +19,41 @@ const nextConfig = {
       'node_modules'
     ];
     
-    // Re-enable optimization now that CRM components are working
-    // if (!dev) {
-    //   config.optimization.minimize = false;
-    // }
+    // Fix Terser configuration for production builds
+    if (!dev && !isServer) {
+      config.optimization.minimizer = config.optimization.minimizer.map(plugin => {
+        if (plugin.constructor.name === 'TerserPlugin') {
+          return new plugin.constructor({
+            terserOptions: {
+              ...plugin.options.terserOptions,
+              parse: {
+                ecma: 8,
+              },
+              compress: {
+                ecma: 5,
+                warnings: false,
+                comparisons: false,
+                inline: 2,
+              },
+              mangle: {
+                safari10: true,
+              },
+              output: {
+                ecma: 5,
+                comments: false,
+                ascii_only: true,
+              },
+            },
+          });
+        }
+        return plugin;
+      });
+    }
     
     return config;
   },
-  // Disable SWC for now to use Babel
-  swcMinify: false,
+  // Use SWC for better performance and compatibility
+  swcMinify: true,
   reactStrictMode: true,
   typescript: {
     // We've already fixed TypeScript errors
