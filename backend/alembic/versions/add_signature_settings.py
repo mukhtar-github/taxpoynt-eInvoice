@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'add_signature_settings'
-down_revision = None  # Will be applied independently
+down_revision = '014_add_crm_pos_tables'  # Connect to main migration chain
 branch_labels = ('signature_features',)  # Separate branch for signature features
 depends_on = None
 

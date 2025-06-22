@@ -305,3 +305,29 @@ def create_validation_record(
     db.refresh(validation_record)
     
     return validation_record
+
+
+class IRNService:
+    """
+    IRN (Invoice Reference Number) service class for generating, validating, and managing IRNs.
+    """
+    
+    def __init__(self, db: Session):
+        self.db = db
+        self.cache = IRNCache()
+        
+    def generate_irn(self, invoice_data: Dict[str, Any]) -> Tuple[str, str, str]:
+        """Generate IRN using the module function."""
+        return generate_irn(invoice_data)
+    
+    def verify_irn(self, irn_value: str, verification_code: str, invoice_data: Dict[str, Any]) -> Tuple[bool, str]:
+        """Verify IRN using the module function."""
+        return verify_irn(self.db, irn_value, verification_code, invoice_data)
+    
+    def expire_outdated_irns(self) -> int:
+        """Expire outdated IRNs using the module function."""
+        return expire_outdated_irns(self.db)
+    
+    def create_validation_record(self, irn_id: str, is_valid: bool, message: str, **kwargs) -> IRNValidationRecord:
+        """Create validation record using the module function."""
+        return create_validation_record(self.db, irn_id, is_valid, message, **kwargs)
