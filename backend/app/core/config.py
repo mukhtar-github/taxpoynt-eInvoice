@@ -38,10 +38,30 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
     ALGORITHM: str = "HS256"
-    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "development_encryption_key_please_change_in_production")
     
-    # Integration Authentication
-    CREDENTIAL_ENCRYPTION_KEY: str = os.getenv("CREDENTIAL_ENCRYPTION_KEY", os.getenv("ENCRYPTION_KEY", "development_encryption_key_please_change_in_production"))
+    # Encryption configuration with production-ready security
+    @property
+    def ENCRYPTION_KEY(self) -> str:
+        """Get encryption key with production-safe fallback."""
+        key = os.getenv("ENCRYPTION_KEY")
+        if not key:
+            if self.APP_ENV == "production":
+                raise ValueError("ENCRYPTION_KEY environment variable is required in production")
+            # Only use development key in non-production environments
+            key = "development_encryption_key_please_change_in_production"
+        return key
+    
+    # Integration Authentication  
+    @property
+    def CREDENTIAL_ENCRYPTION_KEY(self) -> str:
+        """Get credential encryption key with production-safe fallback."""
+        key = os.getenv("CREDENTIAL_ENCRYPTION_KEY") or os.getenv("ENCRYPTION_KEY")
+        if not key:
+            if self.APP_ENV == "production":
+                raise ValueError("CREDENTIAL_ENCRYPTION_KEY or ENCRYPTION_KEY environment variable is required in production")
+            # Only use development key in non-production environments
+            key = "development_encryption_key_please_change_in_production"
+        return key
     OAUTH_TOKEN_REFRESH_BUFFER_MINUTES: int = 5  # Refresh tokens 5 minutes before expiry
     OAUTH_MAX_RETRY_ATTEMPTS: int = 3  # Maximum retries for token refresh
     OAUTH_RETRY_DELAY_SECONDS: int = 1  # Initial delay between retries
