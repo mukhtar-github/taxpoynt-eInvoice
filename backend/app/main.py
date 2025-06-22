@@ -301,6 +301,15 @@ except Exception as e:
     # Don't raise exception here to allow the application to start even if APP features are not available
     # This follows the graceful failure approach used in the multi-step database migration strategy
 
+# Include WebSocket routes for real-time dashboard
+try:
+    from app.routes import websocket_routes
+    app.include_router(websocket_routes.router, prefix=settings.API_V1_STR, tags=["websocket"])
+    logger.info("Successfully included WebSocket routes for real-time dashboard")
+except Exception as e:
+    logger.warning(f"Error including WebSocket routes: {str(e)}")
+    logger.warning("Real-time WebSocket functionality may not be available")
+
 logger.info("All routers initialized successfully")
 logger.info("Application setup complete and ready to serve requests")
 

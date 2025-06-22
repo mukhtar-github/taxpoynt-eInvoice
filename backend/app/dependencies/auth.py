@@ -140,3 +140,29 @@ async def get_current_organization(
     
     # Return first organization if no specific one requested
     return user_organizations[0]
+
+
+async def get_current_user_websocket(
+    token: Optional[str] = None,
+    db: Session = None
+) -> Optional[User]:
+    """
+    Validate access token for WebSocket connections.
+    Token can be provided as query parameter or in WebSocket headers.
+    """
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+    except (JWTError, ValidationError):
+        return None
+    
+    user = get_user(db, user_id=token_data.sub)
+    if not user or not user.is_active:
+        return None
+    
+    return user
