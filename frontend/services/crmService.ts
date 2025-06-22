@@ -195,8 +195,10 @@ export class CRMService {
           page: response.data.deals.page,
           page_size: response.data.deals.page_size,
           total: response.data.deals.total,
-          total_pages: response.data.deals.pages,
-        } as PaginationMeta
+          pages: response.data.deals.pages,
+          has_next: response.data.deals.page < response.data.deals.pages,
+          has_prev: response.data.deals.page > 1
+        }
       };
     } catch (error: any) {
       this.handleApiError(error);

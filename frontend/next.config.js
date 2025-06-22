@@ -2,7 +2,7 @@
 const path = require('path');
 
 const nextConfig = {
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Force use of a single React instance
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -18,6 +18,11 @@ const nextConfig = {
       path.resolve(__dirname, './node_modules/react'),
       'node_modules'
     ];
+    
+    // Re-enable optimization now that CRM components are working
+    // if (!dev) {
+    //   config.optimization.minimize = false;
+    // }
     
     return config;
   },
