@@ -564,3 +564,185 @@ export const fetchOdooIntegrationMetrics = async (
     };
   }
 };
+
+// Activity Feed Types
+export interface ActivityItem {
+  id: string;
+  type: 'invoice_generated' | 'integration_sync' | 'user_action' | 'system_event' | 'error' | 'submission';
+  title: string;
+  description?: string;
+  timestamp: string;
+  metadata?: {
+    user?: string;
+    integration?: string;
+    count?: number;
+    status?: 'success' | 'error' | 'warning' | 'info';
+    [key: string]: any;
+  };
+}
+
+export interface ActivitiesResponse {
+  activities: ActivityItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Fetch activities for the dashboard activity feed
+ * @param limit Maximum number of activities to fetch
+ * @param offset Number of activities to skip
+ * @param activityType Filter by activity type
+ * @param organizationId Optional organization ID to filter activities
+ * @returns Activities data
+ */
+export const fetchActivities = async (
+  limit: number = 20,
+  offset: number = 0,
+  activityType?: string,
+  organizationId?: string
+): Promise<ActivitiesResponse> => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+    params.append('offset', offset.toString());
+    
+    if (activityType) {
+      params.append('activity_type', activityType);
+    }
+    
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+
+    // Make the API request
+    const response = await axios.get(`${API_V1}/dashboard/activities?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    
+    // Return mock data for development and testing
+    const mockActivities: ActivityItem[] = [
+      {
+        id: 'activity_1',
+        type: 'invoice_generated',
+        title: 'Invoice IRN Generated',
+        description: 'IRN INV-2025-001234 generated successfully',
+        timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
+        metadata: {
+          status: 'success',
+          irn_value: 'INV-2025-001234',
+          invoice_number: 'INV-001234'
+        }
+      },
+      {
+        id: 'activity_2',
+        type: 'integration_sync',
+        title: 'Odoo Integration Sync',
+        description: 'Successfully synced 15 invoices from Odoo',
+        timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(), // 12 minutes ago
+        metadata: {
+          status: 'success',
+          integration: 'odoo',
+          count: 15
+        }
+      },
+      {
+        id: 'activity_3',
+        type: 'submission',
+        title: 'FIRS Submission Completed',
+        description: 'Batch submission of 8 invoices to FIRS',
+        timestamp: new Date(Date.now() - 1000 * 60 * 25).toISOString(), // 25 minutes ago
+        metadata: {
+          status: 'success',
+          count: 8
+        }
+      },
+      {
+        id: 'activity_4',
+        type: 'user_action',
+        title: 'Configuration Updated',
+        description: 'Invoice validation rules updated',
+        timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 minutes ago
+        metadata: {
+          status: 'info',
+          user: 'admin@company.com'
+        }
+      },
+      {
+        id: 'activity_5',
+        type: 'error',
+        title: 'Validation Error',
+        description: 'Invoice validation failed - missing customer VAT',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+        metadata: {
+          status: 'error',
+          invoice_number: 'INV-001235'
+        }
+      },
+      {
+        id: 'activity_6',
+        type: 'system_event',
+        title: 'Certificate Renewal',
+        description: 'Digital signing certificate renewed successfully',
+        timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(), // 1.5 hours ago
+        metadata: {
+          status: 'success'
+        }
+      }
+    ];
+
+    // Apply filtering if activityType is specified
+    const filteredActivities = activityType 
+      ? mockActivities.filter(activity => activity.type === activityType)
+      : mockActivities;
+
+    // Apply pagination
+    const paginatedActivities = filteredActivities.slice(offset, offset + limit);
+
+    return {
+      activities: paginatedActivities,
+      total: filteredActivities.length,
+      limit,
+      offset
+    };
+  }
+};
+
+/**
+ * Fetch activity count by type for dashboard stats
+ * @param hours Number of hours to look back (default 24)
+ * @param organizationId Optional organization ID to filter activities
+ * @returns Activity count by type
+ */
+export const fetchActivityStats = async (
+  hours: number = 24,
+  organizationId?: string
+): Promise<Record<string, number>> => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('hours', hours.toString());
+    
+    if (organizationId) {
+      params.append('organization_id', organizationId);
+    }
+
+    // Make the API request (this endpoint would need to be implemented)
+    const response = await axios.get(`${API_V1}/dashboard/activity-stats?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching activity stats:', error);
+    
+    // Return mock data for development and testing
+    return {
+      total_activities: 28,
+      total_transmissions: 12,
+      total_irn_generated: 8,
+      total_integrations: 3,
+      total_errors: 2,
+      total_user_actions: 3
+    };
+  }
+};

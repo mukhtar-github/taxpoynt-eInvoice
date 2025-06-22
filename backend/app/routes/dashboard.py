@@ -22,6 +22,8 @@ from app.schemas.dashboard import (
     SystemHealthMetricsResponse,
     TimeRangeEnum
 )
+from app.services.activity_service import ActivityService
+from datetime import datetime
 
 router = APIRouter(
     prefix="/dashboard",
@@ -105,3 +107,45 @@ async def get_system_health_metrics(
     Only accessible to superusers.
     """
     return MetricsService.get_system_health_metrics(db, time_range.value)
+
+
+@router.get("/activities")
+async def get_activities(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    activity_type: Optional[str] = Query(None),
+    organization_id: Optional[str] = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get paginated activity feed data for the dashboard.
+    
+    Returns recent activities including:
+    - Invoice generation and processing
+    - Integration sync events
+    - System events and alerts
+    - User actions
+    - Error notifications
+    """
+    try:
+        # Use organization_id from user if not provided
+        if not organization_id and hasattr(current_user, 'organization_id'):
+            organization_id = current_user.organization_id
+            
+        activities = ActivityService.get_activities(
+            db=db,
+            organization_id=organization_id,
+            limit=limit,
+            offset=offset,
+            activity_type=activity_type
+        )
+        
+        return {
+            "activities": activities,
+            "total": len(activities),
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch activities: {str(e)}")
