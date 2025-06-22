@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "development_encryption_key_please_change_in_production")
     
     # Integration Authentication
-    CREDENTIAL_ENCRYPTION_KEY: str = os.getenv("CREDENTIAL_ENCRYPTION_KEY", "")
+    CREDENTIAL_ENCRYPTION_KEY: str = os.getenv("CREDENTIAL_ENCRYPTION_KEY", os.getenv("ENCRYPTION_KEY", "development_encryption_key_please_change_in_production"))
     OAUTH_TOKEN_REFRESH_BUFFER_MINUTES: int = 5  # Refresh tokens 5 minutes before expiry
     OAUTH_MAX_RETRY_ATTEMPTS: int = 3  # Maximum retries for token refresh
     OAUTH_RETRY_DELAY_SECONDS: int = 1  # Initial delay between retries

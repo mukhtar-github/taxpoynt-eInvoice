@@ -6,6 +6,7 @@ and deal processing across different CRM platforms.
 """
 
 import logging
+import json
 from typing import Dict, Any, List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -22,6 +23,7 @@ from app.schemas.pagination import PaginatedResponse, PaginationParams
 from app.integrations.base.errors import IntegrationError
 from app.integrations.base.factory import get_connector_factory
 from app.tasks.hubspot_tasks import process_hubspot_deal, sync_hubspot_deals
+from app.services.encryption_service import get_encryption_service, EncryptionService
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +212,8 @@ async def connect_crm_platform(
     platform: str = Path(..., description="CRM platform name (hubspot, salesforce, etc.)"),
     connection_data: CRMConnectionCreate = Body(..., description="Connection configuration"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    encryption_service: EncryptionService = Depends(get_encryption_service)
 ):
     """
     Connect to a CRM platform.
@@ -273,9 +276,9 @@ async def connect_crm_platform(
                 detail=f"Connection test failed: {e.message}"
             )
         
-        # TODO: Encrypt credentials before storing
-        # This should use the encryption service to protect sensitive data
-        encrypted_credentials = str(connection_data.credentials)  # Placeholder
+        # Encrypt credentials before storing
+        encrypted_credentials_dict = encryption_service.encrypt_integration_config(connection_data.credentials)
+        encrypted_credentials = json.dumps(encrypted_credentials_dict)
         
         # Create database record
         db_connection = CRMConnection(
@@ -426,7 +429,8 @@ async def update_crm_connection(
     connection_id: UUID = Path(..., description="CRM connection ID"),
     update_data: CRMConnectionUpdate = Body(..., description="Updated connection data"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    encryption_service: EncryptionService = Depends(get_encryption_service)
 ):
     """
     Update an existing CRM connection.
@@ -448,8 +452,10 @@ async def update_crm_connection(
         
         for field, value in update_dict.items():
             if field == "credentials" and value is not None:
-                # TODO: Encrypt new credentials
-                setattr(connection, "credentials_encrypted", str(value))
+                # Encrypt new credentials
+                encrypted_credentials_dict = encryption_service.encrypt_integration_config(value)
+                encrypted_credentials = json.dumps(encrypted_credentials_dict)
+                setattr(connection, "credentials_encrypted", encrypted_credentials)
             elif hasattr(connection, field):
                 setattr(connection, field, value)
         
@@ -527,7 +533,8 @@ async def delete_crm_connection(
 async def test_crm_connection(
     connection_id: UUID = Path(..., description="CRM connection ID"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    encryption_service: EncryptionService = Depends(get_encryption_service)
 ):
     """
     Test an existing CRM connection.
@@ -543,8 +550,9 @@ async def test_crm_connection(
     try:
         connection = _get_user_crm_connection(db, connection_id, current_user)
         
-        # TODO: Decrypt credentials
-        credentials = eval(connection.credentials_encrypted)  # Placeholder
+        # Decrypt credentials
+        encrypted_credentials_dict = json.loads(connection.credentials_encrypted)
+        credentials = encryption_service.decrypt_integration_config(encrypted_credentials_dict)
         
         try:
             factory = get_connector_factory()

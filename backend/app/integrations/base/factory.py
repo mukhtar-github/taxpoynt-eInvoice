@@ -74,6 +74,47 @@ def create_connector(
         )
 
 
+class ConnectorFactory:
+    """
+    Factory class for creating integration connectors.
+    
+    This class provides a centralized way to create connectors
+    for different platforms and integration types.
+    """
+    
+    def create_connector(
+        self,
+        platform: str,
+        config: Dict[str, Any],
+        integration_type: str = "crm"
+    ) -> BaseConnector:
+        """
+        Create an integration connector for the specified platform.
+        
+        Args:
+            platform: Name of the platform (hubspot, square, etc.)
+            config: Configuration for the connector
+            integration_type: Type of integration (crm, pos, erp)
+            
+        Returns:
+            Instantiated connector for the specified platform
+            
+        Raises:
+            IntegrationError: If connector could not be created
+        """
+        return create_connector(integration_type, platform, config)
+
+
+def get_connector_factory() -> ConnectorFactory:
+    """
+    Get a connector factory instance.
+    
+    Returns:
+        ConnectorFactory instance for creating connectors
+    """
+    return ConnectorFactory()
+
+
 def get_available_integrations(integration_type: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     """
     Get available integrations and their capabilities.

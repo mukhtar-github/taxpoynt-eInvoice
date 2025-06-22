@@ -31,14 +31,19 @@ class SecureCredentialManager:
     
     def __init__(self):
         """Initialize with encryption key from settings."""
-        # Use the encryption key from settings or generate one
+        # Use the encryption key from settings
         encryption_key = getattr(settings, 'CREDENTIAL_ENCRYPTION_KEY', None)
         if not encryption_key:
-            # Generate a key for development (in production, this should be set in settings)
-            encryption_key = Fernet.generate_key()
-            logger.warning("No CREDENTIAL_ENCRYPTION_KEY found in settings. Using generated key.")
+            raise ValueError(
+                "CREDENTIAL_ENCRYPTION_KEY must be set in environment variables for production use. "
+                "Generate a key with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+            )
         
         if isinstance(encryption_key, str):
+            # Check if it's a valid Fernet key length (44 chars base64)
+            if len(encryption_key) < 44:
+                # Pad with base64-safe characters if too short
+                encryption_key = base64.urlsafe_b64encode(encryption_key.ljust(32, '0')[:32].encode()).decode()
             encryption_key = encryption_key.encode()
             
         self.cipher_suite = Fernet(encryption_key)

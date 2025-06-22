@@ -35,6 +35,7 @@ class Organization(Base):
     api_keys = relationship("APIKey", back_populates="organization", cascade="all, delete-orphan")
     organization_users = relationship("OrganizationUser", back_populates="organization", cascade="all, delete-orphan")
     integrations = relationship("Integration", back_populates="organization", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="organization", cascade="all, delete-orphan")
     
     # APP-related relationships
     certificates = relationship("Certificate", back_populates="organization", cascade="all, delete-orphan")

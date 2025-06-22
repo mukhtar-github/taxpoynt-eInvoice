@@ -10,6 +10,7 @@ including:
 """
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
@@ -23,6 +24,9 @@ from app.integrations.crm.hubspot.connector import HubSpotConnector, get_hubspot
 from app.integrations.crm.hubspot.models import HubSpotDeal, HubSpotDealInvoice
 from app.integrations.base.errors import IntegrationError, AuthenticationError
 from app.models.crm_connection import CRMConnection, CRMDeal
+from app.models.user import User
+from app.services.invoice_service import get_invoice_service
+from app.services.encryption_service import get_encryption_service
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -55,18 +59,21 @@ def process_hubspot_deal(self, deal_id: str, connection_id: str) -> Dict[str, An
         if not connection:
             raise ValueError(f"Active CRM connection {connection_id} not found")
         
-        # Get connection config (would need to decrypt credentials in real implementation)
+        # Get connection config and decrypt credentials
+        encryption_service = get_encryption_service(db)
+        try:
+            encrypted_credentials_dict = json.loads(connection.credentials_encrypted)
+            decrypted_credentials = encryption_service.decrypt_integration_config(encrypted_credentials_dict)
+        except Exception as e:
+            logger.error(f"Failed to decrypt credentials for connection {connection_id}: {str(e)}")
+            raise ValueError(f"Invalid or corrupted credentials for connection {connection_id}")
+        
         connection_config = {
             "connection_id": connection_id,
             "auth": {
                 "auth_type": "oauth2",
                 "token_url": "https://api.hubapi.com/oauth/v1/token",
-                "credentials": {
-                    # In real implementation, decrypt these from connection.credentials_encrypted
-                    "client_id": "placeholder_client_id",
-                    "client_secret": "placeholder_client_secret",
-                    "refresh_token": "placeholder_refresh_token"
-                }
+                "credentials": decrypted_credentials
             },
             "settings": connection.connection_settings or {}
         }
@@ -75,7 +82,7 @@ def process_hubspot_deal(self, deal_id: str, connection_id: str) -> Dict[str, An
         connector = get_hubspot_connector(connection_config)
         
         # Fetch deal from HubSpot
-        deal_data = await connector.get_deal_by_id(deal_id)
+        deal_data = asyncio.run(connector.get_deal_by_id(deal_id))
         
         # Check if deal already exists in our database
         existing_deal = db.query(CRMDeal).filter(
@@ -84,7 +91,7 @@ def process_hubspot_deal(self, deal_id: str, connection_id: str) -> Dict[str, An
         ).first()
         
         # Transform deal to invoice format
-        invoice_data = await connector.transform_deal_to_invoice(deal_data)
+        invoice_data = asyncio.run(connector.transform_deal_to_invoice(deal_data))
         
         # Determine if invoice should be generated based on deal stage
         deal_properties = deal_data.get("properties", {})
@@ -109,9 +116,18 @@ def process_hubspot_deal(self, deal_id: str, connection_id: str) -> Dict[str, An
             
             # Update invoice generation status
             if should_generate_invoice and not existing_deal.invoice_generated:
-                existing_deal.invoice_generated = True
-                # TODO: Create actual invoice record in database
-                logger.info(f"Generated invoice for existing deal {deal_id}")
+                # Create actual invoice record in database
+                invoice_service = get_invoice_service(db)
+                creator = db.query(User).filter(User.id == connection.user_id).first()
+                if creator:
+                    invoice = invoice_service.create_invoice_from_crm_deal(
+                        deal=existing_deal,
+                        invoice_data=invoice_data,
+                        created_by=creator
+                    )
+                    logger.info(f"Generated invoice {invoice.invoice_number} for existing deal {deal_id}")
+                else:
+                    logger.error(f"Could not find user {connection.user_id} to create invoice for deal {deal_id}")
                 
         else:
             # Create new deal record
@@ -128,8 +144,18 @@ def process_hubspot_deal(self, deal_id: str, connection_id: str) -> Dict[str, An
             )
             
             if should_generate_invoice:
-                # TODO: Create actual invoice record in database
-                logger.info(f"Generated invoice for new deal {deal_id}")
+                # Create actual invoice record in database
+                invoice_service = get_invoice_service(db)
+                creator = db.query(User).filter(User.id == connection.user_id).first()
+                if creator:
+                    invoice = invoice_service.create_invoice_from_crm_deal(
+                        deal=new_deal,
+                        invoice_data=invoice_data,
+                        created_by=creator
+                    )
+                    logger.info(f"Generated invoice {invoice.invoice_number} for new deal {deal_id}")
+                else:
+                    logger.error(f"Could not find user {connection.user_id} to create invoice for deal {deal_id}")
             
             db.add(new_deal)
         
@@ -210,18 +236,21 @@ def sync_hubspot_deals(self, connection_id: str, days_back: int = 30) -> Dict[st
         if not connection:
             raise ValueError(f"Active CRM connection {connection_id} not found")
         
-        # Get connection config
+        # Get connection config and decrypt credentials
+        encryption_service = get_encryption_service(db)
+        try:
+            encrypted_credentials_dict = json.loads(connection.credentials_encrypted)
+            decrypted_credentials = encryption_service.decrypt_integration_config(encrypted_credentials_dict)
+        except Exception as e:
+            logger.error(f"Failed to decrypt credentials for connection {connection_id}: {str(e)}")
+            raise ValueError(f"Invalid or corrupted credentials for connection {connection_id}")
+        
         connection_config = {
             "connection_id": connection_id,
             "auth": {
                 "auth_type": "oauth2",
                 "token_url": "https://api.hubapi.com/oauth/v1/token",
-                "credentials": {
-                    # In real implementation, decrypt these from connection.credentials_encrypted
-                    "client_id": "placeholder_client_id",
-                    "client_secret": "placeholder_client_secret",
-                    "refresh_token": "placeholder_refresh_token"
-                }
+                "credentials": decrypted_credentials
             },
             "settings": connection.connection_settings or {}
         }
@@ -241,14 +270,14 @@ def sync_hubspot_deals(self, connection_id: str, days_back: int = 30) -> Dict[st
         while True:
             try:
                 # Get deals from HubSpot
-                deals_response = await connector.get_deals(
+                deals_response = asyncio.run(connector.get_deals(
                     limit=limit,
                     offset=offset,
                     properties=[
                         "dealname", "amount", "dealstage", "closedate", 
                         "createdate", "hs_lastmodifieddate", "hubspot_owner_id"
                     ]
-                )
+                ))
                 
                 deals = deals_response.get("results", [])
                 if not deals:
@@ -471,7 +500,7 @@ def hubspot_deal_processor_task(self):
         logger.info(f"Found {len(connection_ids)} active HubSpot connections")
         
         # Process deals for all connections
-        result = await batch_process_hubspot_deals(connection_ids, days_back=1)  # Only last day for regular sync
+        result = asyncio.run(batch_process_hubspot_deals(connection_ids, days_back=1))  # Only last day for regular sync
         
         if result["success"]:
             logger.info(f"HubSpot deal processor task completed successfully")
