@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { EnhancedMetricCard, MetricCardGrid } from '../../components/dashboard/EnhancedMetricCard';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { Switch } from '../../components/ui/Switch';
 import { Table, TableContainer, TableHeader, TableRow, TableHead, TableBody, TableCell, TableEmpty } from '../../components/ui/Table';
 import Link from 'next/link';
 import { 
@@ -20,9 +21,14 @@ import {
   RefreshCw,
   Users,
   FileText,
-  CheckCircle
+  CheckCircle,
+  Wifi,
+  WifiOff,
+  Zap
 } from 'lucide-react';
 import EnhancedDashboard from '../../components/dashboard/EnhancedDashboard';
+import ConnectedActivityFeed from '../../components/dashboard/ConnectedActivityFeed';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import { useAuth } from '../../context/AuthContext';
 import Head from 'next/head';
 import { fetchDashboardSummary } from '../../services/dashboardService';
@@ -130,8 +136,36 @@ const DashboardHub: NextPage = () => {
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true);
   const { user } = useAuth();
+
+  // WebSocket connection for real-time updates
+  const {
+    isConnected,
+    isConnecting,
+    error: wsError,
+    subscribe,
+    requestUpdate,
+    connect,
+    disconnect
+  } = useWebSocket({
+    autoConnect: realtimeEnabled,
+    subscriptions: ['metrics', 'activities', 'alerts']
+  });
   
+  // Handle real-time metric updates via WebSocket
+  useEffect(() => {
+    const unsubscribe = subscribe('metrics_update', (data) => {
+      console.log('Received real-time metrics update:', data);
+      if (data) {
+        setSummary(data);
+        setError(null);
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
+
   // Fetch dashboard summary if available
   useEffect(() => {
     const fetchSummary = async () => {
@@ -161,8 +195,18 @@ const DashboardHub: NextPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await fetchDashboardSummary();
-      setSummary(data);
+      
+      if (isConnected) {
+        // Request real-time update via WebSocket
+        requestUpdate('metrics');
+        // For WebSocket, we don't need to wait for response
+        setIsLoading(false);
+      } else {
+        // Fallback to API call
+        const data = await fetchDashboardSummary();
+        setSummary(data);
+        setIsLoading(false);
+      }
     } catch (err) {
       console.error('Error refreshing dashboard data', err);
       if (axios.isAxiosError(err)) {
@@ -171,8 +215,16 @@ const DashboardHub: NextPage = () => {
       } else {
         setError('Failed to refresh dashboard data');
       }
-    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRealtimeToggle = () => {
+    setRealtimeEnabled(!realtimeEnabled);
+    if (!realtimeEnabled) {
+      connect();
+    } else {
+      disconnect();
     }
   };
 
@@ -203,7 +255,32 @@ const DashboardHub: NextPage = () => {
                 <p className="text-blue-100 text-sm">Monitor your e-Invoice performance metrics</p>
               </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-3">
+              {/* Real-time Connection Status */}
+              <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
+                {isConnected ? (
+                  <>
+                    <Wifi className="w-4 h-4 text-green-300" />
+                    <span className="text-green-300 text-sm">Live</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-4 h-4 text-red-300" />
+                    <span className="text-red-300 text-sm">Offline</span>
+                  </>
+                )}
+              </div>
+
+              {/* Real-time Toggle */}
+              <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
+                <Switch
+                  checked={realtimeEnabled}
+                  onCheckedChange={handleRealtimeToggle}
+                  className="scale-75"
+                />
+                <span className="text-white text-sm">Auto-refresh</span>
+              </div>
+
               <Link href="/firs-test?dev=true" passHref>
                 <Button 
                   variant="secondary" 
@@ -359,14 +436,29 @@ const DashboardHub: NextPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <div className="bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl">
               <div className="border-b border-gray-100 p-5">
-                <h3 className="text-lg font-bold text-gray-800">Recent Transactions</h3>
-                <p className="text-sm text-gray-500">Latest system activity</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <Activity className="w-5 h-5" />
+                      Recent Activity
+                    </h3>
+                    <p className="text-sm text-gray-500">Live system activity feed</p>
+                  </div>
+                  {isConnected && (
+                    <Badge variant="success" className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      Live
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div className="p-5">
-                {/* Transaction log table with horizontal scroll capability */}
-                <TransactionLogTable 
-                  transactions={[]}
-                  isLoading={isLoading}
+              <div className="p-0">
+                {/* Real-time activity feed */}
+                <ConnectedActivityFeed
+                  maxHeight="350px"
+                  showFilter={false}
+                  pollInterval={realtimeEnabled ? 30000 : 0}
+                  pageSize={8}
                 />
               </div>
             </div>

@@ -5,14 +5,17 @@ import EnhancedIRNMetricsCard from '../../components/dashboard/EnhancedIRNMetric
 import ValidationMetricsCard from '../../components/dashboard/ValidationMetricsCard';
 import B2BvsB2CMetricsCard from '../../components/dashboard/B2BvsB2CMetricsCard';
 import OdooIntegrationMetricsCard from '../../components/dashboard/OdooIntegrationMetricsCard';
+import ConnectedActivityFeed from '../../components/dashboard/ConnectedActivityFeed';
 import { fetchDashboardSummary, DashboardSummary } from '../../services/dashboardService';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Switch } from '../../components/ui/Switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
-import { Download, Filter, RefreshCw, Search } from 'lucide-react';
+import { Download, Filter, RefreshCw, Search, Wifi, WifiOff, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import Head from 'next/head';
 
