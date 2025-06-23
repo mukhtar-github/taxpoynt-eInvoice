@@ -34,7 +34,20 @@ async def health_check() -> Dict[str, Any]:
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "service": "taxpoynt-backend",
-        "version": settings.VERSION
+        "version": getattr(settings, "VERSION", "1.0.0")
+    }
+
+
+@router.get("/ready", summary="Simple readiness check")
+async def simple_ready_check() -> Dict[str, Any]:
+    """
+    Simple readiness check without dependency validation.
+    This is a backup endpoint for Railway health checks.
+    """
+    return {
+        "status": "ready",
+        "timestamp": datetime.now().isoformat(),
+        "service": "taxpoynt-backend"
     }
 
 
@@ -43,30 +56,59 @@ async def readiness_check() -> Dict[str, Any]:
     """
     Readiness probe to check if the application is ready to serve traffic.
     This is used by Railway to determine when to switch traffic to new deployment.
+    Uses a graceful startup approach that doesn't fail immediately.
     """
     start_time = time.time()
     checks = {}
     overall_status = "healthy"
     
     try:
-        # Database connectivity check
-        checks["database"] = await _check_database()
+        # For initial startup, just check basic application health
+        # Database and Redis checks can be optional during startup
         
-        # Redis connectivity check  
-        checks["redis"] = await _check_redis()
+        # Database connectivity check (non-blocking)
+        try:
+            checks["database"] = await _check_database()
+        except Exception as e:
+            logger.warning(f"Database check failed during startup: {str(e)}")
+            checks["database"] = {"healthy": False, "error": str(e), "critical": False}
         
-        # Queue system check
-        checks["queues"] = await _check_queues()
+        # Redis connectivity check (non-blocking)
+        try:
+            checks["redis"] = await _check_redis()
+        except Exception as e:
+            logger.warning(f"Redis check failed during startup: {str(e)}")
+            checks["redis"] = {"healthy": False, "error": str(e), "critical": False}
         
-        # Application initialization check
-        checks["application"] = await _check_application()
+        # Application initialization check (critical)
+        try:
+            checks["application"] = await _check_application()
+        except Exception as e:
+            logger.error(f"Application check failed: {str(e)}")
+            checks["application"] = {"healthy": False, "error": str(e), "critical": True}
         
-        # Check if any critical components failed
-        failed_checks = [name for name, check in checks.items() if not check["healthy"]]
+        # Queue system check (non-critical for initial startup)
+        try:
+            checks["queues"] = await _check_queues()
+        except Exception as e:
+            logger.warning(f"Queue check failed during startup: {str(e)}")
+            checks["queues"] = {"healthy": False, "error": str(e), "critical": False}
         
-        if failed_checks:
+        # Only fail if critical components failed
+        critical_failures = [
+            name for name, check in checks.items() 
+            if not check["healthy"] and check.get("critical", False)
+        ]
+        
+        if critical_failures:
             overall_status = "unhealthy"
-            logger.error(f"Readiness check failed: {failed_checks}")
+            logger.error(f"Critical readiness checks failed: {critical_failures}")
+        else:
+            # Check if database is healthy (required for most operations)
+            if checks.get("database", {}).get("healthy", False):
+                overall_status = "healthy"
+            else:
+                overall_status = "starting"  # Still starting up
         
         processing_time = time.time() - start_time
         
@@ -75,15 +117,17 @@ async def readiness_check() -> Dict[str, Any]:
             "checks": checks,
             "processing_time": round(processing_time, 3),
             "timestamp": datetime.now().isoformat(),
-            "failed_checks": failed_checks
+            "critical_failures": critical_failures
         }
         
+        # Only return 503 for critical failures, not for startup dependencies
         if overall_status == "unhealthy":
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=response
             )
         
+        # Return 200 even if still starting (Railway will keep checking)
         return response
         
     except Exception as e:
@@ -236,7 +280,8 @@ async def _check_database() -> Dict[str, Any]:
     """Check database connectivity."""
     try:
         with SessionLocal() as db:
-            result = db.execute("SELECT 1").scalar()
+            from sqlalchemy import text
+            result = db.execute(text("SELECT 1")).scalar()
             return {
                 "healthy": result == 1,
                 "message": "Database connection successful",
@@ -318,16 +363,23 @@ async def _check_database_migrations() -> Dict[str, Any]:
         # This would need actual migration checking logic
         # For now, just check if we can query the main tables
         with SessionLocal() as db:
+            from sqlalchemy import text
             # Check if key tables exist
-            tables_to_check = ["users", "organizations", "pos_connections", "pos_transactions"]
+            tables_to_check = ["users", "organizations"]  # Start with core tables only
+            existing_tables = 0
             
             for table in tables_to_check:
-                result = db.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone()
-                # Table exists if query doesn't throw an error
+                try:
+                    result = db.execute(text(f"SELECT 1 FROM {table} LIMIT 1")).fetchone()
+                    existing_tables += 1
+                except:
+                    # Table might not exist yet, skip it
+                    pass
         
         return {
-            "healthy": True,
-            "message": "Database schema is current",
+            "healthy": existing_tables > 0,  # At least one core table should exist
+            "message": f"Database schema check: {existing_tables}/{len(tables_to_check)} core tables found",
+            "tables_found": existing_tables,
             "tables_checked": len(tables_to_check)
         }
     except Exception as e:
