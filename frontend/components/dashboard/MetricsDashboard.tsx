@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent } from '../ui/Card';
 import { EnhancedMetricCard, MetricCardGrid } from './EnhancedMetricCard';
 import { Typography } from '../ui/Typography';
 import { Badge } from '../ui/Badge';
+import { AreaChart } from '../ui/Charts';
 import { FileText, Clock, TrendingUp, DollarSign } from 'lucide-react';
 
 // Enhanced mock data for the new EnhancedMetricCard
@@ -136,8 +137,19 @@ const MetricsDashboard: React.FC = () => {
                   subtitle="Last 30 days activity"
                 />
                 <CardContent>
-                  <div className="h-64 flex items-center justify-center bg-background-alt rounded-md">
-                    <Typography.Text variant="secondary">Chart placeholder</Typography.Text>
+                  <div className="h-64">
+                    <AreaChart
+                      data={[
+                        { name: 'Week 1', value: 1200 },
+                        { name: 'Week 2', value: 1850 },
+                        { name: 'Week 3', value: 2100 },
+                        { name: 'Week 4', value: 2547 }
+                      ]}
+                      dataKey="value"
+                      gradientType="primary"
+                      animate={true}
+                      height={240}
+                    />
                   </div>
                 </CardContent>
               </Card>
