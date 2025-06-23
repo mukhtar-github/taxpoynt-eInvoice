@@ -8,7 +8,7 @@ for security auditing, compliance, and troubleshooting.
 import uuid
 import enum
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON, func
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, JSON, Integer, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
