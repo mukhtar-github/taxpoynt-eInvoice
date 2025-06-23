@@ -44,6 +44,7 @@ flower>=2.0.1
 jsonschema>=4.19.1
 requests>=2.31.0
 odoorpc>=0.9.0  # Added for Odoo integration
+squareup>=21.0.0.20231030  # Square Python SDK for POS integration
 
 # Testing
 pytest>=7.4.2
