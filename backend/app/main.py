@@ -201,10 +201,10 @@ else:
     os.makedirs("static", exist_ok=True)
     app.mount("/static", StaticFiles(directory=Path("static")), name="static")
 
-# Health check endpoint
+# Health check endpoint (basic)
 @app.get("/health")
 def health_check():
-    """Health check endpoint."""
+    """Basic health check endpoint."""
     return {"status": "ok", "version": settings.VERSION}
 
 # Include routers with error handling
@@ -225,6 +225,16 @@ except Exception as e:
     raise
 
 try:
+    # Health check routers (critical for deployment)
+    from app.api.routes.health import router as health_router
+    app.include_router(health_router, prefix=f"{settings.API_V1_STR}/health", tags=["health"])
+    logger.info("Successfully included health check router")
+    
+    # POS real-time processing router
+    from app.api.routes.pos_realtime import router as pos_realtime_router
+    app.include_router(pos_realtime_router, prefix=f"{settings.API_V1_STR}/pos", tags=["pos-realtime"])
+    logger.info("Successfully included POS real-time router")
+    
     # Feature routers - group 1
     app.include_router(validation.router, prefix=f"{settings.API_V1_STR}/validation", tags=["validation"])
     app.include_router(crypto.router, prefix=f"{settings.API_V1_STR}/crypto", tags=["crypto"])

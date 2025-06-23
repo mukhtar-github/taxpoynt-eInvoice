@@ -81,18 +81,165 @@ handle_migrations() {
     log_message "Database migration process completed."
 }
 
+# Function to run pre-startup health checks
+pre_startup_checks() {
+    log_message "Running pre-startup health checks..."
+    
+    # Check database connectivity
+    log_message "Testing database connectivity..."
+    python -c "
+from app.db.session import SessionLocal
+try:
+    with SessionLocal() as db:
+        result = db.execute('SELECT 1').scalar()
+        if result == 1:
+            print('Database connection: OK')
+        else:
+            print('Database connection: FAILED')
+            exit(1)
+except Exception as e:
+    print(f'Database connection: FAILED - {str(e)}')
+    exit(1)
+"
+    
+    if [ $? -ne 0 ]; then
+        log_message "ERROR: Database connectivity check failed"
+        exit 1
+    fi
+    
+    # Check Redis connectivity
+    log_message "Testing Redis connectivity..."
+    python -c "
+from app.db.redis import get_redis_client
+try:
+    redis_client = get_redis_client()
+    pong = redis_client.ping()
+    if pong:
+        print('Redis connection: OK')
+    else:
+        print('Redis connection: FAILED')
+        exit(1)
+except Exception as e:
+    print(f'Redis connection: FAILED - {str(e)}')
+    exit(1)
+"
+    
+    if [ $? -ne 0 ]; then
+        log_message "WARNING: Redis connectivity check failed - some features may not work"
+        # Don't exit for Redis failure as it's not critical for basic operation
+    fi
+    
+    # Check critical environment variables
+    log_message "Checking critical environment variables..."
+    
+    if [ -z "$DATABASE_URL" ]; then
+        log_message "ERROR: DATABASE_URL is not set"
+        exit 1
+    fi
+    
+    if [ -z "$SECRET_KEY" ]; then
+        log_message "ERROR: SECRET_KEY is not set"
+        exit 1
+    fi
+    
+    log_message "Pre-startup health checks completed successfully"
+}
+
+# Function to wait for dependencies
+wait_for_dependencies() {
+    log_message "Waiting for dependencies to be ready..."
+    
+    # Wait for database to be ready (with timeout)
+    local db_timeout=60
+    local db_elapsed=0
+    local db_interval=5
+    
+    while [ $db_elapsed -lt $db_timeout ]; do
+        if python -c "
+from app.db.session import SessionLocal
+try:
+    with SessionLocal() as db:
+        db.execute('SELECT 1').scalar()
+        exit(0)
+except:
+    exit(1)
+" > /dev/null 2>&1; then
+            log_message "Database is ready"
+            break
+        fi
+        
+        log_message "Waiting for database... (${db_elapsed}s/${db_timeout}s)"
+        sleep $db_interval
+        db_elapsed=$((db_elapsed + db_interval))
+    done
+    
+    if [ $db_elapsed -ge $db_timeout ]; then
+        log_message "ERROR: Database not ready after ${db_timeout} seconds"
+        exit 1
+    fi
+}
+
+# Function to start application with health monitoring
+start_application() {
+    log_message "Starting application with health monitoring..."
+    
+    # Start deployment monitoring in background
+    python -c "
+import asyncio
+import logging
+from app.services.deployment_monitor import get_deployment_monitor
+import os
+
+# Setup basic logging for monitoring
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('deployment_monitor')
+
+async def start_monitoring():
+    try:
+        monitor = get_deployment_monitor()
+        deployment_id = os.environ.get('RAILWAY_DEPLOYMENT_ID', f'railway-{int(__import__('time').time())}')
+        logger.info(f'Starting deployment monitoring for: {deployment_id}')
+        await monitor.start_monitoring(deployment_id)
+        logger.info('Deployment monitoring started successfully')
+    except Exception as e:
+        logger.error(f'Failed to start deployment monitoring: {str(e)}')
+        # Don't fail startup for monitoring issues
+        pass
+
+# Don't block startup for monitoring
+try:
+    asyncio.run(start_monitoring())
+except Exception as e:
+    print(f'Monitoring startup failed: {e}')
+    pass
+" &
+    
+    # Start the application
+    log_message "Starting uvicorn server..."
+    exec uvicorn app.main:app \
+        --host 0.0.0.0 \
+        --port ${PORT:-8000} \
+        --timeout-keep-alive 65 \
+        --access-log \
+        --use-colors
+}
+
 # Main deployment process
 main() {
     # Make sure the script is executable
     chmod +x "${BASH_SOURCE[0]}"
     
+    # Wait for dependencies
+    wait_for_dependencies
+    
     # Run database migrations with additional safety measures
     handle_migrations
     
-    # Start the backend service
-    log_message "Starting backend service..."
-    # Start the application with uvicorn (safer than relying on Docker CMD for consistent behavior)
-    exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+    # Run pre-startup health checks
+    pre_startup_checks
+    
+    # Start the application with monitoring
+    start_application
 }
 
 # Execute the main function
