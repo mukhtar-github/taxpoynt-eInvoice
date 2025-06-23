@@ -33,6 +33,12 @@ export { default as OdooProductsTab } from './OdooProductsTab';
 // CRM Components
 export { default as CRMConnectionCard } from './crm/CRMConnectionCard';
 
+// POS Components
+export { default as POSDashboard } from './pos/POSDashboard';
+export { TransactionsList } from './pos/TransactionsList';
+export { POSConnectorCard } from './pos/POSConnectorCard';
+export { RealTimeStats } from './pos/RealTimeStats';
+
 // Type exports for enhanced components
 export type { 
   IntegrationMetrics,
