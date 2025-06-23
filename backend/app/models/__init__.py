@@ -11,5 +11,8 @@ from app.models.api_credential import ApiCredential, CredentialType
 from app.models.crm_connection import CRMConnection, CRMDeal, CRMType
 from app.models.pos_connection import POSConnection, POSTransaction, POSType
 from app.models.invoice import Invoice, InvoiceStatus, InvoiceSource
+from app.models.certificate import Certificate, CertificateRevocation, CertificateType, CertificateStatus
+from app.models.certificate_request import CertificateRequest, CertificateRequestType, CertificateRequestStatus
+from app.models.submission import SubmissionRecord, SubmissionStatusUpdate, SubmissionNotification, SubmissionStatus, NotificationStatus
 
 # Add new models here when created
