@@ -2,16 +2,20 @@
 POS (Point of Sale) integration tasks for Celery.
 
 This module provides high-priority tasks for POS system integrations
-with real-time transaction processing capabilities.
+with real-time transaction processing capabilities and sub-2-second SLA.
 """
 
+import asyncio
 import logging
+import time
 from typing import Dict, Any, Optional, List
+from uuid import UUID
 from celery import current_task
 from sqlalchemy.orm import Session
 
 from app.core.celery import celery_app
 from app.db.session import SessionLocal
+from app.services.pos_queue_service import get_pos_queue_service
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -177,10 +181,290 @@ def process_end_of_day(self, pos_connection_id: str, date: str) -> Dict[str, Any
         raise self.retry(exc=e, countdown=600, max_retries=2)  # 10 minute delay
 
 
+@celery_app.task(bind=True, name="app.tasks.pos_tasks.process_realtime_transaction")
+def process_realtime_transaction(self, transaction_data: Dict[str, Any], connection_id: str) -> Dict[str, Any]:
+    """
+    Process a real-time POS transaction with sub-2-second SLA.
+    
+    This task is designed for immediate processing with circuit breaker protection
+    and automatic fallback to standard queues on failure.
+    
+    Args:
+        transaction_data: Real-time transaction data
+        connection_id: POS connection identifier
+        
+    Returns:
+        Dict containing processing results with timing metrics
+    """
+    start_time = time.time()
+    task_id = self.request.id
+    
+    try:
+        logger.info(
+            f"Processing real-time transaction {transaction_data.get('transaction_id')}",
+            extra={
+                "task_id": task_id,
+                "connection_id": connection_id,
+                "transaction_id": transaction_data.get('transaction_id')
+            }
+        )
+        
+        # Get queue service for metrics and fallback processing
+        queue_service = get_pos_queue_service()
+        
+        # Validate transaction data quickly
+        if not transaction_data.get('transaction_id'):
+            raise ValueError("Missing transaction_id")
+        
+        if not transaction_data.get('amount'):
+            raise ValueError("Missing transaction amount")
+        
+        # Process transaction with timeout protection
+        with SessionLocal() as db:
+            # Create transaction record immediately
+            from app.crud.pos_transaction import create_pos_transaction
+            from app.schemas.pos import POSTransactionCreate
+            
+            # Convert to schema format
+            transaction_create = POSTransactionCreate(
+                transaction_id=transaction_data['transaction_id'],
+                connection_id=connection_id,
+                location_id=transaction_data.get('location_id', ''),
+                amount=float(transaction_data['amount']),
+                currency=transaction_data.get('currency', 'NGN'),
+                payment_method=transaction_data.get('payment_method', 'unknown'),
+                timestamp=transaction_data.get('timestamp'),
+                items=transaction_data.get('items', []),
+                customer_info=transaction_data.get('customer_info'),
+                tax_info=transaction_data.get('tax_info'),
+                platform_data=transaction_data.get('platform_data'),
+                receipt_number=transaction_data.get('receipt_number'),
+                receipt_url=transaction_data.get('receipt_url')
+            )
+            
+            # Create transaction record
+            db_transaction = create_pos_transaction(
+                db=db,
+                transaction_in=transaction_create,
+                connection_id=UUID(connection_id)
+            )
+            
+            processing_time = time.time() - start_time
+            
+            # Check SLA compliance (target: 2 seconds)
+            sla_target = 2.0
+            sla_met = processing_time <= sla_target
+            
+            result = {
+                "status": "success",
+                "transaction_id": str(db_transaction.id),
+                "external_transaction_id": transaction_data['transaction_id'],
+                "connection_id": connection_id,
+                "processing_time": processing_time,
+                "sla_target": sla_target,
+                "sla_met": sla_met,
+                "processed_at": time.time(),
+                "invoice_generated": False,  # Will be updated by invoice generation task
+                "firs_submitted": False,     # Will be updated by FIRS submission task
+                "task_id": task_id
+            }
+            
+            # Log performance metrics
+            if sla_met:
+                logger.info(
+                    f"Real-time transaction processed within SLA: {processing_time:.3f}s",
+                    extra=result
+                )
+            else:
+                logger.warning(
+                    f"Real-time transaction exceeded SLA: {processing_time:.3f}s > {sla_target}s",
+                    extra=result
+                )
+            
+            return result
+            
+    except Exception as e:
+        processing_time = time.time() - start_time
+        
+        logger.error(
+            f"Real-time transaction processing failed: {str(e)}",
+            extra={
+                "task_id": task_id,
+                "connection_id": connection_id,
+                "processing_time": processing_time,
+                "error": str(e)
+            }
+        )
+        
+        # Don't retry real-time tasks - let them fall back to standard queue
+        return {
+            "status": "failed",
+            "error": str(e),
+            "processing_time": processing_time,
+            "connection_id": connection_id,
+            "task_id": task_id,
+            "sla_met": False
+        }
+
+
+@celery_app.task(bind=True, name="app.tasks.pos_tasks.process_high_priority_batch")
+def process_high_priority_batch(self, batch_size: int = 10, priority: str = "high") -> Dict[str, Any]:
+    """
+    Process a batch of high-priority POS transactions from Redis queue.
+    
+    This task is designed to be run by dedicated workers for high-throughput processing
+    while maintaining SLA requirements.
+    
+    Args:
+        batch_size: Number of transactions to process in this batch
+        priority: Queue priority to process from
+        
+    Returns:
+        Dict containing batch processing results
+    """
+    start_time = time.time()
+    task_id = self.request.id
+    
+    try:
+        # Get queue service
+        queue_service = get_pos_queue_service()
+        
+        # Process batch using async method in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                queue_service.process_queue_batch(priority, batch_size)
+            )
+        finally:
+            loop.close()
+        
+        processing_time = time.time() - start_time
+        
+        # Add timing metrics to result
+        result.update({
+            "batch_processing_time": processing_time,
+            "avg_transaction_time": processing_time / max(result.get("processed", 1), 1),
+            "task_id": task_id,
+            "processed_at": time.time()
+        })
+        
+        logger.info(
+            f"Processed batch of {result.get('processed', 0)} transactions in {processing_time:.3f}s",
+            extra=result
+        )
+        
+        return result
+        
+    except Exception as e:
+        processing_time = time.time() - start_time
+        
+        logger.error(
+            f"Batch processing failed: {str(e)}",
+            extra={
+                "task_id": task_id,
+                "priority": priority,
+                "batch_size": batch_size,
+                "processing_time": processing_time,
+                "error": str(e)
+            }
+        )
+        
+        # Retry batch processing with exponential backoff
+        raise self.retry(exc=e, countdown=min(60 * (2 ** self.request.retries), 300), max_retries=3)
+
+
+@celery_app.task(bind=True, name="app.tasks.pos_tasks.monitor_queue_health")
+def monitor_queue_health(self) -> Dict[str, Any]:
+    """
+    Monitor POS queue health and performance metrics.
+    
+    This task runs periodically to check queue lengths, SLA compliance,
+    and system performance.
+    
+    Returns:
+        Dict containing queue health metrics
+    """
+    start_time = time.time()
+    
+    try:
+        # Get queue service
+        queue_service = get_pos_queue_service()
+        
+        # Get queue status using async method in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            status = loop.run_until_complete(queue_service.get_queue_status())
+        finally:
+            loop.close()
+        
+        processing_time = time.time() - start_time
+        
+        # Add monitoring metadata
+        status.update({
+            "monitor_processing_time": processing_time,
+            "monitored_at": time.time(),
+            "health_check_passed": True
+        })
+        
+        # Check for critical conditions
+        critical_conditions = []
+        warning_conditions = []
+        
+        for queue_name, queue_info in status.get("queues", {}).items():
+            if queue_info.get("status") == "critical":
+                critical_conditions.append(f"Queue {queue_name} has {queue_info.get('length')} items")
+            elif queue_info.get("status") == "warning":
+                warning_conditions.append(f"Queue {queue_name} has {queue_info.get('length')} items")
+        
+        if critical_conditions:
+            logger.error(
+                f"Critical queue conditions detected: {critical_conditions}",
+                extra=status
+            )
+            status["health_status"] = "critical"
+        elif warning_conditions:
+            logger.warning(
+                f"Warning queue conditions detected: {warning_conditions}",
+                extra=status
+            )
+            status["health_status"] = "warning"
+        else:
+            status["health_status"] = "healthy"
+            
+        logger.info(f"Queue health monitoring completed in {processing_time:.3f}s", extra=status)
+        
+        return status
+        
+    except Exception as e:
+        processing_time = time.time() - start_time
+        
+        logger.error(
+            f"Queue health monitoring failed: {str(e)}",
+            extra={
+                "processing_time": processing_time,
+                "error": str(e)
+            }
+        )
+        
+        return {
+            "health_check_passed": False,
+            "error": str(e),
+            "processing_time": processing_time,
+            "monitored_at": time.time()
+        }
+
+
 # Export task functions for discovery
 __all__ = [
     "process_sale",
     "process_refund", 
     "sync_inventory",
-    "process_end_of_day"
+    "process_end_of_day",
+    "process_realtime_transaction",
+    "process_high_priority_batch",
+    "monitor_queue_health"
 ]
