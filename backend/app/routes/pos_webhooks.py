@@ -160,12 +160,11 @@ async def handle_payment_update(
         db.commit()
         db.refresh(transaction)
         
-        # Schedule background processing for FIRS invoice generation
-        from app.tasks.pos_tasks import process_square_transaction_with_firs
+        # Schedule background processing for invoice generation
+        from app.tasks.pos_tasks import process_pos_transaction_to_invoice
         background_tasks.add_task(
-            process_square_transaction_with_firs,
-            transaction.id,
-            connection.id
+            process_pos_transaction_to_invoice,
+            str(transaction.id)
         )
         
         logger.info(f"Created transaction {transaction.id} for payment {payment_id}")
