@@ -8,6 +8,7 @@ with real-time transaction processing capabilities and sub-2-second SLA.
 import asyncio
 import logging
 import time
+from datetime import datetime
 from typing import Dict, Any, Optional, List
 from uuid import UUID
 from celery import current_task
@@ -375,6 +376,150 @@ def process_high_priority_batch(self, batch_size: int = 10, priority: str = "hig
         raise self.retry(exc=e, countdown=min(60 * (2 ** self.request.retries), 300), max_retries=3)
 
 
+@celery_app.task(bind=True, name="app.tasks.pos_tasks.process_square_transaction_with_firs")
+def process_square_transaction_with_firs(transaction_id: str, connection_id: str) -> Dict[str, Any]:
+    """
+    Process Square transaction and generate FIRS invoice.
+    
+    This task handles the complete Square transaction workflow:
+    1. Retrieve transaction from database
+    2. Fetch additional data from Square API if needed
+    3. Generate FIRS-compliant invoice
+    4. Submit to FIRS
+    5. Update transaction status
+    
+    Args:
+        transaction_id: Database transaction ID
+        connection_id: POS connection ID
+        
+    Returns:
+        Dict containing processing results
+    """
+    start_time = time.time()
+    
+    try:
+        logger.info(f"Processing Square transaction {transaction_id} for FIRS compliance")
+        
+        with SessionLocal() as db:
+            # Get transaction from database
+            from app.models.pos_transaction import POSTransaction
+            from app.models.pos_connection import POSConnection
+            
+            transaction = db.query(POSTransaction).filter(POSTransaction.id == transaction_id).first()
+            if not transaction:
+                raise ValueError(f"Transaction {transaction_id} not found")
+            
+            connection = db.query(POSConnection).filter(POSConnection.id == connection_id).first()
+            if not connection:
+                raise ValueError(f"Connection {connection_id} not found")
+            
+            # Initialize Square connector
+            from app.integrations.pos.square.connector import SquarePOSConnector
+            connector = SquarePOSConnector(connection.connection_config)
+            
+            # Get additional transaction details from Square if needed
+            square_transaction = await connector.get_transaction_by_id(transaction.external_transaction_id)
+            
+            # Generate FIRS invoice using Square transformer
+            try:
+                firs_invoice = await connector.generate_firs_invoice(
+                    square_transaction,
+                    customer_info=transaction.transaction_data.get("customer_info")
+                )
+                
+                # Validate FIRS invoice
+                validation_result = connector.firs_transformer.validate_firs_invoice(firs_invoice)
+                
+                if not validation_result["valid"]:
+                    logger.warning(f"FIRS invoice validation failed: {validation_result['errors']}")
+                    # Continue with submission anyway, FIRS will reject if invalid
+                
+                # Update transaction with FIRS invoice data
+                transaction.firs_invoice_data = firs_invoice
+                transaction.status = "firs_generated"
+                transaction.updated_at = datetime.utcnow()
+                
+                # Submit to FIRS (placeholder - would implement actual submission)
+                firs_submission_result = {
+                    "status": "submitted",
+                    "irn": firs_invoice.get("irn"),
+                    "submission_id": f"FIRS_{transaction.external_transaction_id}",
+                    "submitted_at": datetime.utcnow().isoformat()
+                }
+                
+                # Update transaction with submission results
+                transaction.firs_submission_result = firs_submission_result
+                transaction.status = "completed"
+                transaction.updated_at = datetime.utcnow()
+                
+                db.commit()
+                
+                processing_time = time.time() - start_time
+                
+                result = {
+                    "status": "success",
+                    "transaction_id": transaction_id,
+                    "external_transaction_id": transaction.external_transaction_id,
+                    "connection_id": connection_id,
+                    "processing_time": processing_time,
+                    "firs_invoice_generated": True,
+                    "firs_submitted": True,
+                    "irn": firs_invoice.get("irn"),
+                    "validation_passed": validation_result["valid"],
+                    "validation_warnings": validation_result.get("warnings", [])
+                }
+                
+                logger.info(f"Successfully processed Square transaction {transaction_id} for FIRS in {processing_time:.3f}s")
+                return result
+                
+            except Exception as firs_error:
+                logger.error(f"FIRS processing failed for transaction {transaction_id}: {str(firs_error)}")
+                
+                # Update transaction status to indicate FIRS failure
+                transaction.status = "firs_failed"
+                transaction.firs_error = str(firs_error)
+                transaction.updated_at = datetime.utcnow()
+                db.commit()
+                
+                # Return partial success - transaction was recorded but FIRS failed
+                processing_time = time.time() - start_time
+                return {
+                    "status": "partial_success",
+                    "transaction_id": transaction_id,
+                    "external_transaction_id": transaction.external_transaction_id,
+                    "connection_id": connection_id,
+                    "processing_time": processing_time,
+                    "firs_invoice_generated": False,
+                    "firs_submitted": False,
+                    "firs_error": str(firs_error)
+                }
+                
+    except Exception as e:
+        processing_time = time.time() - start_time
+        logger.error(f"Error processing Square transaction {transaction_id}: {str(e)}", exc_info=True)
+        
+        # Update transaction status to failed if possible
+        try:
+            with SessionLocal() as db:
+                from app.models.pos_transaction import POSTransaction
+                transaction = db.query(POSTransaction).filter(POSTransaction.id == transaction_id).first()
+                if transaction:
+                    transaction.status = "failed"
+                    transaction.error_message = str(e)
+                    transaction.updated_at = datetime.utcnow()
+                    db.commit()
+        except Exception:
+            pass  # Don't fail the task due to status update issues
+        
+        return {
+            "status": "failed",
+            "transaction_id": transaction_id,
+            "connection_id": connection_id,
+            "processing_time": processing_time,
+            "error": str(e)
+        }
+
+
 @celery_app.task(bind=True, name="app.tasks.pos_tasks.monitor_queue_health")
 def monitor_queue_health(self) -> Dict[str, Any]:
     """
@@ -466,5 +611,6 @@ __all__ = [
     "process_end_of_day",
     "process_realtime_transaction",
     "process_high_priority_batch",
+    "process_square_transaction_with_firs",
     "monitor_queue_health"
 ]

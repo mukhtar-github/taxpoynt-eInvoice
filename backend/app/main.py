@@ -277,6 +277,16 @@ except Exception as e:
     logger.critical(traceback.format_exc())
     raise
 
+try:
+    # POS webhook routers
+    from app.routes import pos_webhooks
+    app.include_router(pos_webhooks.router, prefix=settings.API_V1_STR, tags=["pos-webhooks"])
+    logger.info("Successfully included POS webhook router")
+except Exception as e:
+    logger.critical(f"FATAL ERROR including POS webhook router: {str(e)}")
+    logger.critical(traceback.format_exc())
+    raise
+
 # Import and include the new FIRS API router with error handling
 try:
     logger.info("Importing FIRS API router...")
