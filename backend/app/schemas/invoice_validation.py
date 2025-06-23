@@ -39,7 +39,7 @@ def compatible_validator(field_name: str) -> Callable:
 def compatible_root_validator() -> Callable:
     """Provide a root validator compatible with both Pydantic versions"""
     if PYDANTIC_V1:
-        return root_validator()
+        return root_validator(skip_on_failure=True)
     else:
         return model_validator(mode='after')
 
@@ -276,7 +276,7 @@ class LegalMonetaryTotal(BaseModel):
     prepaid_amount: Optional[Decimal] = Field(0, ge=0, decimal_places=2, description="Amount prepaid")
     payable_amount: Decimal = Field(..., ge=0, decimal_places=2, description="Amount due for payment")
 
-    @root_validator
+    @compatible_root_validator()
     def validate_amounts(cls, values) -> Dict[str, Any]:
         """Validate the monetary totals are consistent"""
         line_extension = values.get('line_extension_amount')
@@ -330,7 +330,7 @@ class InvoiceValidationRequest(BaseModel):
             raise ValueError("Due date cannot be before invoice date")
         return v
     
-    @root_validator
+    @compatible_root_validator()
     def validate_totals(cls, values) -> Dict[str, Any]:
         """Validate that invoice line totals match document totals"""
         invoice_lines = values.get('invoice_lines')

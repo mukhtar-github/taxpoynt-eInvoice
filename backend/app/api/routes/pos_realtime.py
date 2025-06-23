@@ -15,7 +15,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.dependencies.auth import get_current_user
+from app.dependencies.db import get_db
 from app.schemas.pos import POSTransactionCreate, POSTransactionResponse
 from app.services.pos_queue_service import get_pos_queue_service
 from app.crud.pos_connection import get_pos_connection

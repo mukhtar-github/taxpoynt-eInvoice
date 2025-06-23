@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.pos_connection import POSConnection
-from app.models.pos_transaction import POSTransaction, TransactionStatus
+from app.models.pos_connection import POSTransaction
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -149,7 +149,7 @@ async def handle_payment_update(
             external_transaction_id=payment_id,
             external_order_id=order_id,
             transaction_data=payment_data,
-            status=TransactionStatus.PENDING,
+            status="pending",
             amount=payment_data.get("amount_money", {}).get("amount", 0) / 100,  # Convert from cents
             currency=payment_data.get("amount_money", {}).get("currency", "USD"),
             created_at=datetime.utcnow(),

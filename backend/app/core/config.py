@@ -12,12 +12,6 @@ except ImportError:
 import secrets
 
 class Settings(BaseSettings):
-    # Configuration for Pydantic V1
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
-        extra = "ignore"  # Allow extra fields in environment variables
-    
     # Configuration for Pydantic V2
     model_config = {
         "case_sensitive": True,

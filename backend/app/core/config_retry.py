@@ -20,6 +20,13 @@ from typing import List, Dict, Any, Optional
 class RetrySettings(BaseSettings):
     """Settings for submission retry and failure handling."""
     
+    # Configuration for Pydantic V2
+    model_config = {
+        "case_sensitive": True,
+        "env_file": ".env",
+        "extra": "ignore"  # Allow extra fields in environment variables
+    }
+    
     # Retry mechanism settings
     MAX_RETRY_ATTEMPTS: int = 5
     BASE_RETRY_DELAY: int = 60  # seconds
@@ -46,9 +53,6 @@ class RetrySettings(BaseSettings):
     ALERT_ON_CONSECUTIVE_FAILURES: int = 3
     ALERT_ON_FAILURE_PERCENTAGE: float = 0.1  # Alert if 10% of submissions fail
     
-    class Config:
-        env_prefix = "TAXPOYNT_"
-        env_file = ".env"
 
 
 # Create an instance for importing

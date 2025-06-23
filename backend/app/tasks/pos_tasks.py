@@ -422,7 +422,7 @@ def process_pos_transaction_to_invoice(transaction_id: str) -> Dict[str, Any]:
             service = POSTransactionService(db)
             
             # Convert transaction to invoice
-            invoice = await service.transaction_to_invoice(transaction)
+            invoice = service.transaction_to_invoice(transaction)
             
             # Generate IRN for the invoice
             try:
@@ -545,11 +545,11 @@ def process_square_transaction_with_firs(transaction_id: str, connection_id: str
             connector = SquarePOSConnector(connection.connection_config)
             
             # Get additional transaction details from Square if needed
-            square_transaction = await connector.get_transaction_by_id(transaction.external_transaction_id)
+            square_transaction = connector.get_transaction_by_id(transaction.external_transaction_id)
             
             # Generate FIRS invoice using Square transformer
             try:
-                firs_invoice = await connector.generate_firs_invoice(
+                firs_invoice = connector.generate_firs_invoice(
                     square_transaction,
                     customer_info=transaction.transaction_data.get("customer_info")
                 )
@@ -752,7 +752,7 @@ def retry_failed_invoice_generation(transaction_id: str, max_retries: int = 3) -
             service = POSTransactionService(db)
             
             # Attempt retry
-            success = await service.retry_failed_invoice_generation(transaction_id)
+            success = service.retry_failed_invoice_generation(transaction_id)
             
             processing_time = time.time() - start_time
             
