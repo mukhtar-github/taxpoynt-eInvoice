@@ -13,8 +13,8 @@ from app.integrations.base.factory import get_available_integrations
 from app.integrations.crm.hubspot.router import router as hubspot_router
 
 # Import additional integrations as they are implemented
-# Temporarily disabled Salesforce router for debugging
-# from app.integrations.crm.salesforce.router import router as salesforce_router
+# Using simplified Salesforce router to avoid dependency issues
+from app.integrations.crm.salesforce.router_simple import router as salesforce_router
 # from app.integrations.crm.pipedrive.router import router as pipedrive_router
 # from app.integrations.pos.square.router import router as square_router
 # from app.integrations.pos.toast.router import router as toast_router
@@ -47,8 +47,8 @@ router.include_router(pos_router)
 # Include platform-specific routers in their respective type routers
 crm_router.include_router(hubspot_router)
 # Include other CRM routers as they are implemented
-# Temporarily disabled Salesforce router
-# crm_router.include_router(salesforce_router)
+# Using simplified Salesforce router
+crm_router.include_router(salesforce_router)
 # crm_router.include_router(pipedrive_router)
 
 # Include POS routers as they are implemented
