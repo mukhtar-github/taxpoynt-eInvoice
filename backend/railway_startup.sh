@@ -147,25 +147,35 @@ except Exception as e:
 
 # Function to wait for dependencies
 wait_for_dependencies() {
-    log_message "Waiting for dependencies to be ready..."
+    log_message "Waiting for database to be ready..."
     
-    # Wait for database to be ready (with timeout)
-    local db_timeout=60
+    # Simplified database check with shorter timeout
+    local db_timeout=30  # Reduced from 60 seconds
     local db_elapsed=0
-    local db_interval=5
+    local db_interval=2   # Check every 2 seconds instead of 5
     
     while [ $db_elapsed -lt $db_timeout ]; do
         if python -c "
-from app.db.session import SessionLocal
+import os
+import sys
+sys.path.append('/app')
+from sqlalchemy import create_engine, text
 try:
-    with SessionLocal() as db:
-        db.execute('SELECT 1').scalar()
-        exit(0)
-except:
+    engine = create_engine(
+        os.environ['DATABASE_URL'],
+        pool_timeout=5,
+        connect_args={'connect_timeout': 5}
+    )
+    with engine.connect() as conn:
+        conn.execute(text('SELECT 1'))
+    print('Database ready')
+    exit(0)
+except Exception as e:
+    print(f'Database not ready: {e}')
     exit(1)
 " > /dev/null 2>&1; then
             log_message "Database is ready"
-            break
+            return 0
         fi
         
         log_message "Waiting for database... (${db_elapsed}s/${db_timeout}s)"
@@ -173,10 +183,9 @@ except:
         db_elapsed=$((db_elapsed + db_interval))
     done
     
-    if [ $db_elapsed -ge $db_timeout ]; then
-        log_message "ERROR: Database not ready after ${db_timeout} seconds"
-        exit 1
-    fi
+    # Don't fail deployment - let health checks handle it
+    log_message "WARNING: Database check timed out, proceeding with startup"
+    return 0
 }
 
 # Function to start application with health monitoring
