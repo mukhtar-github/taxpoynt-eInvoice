@@ -100,10 +100,10 @@ def upgrade() -> None:
     op.create_index('ix_csid_registry_is_active', 'csid_registry', ['is_active'])
     
     # Step 3: Add foreign key constraints separately
+    # First check which tables actually exist
     constraints = [
         # Certificate request constraints
         ('fk_certificate_requests_organization_id', 'certificate_requests', 'organization_id', 'organizations', 'id'),
-        ('fk_certificate_requests_encryption_key_id', 'certificate_requests', 'encryption_key_id', 'encryption_keys', 'id'),
         ('fk_certificate_requests_created_by', 'certificate_requests', 'created_by', 'users', 'id'),
         
         # Transmission records constraints
@@ -118,12 +118,22 @@ def upgrade() -> None:
         ('fk_csid_registry_created_by', 'csid_registry', 'created_by', 'users', 'id')
     ]
     
+    # Optional constraint for encryption_keys if it exists
+    if 'encryption_keys' in tables:
+        constraints.append(
+            ('fk_certificate_requests_encryption_key_id', 'certificate_requests', 'encryption_key_id', 'encryption_keys', 'id')
+        )
+    
     for constraint_name, table, column, ref_table, ref_column in constraints:
         try:
-            op.create_foreign_key(
-                constraint_name, table, ref_table,
-                [column], [ref_column]
-            )
+            # Check if the referenced table exists
+            if ref_table in tables:
+                op.create_foreign_key(
+                    constraint_name, table, ref_table,
+                    [column], [ref_column]
+                )
+            else:
+                print(f"Skipping constraint {constraint_name}: referenced table {ref_table} does not exist")
         except Exception as e:
             print(f"Warning: Could not create constraint {constraint_name}: {e}")
             # Continue with other constraints
@@ -131,6 +141,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Drop tables and indexes in reverse order to avoid dependency issues
+    
+    # Check which tables exist before dropping constraints
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    tables = inspector.get_table_names()
     
     # Drop foreign key constraints first
     constraints = [
@@ -147,33 +162,50 @@ def downgrade() -> None:
         
         # Certificate request constraints
         ('fk_certificate_requests_created_by', 'certificate_requests'),
-        ('fk_certificate_requests_encryption_key_id', 'certificate_requests'),
         ('fk_certificate_requests_organization_id', 'certificate_requests')
     ]
     
+    # Add optional encryption key constraint if it was created
+    if 'encryption_keys' in tables:
+        constraints.append(('fk_certificate_requests_encryption_key_id', 'certificate_requests'))
+    
     for constraint_name, table in constraints:
         try:
-            op.drop_constraint(constraint_name, table)
+            if table in tables:
+                op.drop_constraint(constraint_name, table)
         except Exception as e:
             print(f"Warning: Could not drop constraint {constraint_name}: {e}")
     
-    # Drop indexes
-    op.drop_index('ix_csid_registry_is_active', table_name='csid_registry')
-    op.drop_index('ix_csid_registry_certificate_id', table_name='csid_registry')
-    op.drop_index('ix_csid_registry_organization_id', table_name='csid_registry')
+    # Drop indexes only if tables exist
+    if 'csid_registry' in tables:
+        try:
+            op.drop_index('ix_csid_registry_is_active', table_name='csid_registry')
+            op.drop_index('ix_csid_registry_certificate_id', table_name='csid_registry')
+            op.drop_index('ix_csid_registry_organization_id', table_name='csid_registry')
+            op.drop_constraint('uq_csid_registry_csid', 'csid_registry')
+        except Exception as e:
+            print(f"Warning: Could not drop csid_registry indexes/constraints: {e}")
     
-    op.drop_index('ix_transmission_records_status', table_name='transmission_records')
-    op.drop_index('ix_transmission_records_submission_id', table_name='transmission_records')
-    op.drop_index('ix_transmission_records_certificate_id', table_name='transmission_records')
-    op.drop_index('ix_transmission_records_organization_id', table_name='transmission_records')
+    if 'transmission_records' in tables:
+        try:
+            op.drop_index('ix_transmission_records_status', table_name='transmission_records')
+            op.drop_index('ix_transmission_records_submission_id', table_name='transmission_records')
+            op.drop_index('ix_transmission_records_certificate_id', table_name='transmission_records')
+            op.drop_index('ix_transmission_records_organization_id', table_name='transmission_records')
+        except Exception as e:
+            print(f"Warning: Could not drop transmission_records indexes: {e}")
     
-    op.drop_index('ix_certificate_requests_status', table_name='certificate_requests')
-    op.drop_index('ix_certificate_requests_organization_id', table_name='certificate_requests')
+    if 'certificate_requests' in tables:
+        try:
+            op.drop_index('ix_certificate_requests_status', table_name='certificate_requests')
+            op.drop_index('ix_certificate_requests_organization_id', table_name='certificate_requests')
+        except Exception as e:
+            print(f"Warning: Could not drop certificate_requests indexes: {e}")
     
-    # Drop unique constraint
-    op.drop_constraint('uq_csid_registry_csid', 'csid_registry')
-    
-    # Drop tables
-    op.drop_table('csid_registry')
-    op.drop_table('transmission_records')
-    op.drop_table('certificate_requests')
+    # Drop tables only if they exist
+    for table_name in ['csid_registry', 'transmission_records', 'certificate_requests']:
+        if table_name in tables:
+            try:
+                op.drop_table(table_name)
+            except Exception as e:
+                print(f"Warning: Could not drop table {table_name}: {e}")
