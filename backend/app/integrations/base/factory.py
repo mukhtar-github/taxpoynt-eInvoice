@@ -137,10 +137,10 @@ def get_available_integrations(integration_type: Optional[str] = None) -> Dict[s
             },
             "salesforce": {
                 "name": "Salesforce",
-                "description": "Salesforce CRM integration",
-                "auth_methods": ["oauth2"],
-                "features": ["opportunities", "accounts", "contacts"],
-                "status": "planned",
+                "description": "Salesforce CRM integration with JWT bearer authentication",
+                "auth_methods": ["oauth2", "jwt_bearer"],
+                "features": ["opportunities", "accounts", "contacts", "webhooks", "platform_events"],
+                "status": "available",
             },
             "pipedrive": {
                 "name": "Pipedrive",
