@@ -34,28 +34,26 @@ def upgrade() -> None:
     required_tables = ['organizations', 'users', 'invoices']
     missing_tables = [table for table in required_tables if table not in tables]
     
-    # Step 2: Create enums first (with proper existence check for PostgreSQL)
-    # Check if crm_type enum exists
-    crm_type_exists = connection.execute(sa.text(
-        "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'crm_type')"
-    )).scalar()
-    
-    if not crm_type_exists:
+    # Step 2: Create enums first (with proper existence check and error handling)
+    # Create crm_type enum safely
+    try:
         connection.execute(sa.text("CREATE TYPE crm_type AS ENUM ('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom')"))
         print("Created crm_type enum")
-    else:
-        print("crm_type enum already exists")
+    except Exception as e:
+        if "already exists" in str(e) or "DuplicateObject" in str(e):
+            print("crm_type enum already exists")
+        else:
+            raise e
     
-    # Check if pos_type enum exists
-    pos_type_exists = connection.execute(sa.text(
-        "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'pos_type')"
-    )).scalar()
-    
-    if not pos_type_exists:
+    # Create pos_type enum safely
+    try:
         connection.execute(sa.text("CREATE TYPE pos_type AS ENUM ('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom')"))
         print("Created pos_type enum")
-    else:
-        print("pos_type enum already exists")
+    except Exception as e:
+        if "already exists" in str(e) or "DuplicateObject" in str(e):
+            print("pos_type enum already exists")
+        else:
+            raise e
     
     # Step 3: Create the tables without foreign key constraints initially
 
