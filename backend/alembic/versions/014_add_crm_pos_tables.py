@@ -34,59 +34,19 @@ def upgrade() -> None:
     required_tables = ['organizations', 'users', 'invoices']
     missing_tables = [table for table in required_tables if table not in tables]
     
-    # Step 2: Create enums first (with proper existence check and error handling)
-    # Use PostgreSQL-specific DO block for atomic enum creation
-    try:
-        connection.execute(sa.text("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'crm_type') THEN
-                    CREATE TYPE crm_type AS ENUM ('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom');
-                    RAISE NOTICE 'Created crm_type enum';
-                ELSE
-                    RAISE NOTICE 'crm_type enum already exists, skipping creation';
-                END IF;
-            EXCEPTION
-                WHEN duplicate_object THEN
-                    RAISE NOTICE 'crm_type enum already exists (caught duplicate)';
-            END
-            $$;
-        """))
-        print("crm_type enum creation completed")
-    except Exception as e:
-        print(f"Warning: Could not create crm_type enum: {e}")
-        # Continue execution - enum might already exist
+    # Step 2: Let SQLAlchemy handle enum creation automatically with tables
     
-    try:
-        connection.execute(sa.text("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'pos_type') THEN
-                    CREATE TYPE pos_type AS ENUM ('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom');
-                    RAISE NOTICE 'Created pos_type enum';
-                ELSE
-                    RAISE NOTICE 'pos_type enum already exists, skipping creation';
-                END IF;
-            EXCEPTION
-                WHEN duplicate_object THEN
-                    RAISE NOTICE 'pos_type enum already exists (caught duplicate)';
-            END
-            $$;
-        """))
-        print("pos_type enum creation completed")
-    except Exception as e:
-        print(f"Warning: Could not create pos_type enum: {e}")
-        # Continue execution - enum might already exist
+    # Step 3: Create the tables (enums will be created automatically by SQLAlchemy)
+    # Wrap table creation in try-catch to handle enum conflicts gracefully
     
-    # Step 3: Create the tables without foreign key constraints initially
-
     # CRM Connections table
-    op.create_table(
+    try:
+        op.create_table(
         'crm_connections',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
         sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('organization_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('crm_type', sa.Enum('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom', name='crm_type', create_type=False), nullable=False),
+        sa.Column('crm_type', sa.Enum('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom', name='crm_type'), nullable=False),
         sa.Column('connection_name', sa.String(255)),
         sa.Column('credentials_encrypted', sa.Text),
         sa.Column('connection_settings', postgresql.JSONB, nullable=True),
@@ -96,7 +56,12 @@ def upgrade() -> None:
         sa.Column('last_sync_at', sa.DateTime, nullable=True),
         sa.Column('created_at', sa.DateTime, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime, onupdate=sa.func.now())
-    )
+        )
+    except Exception as e:
+        if "already exists" in str(e) or "DuplicateObject" in str(e):
+            print("CRM connections table or enum already exists, continuing...")
+        else:
+            raise e
     
     # Create indexes for CRM connections
     op.create_index('idx_crm_connections_user_id', 'crm_connections', ['user_id'])
@@ -128,12 +93,13 @@ def upgrade() -> None:
     op.create_index('idx_crm_deals_connection_stage', 'crm_deals', ['connection_id', 'deal_stage'])
     
     # POS Connections table
-    op.create_table(
+    try:
+        op.create_table(
         'pos_connections',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
         sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('organization_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('pos_type', sa.Enum('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom', name='pos_type', create_type=False), nullable=False),
+        sa.Column('pos_type', sa.Enum('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom', name='pos_type'), nullable=False),
         sa.Column('location_name', sa.String(255)),
         sa.Column('credentials_encrypted', sa.Text),
         sa.Column('connection_settings', postgresql.JSONB, nullable=True),
@@ -143,7 +109,12 @@ def upgrade() -> None:
         sa.Column('last_sync_at', sa.DateTime, nullable=True),
         sa.Column('created_at', sa.DateTime, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime, onupdate=sa.func.now())
-    )
+        )
+    except Exception as e:
+        if "already exists" in str(e) or "DuplicateObject" in str(e):
+            print("POS connections table or enum already exists, continuing...")
+        else:
+            raise e
     
     # Create indexes for POS connections
     op.create_index('idx_pos_connections_user_id', 'pos_connections', ['user_id'])
