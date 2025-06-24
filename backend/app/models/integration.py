@@ -17,6 +17,7 @@ class Integration(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
     name = Column(String(100), nullable=False)
     description = Column(Text)
     integration_type = Column(Enum(IntegrationType), nullable=False, default=IntegrationType.CUSTOM)
@@ -34,6 +35,7 @@ class Integration(Base):
 
     # Relationships
     client = relationship("Client", back_populates="integrations")
+    organization = relationship("Organization", back_populates="integrations")
     history = relationship("IntegrationHistory", back_populates="integration")
     irn_records = relationship("IRNRecord", back_populates="integration")
     submission_records = relationship("SubmissionRecord", back_populates="integration")
