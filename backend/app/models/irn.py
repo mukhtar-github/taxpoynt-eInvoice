@@ -28,7 +28,7 @@ class IRNRecord(Base):
     generated_at = Column(DateTime, nullable=False, default=func.now())
     valid_until = Column(DateTime, nullable=False)
     meta_data = Column(JSON, nullable=True)
-    status = Column(Enum(IRNStatus), nullable=False, default=IRNStatus.UNUSED)
+    status = Column(Enum(IRNStatus, values_callable=lambda obj: [e.value for e in obj]), nullable=False, default=IRNStatus.UNUSED)
     used_at = Column(DateTime, nullable=True)
     invoice_id = Column(String(50), nullable=True)
     hash_value = Column(String(128), nullable=True)  # For invoice data verification

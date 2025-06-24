@@ -35,7 +35,7 @@ class CRMConnection(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
-    crm_type = Column(Enum(CRMType), nullable=False)
+    crm_type = Column(Enum(CRMType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     connection_name = Column(String(255))
     credentials_encrypted = Column(Text)
     connection_settings = Column(JSONB, nullable=True)

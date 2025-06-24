@@ -232,6 +232,32 @@ except Exception as e:
             "fallback": True
         }
 
+# Debug endpoint for enum verification
+@app.get("/debug/enums")
+def debug_enum_values():
+    """Debug endpoint to verify enum configuration"""
+    from datetime import datetime
+    import sys
+    from app.models.crm_connection import CRMType
+    from app.models.pos_connection import POSType
+    
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "enum_debug": {
+            "crm_type_names": [e.name for e in CRMType],
+            "crm_type_values": [e.value for e in CRMType],
+            "pos_type_names": [e.name for e in POSType], 
+            "pos_type_values": [e.value for e in POSType],
+        },
+        "cache_status": {
+            "pythondontwritebytecode": os.environ.get('PYTHONDONTWRITEBYTECODE'),
+            "nixpacks_no_cache": os.environ.get('NIXPACKS_NO_CACHE'),
+            "debug_enums": os.environ.get('DEBUG_ENUMS'),
+        },
+        "modules_loaded": len(sys.modules),
+        "deployment_verification": "SUCCESS"
+    }
+
 # Include routers with error handling
 try:
     # Authentication and security routers

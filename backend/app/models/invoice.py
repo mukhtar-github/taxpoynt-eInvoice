@@ -54,8 +54,8 @@ class Invoice(Base):
     # Invoice details
     invoice_date = Column(DateTime, nullable=False, default=func.now())
     due_date = Column(DateTime, nullable=True)
-    status = Column(Enum(InvoiceStatus), nullable=False, default=InvoiceStatus.DRAFT)
-    source = Column(Enum(InvoiceSource), nullable=False, default=InvoiceSource.MANUAL)
+    status = Column(Enum(InvoiceStatus, values_callable=lambda obj: [e.value for e in obj]), nullable=False, default=InvoiceStatus.DRAFT)
+    source = Column(Enum(InvoiceSource, values_callable=lambda obj: [e.value for e in obj]), nullable=False, default=InvoiceSource.MANUAL)
     
     # Financial information
     subtotal = Column(Numeric(15, 2), nullable=False, default=0)

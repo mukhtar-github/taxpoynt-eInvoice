@@ -36,7 +36,7 @@ class POSConnection(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
-    pos_type = Column(Enum(POSType), nullable=False)
+    pos_type = Column(Enum(POSType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     location_name = Column(String(255))
     credentials_encrypted = Column(Text)
     connection_settings = Column(JSONB, nullable=True)
