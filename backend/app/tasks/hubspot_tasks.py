@@ -23,7 +23,7 @@ from app.db.session import SessionLocal
 from app.integrations.crm.hubspot.connector import HubSpotConnector, get_hubspot_connector
 from app.integrations.crm.hubspot.models import HubSpotDeal, HubSpotDealInvoice
 from app.integrations.base.errors import IntegrationError, AuthenticationError
-from app.models.crm_connection import CRMConnection, CRMDeal
+from app.models.crm_connection import CRMConnection, CRMDeal, CRMType
 from app.models.user import User
 from app.services.invoice_service import get_invoice_service
 from app.services.encryption_service import get_encryption_service
@@ -488,7 +488,7 @@ def hubspot_deal_processor_task(self):
     try:
         # Get all active HubSpot connections
         active_connections = db.query(CRMConnection).filter(
-            CRMConnection.crm_type == "hubspot",
+            CRMConnection.crm_type == CRMType.HUBSPOT.value,
             CRMConnection.is_active == True
         ).all()
         

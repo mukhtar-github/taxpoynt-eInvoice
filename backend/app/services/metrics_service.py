@@ -79,11 +79,11 @@ class MetricsService:
         
         # Get count by status
         status_counts = {
-            "unused": query.filter(IRNRecord.status == IRNStatus.UNUSED).count(),
-            "active": query.filter(IRNRecord.status == IRNStatus.ACTIVE).count(),
-            "used": query.filter(IRNRecord.status == IRNStatus.USED).count(),
-            "expired": query.filter(IRNRecord.status == IRNStatus.EXPIRED).count(),
-            "cancelled": query.filter(IRNRecord.status == IRNStatus.CANCELLED).count()
+            "unused": query.filter(IRNRecord.status == IRNStatus.UNUSED.value).count(),
+            "active": query.filter(IRNRecord.status == IRNStatus.ACTIVE.value).count(),
+            "used": query.filter(IRNRecord.status == IRNStatus.USED.value).count(),
+            "expired": query.filter(IRNRecord.status == IRNStatus.EXPIRED.value).count(),
+            "cancelled": query.filter(IRNRecord.status == IRNStatus.CANCELLED.value).count()
         }
         
         # Get generation rate (per hour) over time

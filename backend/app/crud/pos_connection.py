@@ -135,7 +135,7 @@ def get_pos_connections_by_user(
     query = db.query(POSConnection).filter(POSConnection.user_id == user_id)
     
     if pos_type:
-        query = query.filter(POSConnection.pos_type == pos_type)
+        query = query.filter(POSConnection.pos_type == pos_type.value)
     
     if is_active is not None:
         query = query.filter(POSConnection.is_active == is_active)
@@ -339,7 +339,7 @@ def get_pos_connections_by_type(
     return db.query(POSConnection).filter(
         and_(
             POSConnection.user_id == user_id,
-            POSConnection.pos_type == pos_type
+            POSConnection.pos_type == pos_type.value
         )
     ).order_by(desc(POSConnection.created_at)).all()
 

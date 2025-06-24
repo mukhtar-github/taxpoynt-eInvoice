@@ -437,7 +437,7 @@ class ValidationRuleService:
             
             # Apply filters
             if not include_disabled:
-                system_query = system_query.filter(ValidationRule.status == ValidationRuleStatus.ACTIVE)
+                system_query = system_query.filter(ValidationRule.status == ValidationRuleStatus.ACTIVE.value)
             if category:
                 # For system rules, use tags to check category
                 system_query = system_query.filter(ValidationRule.tags.contains({"category": category}))
@@ -451,7 +451,7 @@ class ValidationRuleService:
             
             # Apply filters to custom rules
             if not include_disabled:
-                custom_query = custom_query.filter(CustomValidationRule.status == ValidationRuleStatus.ACTIVE)
+                custom_query = custom_query.filter(CustomValidationRule.status == ValidationRuleStatus.ACTIVE.value)
             if category:
                 custom_query = custom_query.filter(CustomValidationRule.category == category)
             if rule_type:

@@ -41,7 +41,7 @@ class RetryScheduler:
         # Find transmissions in RETRYING status
         retrying_transmissions = (
             self.db.query(TransmissionRecord)
-            .filter(TransmissionRecord.status == TransmissionStatus.RETRYING)
+            .filter(TransmissionRecord.status == TransmissionStatus.RETRYING.value)
             .all()
         )
         
@@ -89,7 +89,7 @@ class RetryScheduler:
                 logger.error(f"Transmission {transmission_id} not found for retry")
                 return False
                 
-            if transmission.status != TransmissionStatus.RETRYING:
+            if transmission.status != TransmissionStatus.RETRYING.value:
                 logger.warning(f"Transmission {transmission_id} is not in RETRYING status")
                 return False
                 
