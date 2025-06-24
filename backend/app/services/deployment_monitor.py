@@ -399,20 +399,34 @@ class DeploymentMonitor:
     async def _get_memory_usage(self) -> float:
         """Get memory usage percentage."""
         try:
-            # This would get actual memory usage
-            # For now, return a simulated value
+            # Run psutil in thread pool to avoid blocking
+            import asyncio
+            import concurrent.futures
             import psutil
-            return psutil.virtual_memory().percent
+            
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                memory_percent = await loop.run_in_executor(
+                    executor, lambda: psutil.virtual_memory().percent
+                )
+            return memory_percent
         except:
             return 50.0  # Default value
     
     async def _get_cpu_usage(self) -> float:
         """Get CPU usage percentage."""
         try:
-            # This would get actual CPU usage
-            # For now, return a simulated value
+            # Run psutil in thread pool to avoid blocking
+            import asyncio
+            import concurrent.futures
             import psutil
-            return psutil.cpu_percent(interval=1)
+            
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                cpu_percent = await loop.run_in_executor(
+                    executor, lambda: psutil.cpu_percent(interval=1)
+                )
+            return cpu_percent
         except:
             return 30.0  # Default value
     

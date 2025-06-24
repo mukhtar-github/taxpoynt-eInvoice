@@ -30,7 +30,7 @@ async def websocket_dashboard_endpoint(
     organization_id: str,
     token: Optional[str] = None,
     db: Session = Depends(get_db)
-):
+) -> None:
     """
     WebSocket endpoint for real-time dashboard updates.
     
@@ -117,7 +117,7 @@ async def websocket_activities_endpoint(
     organization_id: str,
     token: Optional[str] = None,
     db: Session = Depends(get_db)
-):
+) -> None:
     """
     WebSocket endpoint specifically for activity feed updates.
     Lightweight endpoint for clients that only need activity updates.
@@ -168,7 +168,7 @@ async def websocket_integrations_endpoint(
     organization_id: str,
     token: Optional[str] = None,
     db: Session = Depends(get_db)
-):
+) -> None:
     """
     WebSocket endpoint for integration status updates.
     Provides real-time integration health and sync status.
