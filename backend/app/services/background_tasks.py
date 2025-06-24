@@ -31,9 +31,10 @@ async def async_hubspot_deal_processor():
     import concurrent.futures
     
     # Run the synchronous Celery task in a thread pool
+    # Note: hubspot_deal_processor_task expects self parameter, so we call it directly
     loop = asyncio.get_event_loop()
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        result = await loop.run_in_executor(executor, hubspot_deal_processor_task, None)
+        result = await loop.run_in_executor(executor, lambda: hubspot_deal_processor_task.apply())
     return result
 
 async def async_certificate_monitor():
@@ -42,9 +43,10 @@ async def async_certificate_monitor():
     import concurrent.futures
     
     # Run the synchronous Celery task in a thread pool
+    # Note: certificate_monitor_task takes no arguments
     loop = asyncio.get_event_loop()
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        result = await loop.run_in_executor(executor, certificate_monitor_task, None)
+        result = await loop.run_in_executor(executor, certificate_monitor_task)
     return result
 
 # Global task registry to prevent duplicate tasks
