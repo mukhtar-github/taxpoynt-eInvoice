@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '013_add_app_functionality_tables'
-down_revision = '012_org_branding'
+down_revision = '000_create_base_tables_postgresql'
 branch_labels = None
 depends_on = None
 
