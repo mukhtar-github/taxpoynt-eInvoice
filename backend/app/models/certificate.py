@@ -73,6 +73,7 @@ class Certificate(Base):
     # Relationships
     organization = relationship("Organization", back_populates="certificates")
     certificate_request = relationship("CertificateRequest", back_populates="certificate")
+    csids = relationship("CSIDRegistry", back_populates="certificate", cascade="all, delete-orphan")
     encryption_key = relationship("EncryptionKey")
     created_by_user = relationship("User", foreign_keys=[created_by])
     revocation = relationship("CertificateRevocation", back_populates="certificate", uselist=False)
