@@ -28,7 +28,6 @@ def get_engine_kwargs():
             "pool_timeout": 10,  # Faster timeout
             "connect_args": {
                 "connect_timeout": 5,
-                "command_timeout": 10,
                 "server_settings": {
                     "application_name": "taxpoynt-railway",
                 }

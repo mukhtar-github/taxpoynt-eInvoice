@@ -164,8 +164,7 @@ from sqlalchemy import create_engine, text
 try:
     engine = create_engine(
         os.environ['DATABASE_URL'],
-        pool_timeout=5,
-        connect_args={'connect_timeout': 5}
+        pool_timeout=5
     )
     with engine.connect() as conn:
         conn.execute(text('SELECT 1'))
