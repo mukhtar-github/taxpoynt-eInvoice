@@ -488,7 +488,7 @@ def hubspot_deal_processor_task(self):
     try:
         # Get all active HubSpot connections
         active_connections = db.query(CRMConnection).filter(
-            CRMConnection.crm_type == CRMType.HUBSPOT.value,
+            CRMConnection.crm_type == "hubspot",
             CRMConnection.is_active == True
         ).all()
         
