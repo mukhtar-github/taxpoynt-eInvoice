@@ -346,7 +346,7 @@ async def list_crm_connections(
         if platform:
             try:
                 crm_type = CRMType(platform.lower())
-                query = query.filter(CRMConnection.crm_type == crm_type)
+                query = query.filter(CRMConnection.crm_type == crm_type.value)
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
