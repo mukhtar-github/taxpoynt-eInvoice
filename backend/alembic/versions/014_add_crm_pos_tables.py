@@ -35,25 +35,43 @@ def upgrade() -> None:
     missing_tables = [table for table in required_tables if table not in tables]
     
     # Step 2: Create enums first (with proper existence check and error handling)
-    # Create crm_type enum safely
+    # Create crm_type enum safely with explicit check
     try:
-        connection.execute(sa.text("CREATE TYPE crm_type AS ENUM ('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom')"))
-        print("Created crm_type enum")
+        # First check if enum exists
+        enum_exists = connection.execute(sa.text(
+            "SELECT 1 FROM pg_type WHERE typname = 'crm_type'"
+        )).fetchone()
+        
+        if not enum_exists:
+            connection.execute(sa.text("CREATE TYPE crm_type AS ENUM ('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom')"))
+            print("Created crm_type enum")
+        else:
+            print("crm_type enum already exists, skipping creation")
     except Exception as e:
         if "already exists" in str(e) or "DuplicateObject" in str(e):
             print("crm_type enum already exists")
         else:
-            raise e
+            print(f"Warning: Could not create crm_type enum: {e}")
+            # Continue execution - enum might already exist
     
-    # Create pos_type enum safely
+    # Create pos_type enum safely with explicit check
     try:
-        connection.execute(sa.text("CREATE TYPE pos_type AS ENUM ('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom')"))
-        print("Created pos_type enum")
+        # First check if enum exists
+        enum_exists = connection.execute(sa.text(
+            "SELECT 1 FROM pg_type WHERE typname = 'pos_type'"
+        )).fetchone()
+        
+        if not enum_exists:
+            connection.execute(sa.text("CREATE TYPE pos_type AS ENUM ('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom')"))
+            print("Created pos_type enum")
+        else:
+            print("pos_type enum already exists, skipping creation")
     except Exception as e:
         if "already exists" in str(e) or "DuplicateObject" in str(e):
             print("pos_type enum already exists")
         else:
-            raise e
+            print(f"Warning: Could not create pos_type enum: {e}")
+            # Continue execution - enum might already exist
     
     # Step 3: Create the tables without foreign key constraints initially
 

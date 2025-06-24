@@ -89,9 +89,10 @@ pre_startup_checks() {
     log_message "Testing database connectivity..."
     python -c "
 from app.db.session import SessionLocal
+from sqlalchemy import text
 try:
     with SessionLocal() as db:
-        result = db.execute('SELECT 1').scalar()
+        result = db.execute(text('SELECT 1')).scalar()
         if result == 1:
             print('Database connection: OK')
         else:
