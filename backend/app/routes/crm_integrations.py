@@ -765,7 +765,7 @@ async def process_crm_deal(
         logger.info(f"Processing deal {deal_id} with action '{process_request.action}' for user {current_user.id}")
         
         # Route to appropriate platform-specific processing
-        if connection.crm_type == CRMType.HUBSPOT:
+        if connection.crm_type == CRMType.HUBSPOT.value:
             if process_request.action == "sync":
                 result = await sync_hubspot_deals(str(connection_id), days_back=30)
             elif process_request.action in ["generate_invoice", "process"]:
@@ -829,7 +829,7 @@ async def sync_crm_connection(
         logger.info(f"Manual sync triggered for connection {connection_id} by user {current_user.id}")
         
         # Route to appropriate platform-specific sync
-        if connection.crm_type == CRMType.HUBSPOT:
+        if connection.crm_type == CRMType.HUBSPOT.value:
             result = await sync_hubspot_deals(str(connection_id), days_back)
         else:
             raise HTTPException(
