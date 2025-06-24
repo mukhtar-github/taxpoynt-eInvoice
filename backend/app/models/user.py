@@ -43,6 +43,7 @@ class User(Base):
     # Relationships
     api_keys = relationship("APIKey", back_populates="user")
     created_invoices = relationship("Invoice", back_populates="creator")
+    organization_users = relationship("OrganizationUser", back_populates="user", cascade="all, delete-orphan")
 
 
 # Organization and OrganizationUser models are now in organization.py
