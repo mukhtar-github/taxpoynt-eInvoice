@@ -13,10 +13,7 @@ def get_engine_kwargs():
         "pool_recycle": 300,  # 5 minutes
         "pool_pre_ping": True,  # Test connections before use
         "connect_args": {
-            "connect_timeout": 10,
-            "server_settings": {
-                "application_name": "taxpoynt-einvoice",
-            }
+            "connect_timeout": 10
         }
     }
     
@@ -27,10 +24,7 @@ def get_engine_kwargs():
             "max_overflow": 5,
             "pool_timeout": 10,  # Faster timeout
             "connect_args": {
-                "connect_timeout": 5,
-                "server_settings": {
-                    "application_name": "taxpoynt-railway",
-                }
+                "connect_timeout": 5
             }
         })
     
