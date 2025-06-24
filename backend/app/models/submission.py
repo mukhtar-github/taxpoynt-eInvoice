@@ -77,6 +77,7 @@ class SubmissionRecord(Base):
     # Relationships
     irn_record = relationship("IRNRecord", back_populates="submission_records")
     integration = relationship("Integration", back_populates="submission_records")
+    transmissions = relationship("TransmissionRecord", back_populates="submission", cascade="all, delete-orphan")
     status_updates = relationship("SubmissionStatusUpdate", back_populates="submission", 
                                  order_by="desc(SubmissionStatusUpdate.timestamp)")
     notifications = relationship("SubmissionNotification", back_populates="submission",

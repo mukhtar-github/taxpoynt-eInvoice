@@ -33,7 +33,7 @@ class TransmissionRecord(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
     certificate_id = Column(UUID(as_uuid=True), ForeignKey("certificates.id"), index=True)
-    submission_id = Column(UUID(as_uuid=True), ForeignKey("submissions.id"), index=True)
+    submission_id = Column(UUID(as_uuid=True), ForeignKey("submission_records.id"), index=True)
     
     # Transmission details
     transmission_time = Column(DateTime, nullable=False, server_default=func.now())
@@ -53,7 +53,7 @@ class TransmissionRecord(Base):
     # Relationships
     organization = relationship("Organization", back_populates="transmissions")
     certificate = relationship("Certificate")
-    submission = relationship("Submission", back_populates="transmissions")
+    submission = relationship("SubmissionRecord", back_populates="transmissions")
     created_by_user = relationship("User", foreign_keys=[created_by])
     status_logs = relationship("TransmissionStatusLog", back_populates="transmission", cascade="all, delete-orphan")
     errors = relationship("TransmissionError", back_populates="transmission", cascade="all, delete-orphan")
