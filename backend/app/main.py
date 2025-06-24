@@ -201,21 +201,36 @@ else:
     os.makedirs("static", exist_ok=True)
     app.mount("/static", StaticFiles(directory=Path("static")), name="static")
 
-# Health check endpoint (basic)
-@app.get("/health")
-def health_check():
-    """Basic health check endpoint."""
-    return {"status": "ok", "timestamp": "2024-06-23T12:00:00Z"}
+# Railway-optimized health checks for Blue-Green deployment
+try:
+    from app.api.routes.health_railway import router as railway_health_router
+    app.include_router(railway_health_router, tags=["health-railway"])
+    logger.info("Successfully included Railway-optimized health checks")
+except Exception as e:
+    logger.warning(f"Could not include Railway health router: {str(e)} - using fallback health checks")
+    
+    # Fallback basic health checks
+    @app.get("/health")
+    def basic_health_check():
+        """Fallback basic health check endpoint."""
+        from datetime import datetime
+        return {
+            "status": "healthy",
+            "service": "taxpoynt-backend",
+            "timestamp": datetime.now().isoformat(),
+            "fallback": True
+        }
 
-# Critical Railway deployment health check - simple and fast
-@app.get("/api/v1/health/ready")
-def railway_ready_check():
-    """Railway readiness check - minimal and fast."""
-    return {
-        "status": "ready",
-        "service": "taxpoynt-backend",
-        "timestamp": "2024-06-23T12:00:00Z"
-    }
+    @app.get("/ready")
+    def basic_ready_check():
+        """Fallback readiness check."""
+        from datetime import datetime
+        return {
+            "status": "ready",
+            "service": "taxpoynt-backend",
+            "timestamp": datetime.now().isoformat(),
+            "fallback": True
+        }
 
 # Include routers with error handling
 try:
@@ -235,12 +250,12 @@ except Exception as e:
     raise
 
 try:
-    # Health check routers (critical for deployment)
-    from app.api.routes.health import router as health_router
-    app.include_router(health_router, prefix=f"{settings.API_V1_STR}/health", tags=["health"])
-    logger.info("Successfully included health check router")
+    # Detailed health check routers (for operational monitoring)
+    from app.api.routes.health import router as detailed_health_router
+    app.include_router(detailed_health_router, prefix=f"{settings.API_V1_STR}/health", tags=["health-detailed"])
+    logger.info("Successfully included detailed health check router for operational monitoring")
 except Exception as e:
-    logger.warning(f"Could not include health router: {str(e)} - using basic health check")
+    logger.warning(f"Could not include detailed health router: {str(e)} - detailed health checks not available")
 
 try:    
     # POS real-time processing router

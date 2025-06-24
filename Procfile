@@ -1,0 +1,1 @@
+web: cd backend && python scripts/railway_startup.py

@@ -1,0 +1,32 @@
+{
+  "build": {
+    "builder": "nixpacks",
+    "buildCommand": "cd backend && pip install --no-cache-dir -r requirements.txt"
+  },
+  "deploy": {
+    "startCommand": "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 300",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "APP_ENV": "production",
+        "WORKERS": "1",
+        "TIMEOUT_KEEP_ALIVE": "300",
+        "GRACEFUL_TIMEOUT": "120",
+        "MAX_REQUESTS": "1000",
+        "MAX_REQUESTS_JITTER": "100"
+      }
+    },
+    "staging": {
+      "variables": {
+        "APP_ENV": "staging",
+        "WORKERS": "1",
+        "TIMEOUT_KEEP_ALIVE": "300"
+      }
+    }
+  }
+}
