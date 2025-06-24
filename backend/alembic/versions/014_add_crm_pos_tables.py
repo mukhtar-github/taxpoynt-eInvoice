@@ -34,9 +34,9 @@ def upgrade() -> None:
     required_tables = ['organizations', 'users', 'invoices']
     missing_tables = [table for table in required_tables if table not in tables]
     
-    # Step 2: Create enums first
-    op.execute("CREATE TYPE crm_type AS ENUM ('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom');")
-    op.execute("CREATE TYPE pos_type AS ENUM ('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom');")
+    # Step 2: Create enums first (with existence check)
+    connection.execute(sa.text("CREATE TYPE IF NOT EXISTS crm_type AS ENUM ('hubspot', 'salesforce', 'pipedrive', 'zoho', 'custom');"))
+    connection.execute(sa.text("CREATE TYPE IF NOT EXISTS pos_type AS ENUM ('square', 'toast', 'lightspeed', 'flutterwave', 'paystack', 'custom');"))
     
     # Step 3: Create the tables without foreign key constraints initially
 
