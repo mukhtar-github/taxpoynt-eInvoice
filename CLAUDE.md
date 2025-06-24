@@ -29,4 +29,11 @@ TaxPoynt eInvoice is a comprehensive middleware service that facilitates integra
 - Core Web Vitals measurement and monitoring
 - Code splitting for landing components
 
-[... rest of the existing content remains unchanged ...]
+## Development Best Practices
+
+### Python and Environment Management
+- Always use python3: "Let me try with python3 instead,"
+- Always use the virtual environment to run the commands: "I can see there's a virtual environment with alembic. Let me use the virtual environment to run the commands"
+
+## Execution Principles
+- Always think and analyze before execution.
