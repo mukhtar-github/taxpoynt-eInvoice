@@ -85,6 +85,23 @@ async def schedule_submission_retry(
     Returns:
         Created SubmissionRetry record
     """
+    # Check if submission_retries table exists
+    from sqlalchemy import inspect
+    
+    inspector = inspect(db.bind)
+    tables = inspector.get_table_names()
+    
+    if 'submission_retries' not in tables:
+        logger.warning("submission_retries table does not exist yet. Cannot schedule retry.")
+        # Return a mock retry object that won't be persisted
+        class MockRetry:
+            id = submission_id
+            submission_id = submission_id
+            attempt_number = 0
+            max_attempts = max_attempts
+            status = "SKIPPED"
+        return MockRetry()
+    
     # Find the submission record
     submission = db.query(SubmissionRecord).filter(SubmissionRecord.id == submission_id).first()
     if not submission:
@@ -203,6 +220,16 @@ async def process_submission_retry(db: Session, retry_id: UUID) -> bool:
     Returns:
         True if the retry was successful, False otherwise
     """
+    # Check if submission_retries table exists
+    from sqlalchemy import inspect
+    
+    inspector = inspect(db.bind)
+    tables = inspector.get_table_names()
+    
+    if 'submission_retries' not in tables:
+        logger.warning("submission_retries table does not exist yet. Cannot process retry.")
+        return False
+    
     # Get the retry record
     retry = db.query(SubmissionRetry).filter(SubmissionRetry.id == retry_id).first()
     if not retry:
@@ -514,17 +541,15 @@ async def process_pending_retries(db: Session) -> int:
         Number of retries processed
     """
     try:
-        # Check if table exists by making a low-impact query
-        try:
-            # Just check if the table exists without doing a full query
-            db.execute(text("SELECT 1 FROM submission_retries LIMIT 1"))
-        except Exception as table_error:
-            # If table doesn't exist, log and return early
-            if "relation \"submission_retries\" does not exist" in str(table_error):
-                logger.warning("submission_retries table does not exist yet. Skipping retry processing.")
-                return 0
-            # For other errors, re-raise
-            raise
+        # Check if table exists using SQLAlchemy inspector (no DB errors)
+        from sqlalchemy import inspect
+        
+        inspector = inspect(db.bind)
+        tables = inspector.get_table_names()
+        
+        if 'submission_retries' not in tables:
+            logger.warning("submission_retries table does not exist yet. Skipping retry processing.")
+            return 0
             
         # Find pending retries that are due
         now = datetime.utcnow()
