@@ -123,9 +123,10 @@ def upgrade() -> None:
     
     # Step 4: Create the POS transactions table with partitioning
     # First create the parent table with partitioning configuration
+    # Note: Primary key must include partition key (transaction_timestamp)
     op.execute("""
     CREATE TABLE pos_transactions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID DEFAULT gen_random_uuid(),
         connection_id UUID NOT NULL,
         external_transaction_id VARCHAR(255) NOT NULL,
         transaction_amount DECIMAL(15,2),
@@ -139,7 +140,8 @@ def upgrade() -> None:
         processing_errors JSONB,
         transaction_metadata JSONB,
         created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP
+        updated_at TIMESTAMP,
+        PRIMARY KEY (id, transaction_timestamp)
     ) PARTITION BY RANGE (transaction_timestamp);
     """)
     
