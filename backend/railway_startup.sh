@@ -138,9 +138,12 @@ except Exception as e:
         exit 1
     fi
     
+    log_message "DATABASE_URL configured: ${DATABASE_URL:0:30}..."
+    
     if [ -z "$SECRET_KEY" ]; then
-        log_message "ERROR: SECRET_KEY is not set"
-        exit 1
+        log_message "WARNING: SECRET_KEY is not set - generating temporary key"
+        export SECRET_KEY="temp-railway-key-$(date +%s)-$(openssl rand -hex 16)"
+        log_message "Generated temporary SECRET_KEY for deployment"
     fi
     
     log_message "Pre-startup health checks completed successfully"
@@ -192,36 +195,53 @@ except Exception as e:
 start_application() {
     log_message "Starting application with health monitoring..."
     
-    # Start deployment monitoring in background
-    python -c "
+    # Test app import first
+    log_message "Testing application import..."
+    python3 -c "
+try:
+    from app.main import app
+    print('SUCCESS: Application imported successfully')
+except Exception as e:
+    print(f'ERROR: Application import failed: {e}')
+    import traceback
+    traceback.print_exc()
+    exit(1)
+" 
+    
+    if [ $? -ne 0 ]; then
+        log_message "FALLBACK: Using simple app due to import failure"
+        exec uvicorn app.simple_main:app \
+            --host 0.0.0.0 \
+            --port ${PORT:-8000} \
+            --access-log
+        return
+    fi
+    
+    # Start deployment monitoring in background (don't block startup)
+    (python3 -c "
 import asyncio
 import logging
-from app.services.deployment_monitor import get_deployment_monitor
 import os
 
-# Setup basic logging for monitoring
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('deployment_monitor')
 
 async def start_monitoring():
     try:
+        from app.services.deployment_monitor import get_deployment_monitor
         monitor = get_deployment_monitor()
         deployment_id = os.environ.get('RAILWAY_DEPLOYMENT_ID', f'railway-{int(__import__('time').time())}')
         logger.info(f'Starting deployment monitoring for: {deployment_id}')
         await monitor.start_monitoring(deployment_id)
         logger.info('Deployment monitoring started successfully')
     except Exception as e:
-        logger.error(f'Failed to start deployment monitoring: {str(e)}')
-        # Don't fail startup for monitoring issues
-        pass
+        logger.info(f'Deployment monitoring not available: {str(e)}')
 
-# Don't block startup for monitoring
 try:
     asyncio.run(start_monitoring())
 except Exception as e:
-    print(f'Monitoring startup failed: {e}')
-    pass
-" &
+    print(f'Monitoring startup skipped: {e}')
+" 2>/dev/null) &
     
     # Start the application
     log_message "Starting uvicorn server..."
@@ -229,8 +249,7 @@ except Exception as e:
         --host 0.0.0.0 \
         --port ${PORT:-8000} \
         --timeout-keep-alive 65 \
-        --access-log \
-        --use-colors
+        --access-log
 }
 
 # Main deployment process

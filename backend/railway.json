@@ -6,7 +6,7 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "startCommand": "chmod +x railway_startup_minimal.sh && ./railway_startup_minimal.sh",
+    "startCommand": "chmod +x railway_startup.sh && ./railway_startup.sh",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5,
     "healthcheckPath": "/api/v1/health/ready",
