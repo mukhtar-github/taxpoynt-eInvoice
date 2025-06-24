@@ -201,13 +201,13 @@ else:
     os.makedirs("static", exist_ok=True)
     app.mount("/static", StaticFiles(directory=Path("static")), name="static")
 
-# Railway-optimized health checks for Blue-Green deployment
+# Unified health check system for Railway deployment and operational monitoring
 try:
-    from app.api.routes.health_railway import router as railway_health_router
-    app.include_router(railway_health_router, tags=["health-railway"])
-    logger.info("Successfully included Railway-optimized health checks")
+    from app.api.routes.health import router as unified_health_router
+    app.include_router(unified_health_router, tags=["health"])
+    logger.info("Successfully included unified health check system")
 except Exception as e:
-    logger.warning(f"Could not include Railway health router: {str(e)} - using fallback health checks")
+    logger.warning(f"Could not include unified health router: {str(e)} - using fallback health checks")
     
     # Fallback basic health checks
     @app.get("/health")
@@ -249,13 +249,7 @@ except Exception as e:
     logger.critical(traceback.format_exc())
     raise
 
-try:
-    # Detailed health check routers (for operational monitoring)
-    from app.api.routes.health import router as detailed_health_router
-    app.include_router(detailed_health_router, prefix=f"{settings.API_V1_STR}/health", tags=["health-detailed"])
-    logger.info("Successfully included detailed health check router for operational monitoring")
-except Exception as e:
-    logger.warning(f"Could not include detailed health router: {str(e)} - detailed health checks not available")
+# Note: Detailed health checks are now part of the unified health system above
 
 try:    
     # POS real-time processing router
