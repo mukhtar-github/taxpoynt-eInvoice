@@ -17,10 +17,19 @@ depends_on = None
 
 # Following the multi-step migration approach as documented in the system
 def upgrade() -> None:
-    # Step 1: Check if dependency tables exist
-    # This is handled by Alembic dependency chain, but we'll add a safeguard
+    # Step 0: Enable uuid-ossp extension if using PostgreSQL
     connection = op.get_bind()
     inspector = sa.inspect(connection)
+    
+    # Check if we're using PostgreSQL and enable uuid-ossp extension
+    if inspector.dialect.name == 'postgresql':
+        try:
+            connection.execute(sa.text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+        except Exception as e:
+            print(f"Warning: Could not create uuid-ossp extension: {e}")
+    
+    # Step 1: Check if dependency tables exist
+    # This is handled by Alembic dependency chain, but we'll add a safeguard
     tables = inspector.get_table_names()
     
     # Make sure required tables exist
