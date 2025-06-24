@@ -94,7 +94,7 @@ def upgrade() -> None:
         # Add foreign key constraints if both tables exist
         if 'organizations' in existing_tables or 'organizations' not in existing_tables:
             op.create_foreign_key(
-                'fk_organization_users_organization_id', 
+                'fk_org_users_org_id', 
                 'organization_users', 
                 'organizations',
                 ['organization_id'], 
@@ -104,7 +104,7 @@ def upgrade() -> None:
         
         if 'users' in existing_tables or 'users' not in existing_tables:
             op.create_foreign_key(
-                'fk_organization_users_user_id', 
+                'fk_org_users_user_id', 
                 'organization_users', 
                 'users',
                 ['user_id'], 
@@ -114,7 +114,7 @@ def upgrade() -> None:
         
         # Create unique constraint to prevent duplicate user-organization pairs
         op.create_unique_constraint(
-            'uq_organization_users_org_user', 
+            'uq_org_users_org_user', 
             'organization_users', 
             ['organization_id', 'user_id']
         )
