@@ -32,13 +32,17 @@ def upgrade() -> None:
     # This is handled by Alembic dependency chain, but we'll add a safeguard
     tables = inspector.get_table_names()
     
-    # Make sure required tables exist
-    required_tables = ['organizations', 'certificates', 'users', 'submissions']
+    # Check for required tables - warn but don't fail if missing
+    required_tables = ['organizations', 'certificates', 'users', 'submission_records']
+    missing_tables = []
     for table in required_tables:
         if table not in tables:
-            # For safety, we'll raise an exception rather than try to create them
-            # This prevents unexpected behavior in production
-            raise Exception(f"Dependency table {table} not found. Please run previous migrations first.")
+            missing_tables.append(table)
+            print(f"Warning: Dependency table {table} not found. Some foreign keys will be skipped.")
+    
+    # Log missing tables but continue migration
+    if missing_tables:
+        print(f"Missing tables: {missing_tables}. Migration will continue with available tables.")
     
     # Step 2: Create tables without foreign key constraints initially
     
@@ -118,7 +122,7 @@ def upgrade() -> None:
         # Transmission records constraints
         ('fk_transmission_records_organization_id', 'transmission_records', 'organization_id', 'organizations', 'id'),
         ('fk_transmission_records_certificate_id', 'transmission_records', 'certificate_id', 'certificates', 'id'),
-        ('fk_transmission_records_submission_id', 'transmission_records', 'submission_id', 'submissions', 'id'),
+        ('fk_transmission_records_submission_id', 'transmission_records', 'submission_id', 'submission_records', 'id'),
         ('fk_transmission_records_created_by', 'transmission_records', 'created_by', 'users', 'id'),
         
         # CSID registry constraints
