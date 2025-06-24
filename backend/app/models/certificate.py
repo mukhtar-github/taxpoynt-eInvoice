@@ -40,6 +40,7 @@ class Certificate(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
+    certificate_request_id = Column(UUID(as_uuid=True), ForeignKey("certificate_requests.id"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(String(500))
     certificate_type = Column(String(20), nullable=False, default=CertificateType.X509)
@@ -71,6 +72,7 @@ class Certificate(Base):
     
     # Relationships
     organization = relationship("Organization", back_populates="certificates")
+    certificate_request = relationship("CertificateRequest", back_populates="certificate")
     encryption_key = relationship("EncryptionKey")
     created_by_user = relationship("User", foreign_keys=[created_by])
     revocation = relationship("CertificateRevocation", back_populates="certificate", uselist=False)
