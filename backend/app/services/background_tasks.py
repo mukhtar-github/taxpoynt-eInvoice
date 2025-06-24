@@ -24,6 +24,29 @@ from app.tasks.hubspot_tasks import hubspot_deal_processor_task
 
 logger = get_logger(__name__)
 
+# Async wrappers for Celery tasks
+async def async_hubspot_deal_processor():
+    """Async wrapper for the HubSpot deal processor Celery task"""
+    import asyncio
+    import concurrent.futures
+    
+    # Run the synchronous Celery task in a thread pool
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        result = await loop.run_in_executor(executor, hubspot_deal_processor_task, None)
+    return result
+
+async def async_certificate_monitor():
+    """Async wrapper for the certificate monitor Celery task"""
+    import asyncio
+    import concurrent.futures
+    
+    # Run the synchronous Celery task in a thread pool
+    loop = asyncio.get_event_loop()
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        result = await loop.run_in_executor(executor, certificate_monitor_task, None)
+    return result
+
 # Global task registry to prevent duplicate tasks
 _tasks = {}
 
@@ -42,14 +65,14 @@ async def start_background_tasks():
     # Start the certificate monitoring task
     start_task(
         "certificate_monitor",
-        certificate_monitor_task,
+        async_certificate_monitor,
         interval_seconds=getattr(settings, "CERTIFICATE_MONITOR_INTERVAL", 3600)  # Default: hourly
     )
     
     # Start the HubSpot deal processor task
     start_task(
         "hubspot_deal_processor",
-        hubspot_deal_processor_task,
+        async_hubspot_deal_processor,
         interval_seconds=getattr(settings, "HUBSPOT_SYNC_INTERVAL", 3600)  # Default: hourly
     )
     
