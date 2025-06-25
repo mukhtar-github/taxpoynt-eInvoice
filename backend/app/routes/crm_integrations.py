@@ -24,6 +24,9 @@ from app.integrations.base.errors import IntegrationError
 from app.integrations.base.factory import get_connector_factory
 from app.tasks.hubspot_tasks import process_hubspot_deal, sync_hubspot_deals
 from app.services.encryption_service import get_encryption_service, EncryptionService
+from app.integrations.crm.data_mapper import cross_platform_mapper
+from app.integrations.crm.template_engine import template_engine
+from app.integrations.crm.pipeline_tracker import get_pipeline_tracker
 
 logger = logging.getLogger(__name__)
 

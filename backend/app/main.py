@@ -72,7 +72,7 @@ except Exception as e:
 
 try:
     from app.routes import validation, firs, integrations, api_credentials, bulk_irn, validation_management, organization
-    from app.routes import organization_integrations, organization_odoo, crm_integrations, queue_monitoring
+    from app.routes import organization_integrations, organization_odoo, crm_integrations, queue_monitoring, advanced_crm_features
     logger.info("Successfully imported primary feature routes")
 except Exception as e:
     logger.critical(f"FATAL ERROR importing primary feature routes: {str(e)}")
@@ -306,6 +306,12 @@ try:
     logger.info("Successfully included CRM integrations router")
 except Exception as e:
     logger.warning(f"Could not include CRM integrations router: {str(e)}")
+
+try:
+    app.include_router(advanced_crm_features.router, prefix=settings.API_V1_STR, tags=["advanced-crm-features"])
+    logger.info("Successfully included Advanced CRM Features router")
+except Exception as e:
+    logger.warning(f"Could not include Advanced CRM Features router: {str(e)}")
 
 try:
     app.include_router(queue_monitoring.router, prefix=f"{settings.API_V1_STR}/monitoring", tags=["queue-monitoring"])
