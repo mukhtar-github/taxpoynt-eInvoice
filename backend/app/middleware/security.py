@@ -28,8 +28,12 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process an incoming request and enforce security policies."""
-        # Check if we need to redirect to HTTPS
-        if self.https_redirect and request.url.scheme == "http":
+        # Skip HTTPS redirect for health check endpoints to prevent Railway 301s
+        health_paths = ["/api/v1/health/", "/health", "/ready", "/live", "/startup"]
+        is_health_check = any(request.url.path.startswith(path) for path in health_paths)
+        
+        # Check if we need to redirect to HTTPS (skip for health checks)
+        if self.https_redirect and request.url.scheme == "http" and not is_health_check:
             https_url = str(request.url).replace("http://", "https://", 1)
             return Response(
                 status_code=status.HTTP_301_MOVED_PERMANENTLY,
