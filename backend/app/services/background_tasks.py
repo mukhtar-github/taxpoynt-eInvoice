@@ -38,15 +38,9 @@ async def async_hubspot_deal_processor():
     return result
 
 async def async_certificate_monitor():
-    """Async wrapper for the certificate monitor Celery task"""
-    import asyncio
-    import concurrent.futures
-    
-    # Run the synchronous Celery task in a thread pool
-    # Note: certificate_monitor_task takes no arguments
-    loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        result = await loop.run_in_executor(executor, certificate_monitor_task)
+    """Async wrapper for the certificate monitor task"""
+    # certificate_monitor_task is already an async function, so we can await it directly
+    result = await certificate_monitor_task()
     return result
 
 # Global task registry to prevent duplicate tasks
