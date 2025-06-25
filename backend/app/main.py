@@ -204,7 +204,7 @@ else:
 # Unified health check system for Railway deployment and operational monitoring
 try:
     from app.api.routes.health import router as unified_health_router
-    app.include_router(unified_health_router, tags=["health"])
+    app.include_router(unified_health_router, prefix="/api/v1/health", tags=["health"])
     logger.info("Successfully included unified health check system")
 except Exception as e:
     logger.warning(f"Could not include unified health router: {str(e)} - using fallback health checks")
