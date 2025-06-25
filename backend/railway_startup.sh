@@ -243,13 +243,19 @@ except Exception as e:
     print(f'Monitoring startup skipped: {e}')
 " 2>/dev/null) &
     
-    # Start the application
-    log_message "Starting uvicorn server..."
+    # Start the application with enhanced monitoring and performance baseline
+    log_message "Starting uvicorn server with performance monitoring..."
+    log_message "Configuration: host=0.0.0.0, port=${PORT:-8000}, keep-alive=65s, workers=1"
+    
     exec uvicorn app.main:app \
         --host 0.0.0.0 \
         --port ${PORT:-8000} \
         --timeout-keep-alive 65 \
-        --access-log
+        --access-log \
+        --log-level info \
+        --workers 1 \
+        --loop uvloop \
+        --http httptools
 }
 
 # Main deployment process

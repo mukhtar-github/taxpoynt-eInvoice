@@ -1,8 +1,11 @@
 # Web framework
 fastapi>=0.104.0
-uvicorn>=0.23.2
+uvicorn[standard]>=0.23.2
 starlette>=0.27.0
 python-multipart>=0.0.6
+# Performance enhancements for uvicorn
+uvloop>=0.17.0
+httptools>=0.6.0
 
 # API documentation
 pydantic==1.10.22
