@@ -64,7 +64,17 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
   images: {
     domains: [],
-    unoptimized: false
+    unoptimized: false,
+    // Nigerian mobile optimization
+    deviceSizes: [320, 480, 640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/webp']
+  },
+  // PWA and Service Worker support
+  experimental: {
+    // Enable modern features for better performance
+    esmExternals: true,
+    serverComponentsExternalPackages: []
   },
   // Configure security headers
   async headers() {
