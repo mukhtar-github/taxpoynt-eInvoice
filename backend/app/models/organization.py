@@ -50,6 +50,13 @@ class Organization(Base):
     crm_connections = relationship("CRMConnection", back_populates="organization", cascade="all, delete-orphan")
     pos_connections = relationship("POSConnection", back_populates="organization", cascade="all, delete-orphan")
     
+    # Nigerian compliance relationships
+    nitda_accreditations = relationship("NITDAAccreditation", back_populates="organization", cascade="all, delete-orphan")
+    ndpr_compliance = relationship("NDPRCompliance", back_populates="organization", cascade="all, delete-orphan")
+    nigerian_business_registrations = relationship("NigerianBusinessRegistration", back_populates="organization", cascade="all, delete-orphan")
+    firs_penalties = relationship("FIRSPenaltyTracking", back_populates="organization", cascade="all, delete-orphan")
+    iso27001_compliance = relationship("ISO27001Compliance", back_populates="organization", cascade="all, delete-orphan")
+    
 
 class OrganizationUser(Base):
     """

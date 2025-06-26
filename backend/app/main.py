@@ -391,6 +391,22 @@ except Exception as e:
     logger.warning(f"Error including WebSocket routes: {str(e)}")
     logger.warning("Real-time WebSocket functionality may not be available")
 
+# Include Nigerian Compliance router
+try:
+    from app.routes.nigerian_compliance import router as nigerian_compliance_router
+    app.include_router(nigerian_compliance_router, prefix=settings.API_V1_STR, tags=["nigerian-compliance"])
+    logger.info("Successfully included Nigerian compliance router")
+except Exception as e:
+    logger.warning(f"Could not include Nigerian compliance router: {str(e)}")
+
+# Include Service Access Management router
+try:
+    from app.routes.service_access_management import router as service_access_router
+    app.include_router(service_access_router, prefix=settings.API_V1_STR, tags=["service-access"])
+    logger.info("Successfully included Service Access Management router")
+except Exception as e:
+    logger.warning(f"Could not include Service Access Management router: {str(e)}")
+
 logger.info("All routers initialized successfully")
 logger.info("Application setup complete and ready to serve requests")
 

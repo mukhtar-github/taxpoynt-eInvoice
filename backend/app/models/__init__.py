@@ -14,5 +14,20 @@ from app.models.invoice import Invoice, InvoiceStatus, InvoiceSource
 from app.models.certificate import Certificate, CertificateRevocation, CertificateType, CertificateStatus
 from app.models.certificate_request import CertificateRequest, CertificateRequestType, CertificateRequestStatus
 from app.models.submission import SubmissionRecord, SubmissionStatusUpdate, SubmissionNotification, SubmissionStatus, NotificationStatus
+from app.models.nigerian_compliance import (
+    NITDAAccreditation, 
+    NDPRCompliance, 
+    NigerianBusinessRegistration,
+    FIRSPenaltyTracking,
+    ISO27001Compliance,
+    AccreditationStatus,
+    ComplianceLevel
+)
+from app.models.user_service_access import (
+    UserServiceAccess,
+    ServiceAccessAuditLog,
+    ServiceType,
+    AccessLevel
+)
 
 # Add new models here when created
