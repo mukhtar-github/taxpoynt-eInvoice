@@ -51,7 +51,7 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % valuePropositions.length);
-    }, 3000);
+    }, 4000); // Increased from 3000ms to 4000ms for better readability
     return () => clearInterval(interval);
   }, [valuePropositions.length]);
 
@@ -118,19 +118,23 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
                 </Typography.Heading>
 
                 {/* Animated Value Proposition */}
-                <div className="h-8 md:h-10 overflow-hidden">
+                <div className="h-10 md:h-12 relative overflow-hidden">
                   <div 
-                    className="transition-transform duration-500 ease-in-out"
+                    className="transition-all duration-700 ease-in-out"
                     style={{ transform: `translateY(-${currentSlide * 100}%)` }}
                   >
                     {valuePropositions.map((proposition, index) => (
-                      <Typography.Text 
+                      <div 
                         key={index}
-                        size="lg" 
-                        className="block text-cyan-100 font-medium h-8 md:h-10 leading-8 md:leading-10"
+                        className="h-10 md:h-12 flex items-center"
                       >
-                        {proposition}
-                      </Typography.Text>
+                        <Typography.Text 
+                          size="lg" 
+                          className="text-cyan-200 font-semibold whitespace-nowrap"
+                        >
+                          {proposition}
+                        </Typography.Text>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -158,7 +162,7 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
                 <Button 
                   size="lg"
                   variant="outline" 
-                  className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm shadow-lg font-semibold group"
+                  className="bg-gray-200 text-gray-900 border-gray-400 hover:bg-gray-300 shadow-lg font-semibold group"
                   onClick={() => {
                     // Scroll to demo section
                     const demoSection = document.getElementById('demo-section');
