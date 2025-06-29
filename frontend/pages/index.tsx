@@ -67,7 +67,7 @@ const Home: React.FC = () => {
         <EnhancedHero />
 
         {/* Day 5: Trust & Social Proof Section */}
-        <div className="py-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-y border-blue-200">
+        <div className="py-8 bg-gradient-to-r from-slate-100 to-gray-100 border-y border-gray-300">
           <div className="container mx-auto px-4">
             <div className="text-center mb-8">
               <Typography.Heading level="h2" className="text-2xl font-bold text-gray-900 mb-2">
@@ -108,7 +108,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Dual Certification Highlight */}
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-y border-gray-200 py-8">
+        <div className="bg-gradient-to-r from-gray-100 to-gray-200 border-y border-gray-400 py-8">
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8">
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-center">
@@ -245,7 +245,7 @@ const Home: React.FC = () => {
         />
 
         {/* APP Capabilities Section - Enhanced & Prominent */}
-        <div id="app-capabilities" className="py-16 bg-gradient-to-r from-cyan-50 to-white border-t-4 border-cyan-500">
+        <div id="app-capabilities" className="py-16 bg-gradient-to-r from-slate-50 to-gray-50 border-t-4 border-cyan-600">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <div className="inline-block bg-cyan-600 text-white px-4 py-2 rounded-full mb-4 shadow-md">
@@ -254,7 +254,7 @@ const Home: React.FC = () => {
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-cyan-800">
                 Access Point Provider Excellence
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-700 mb-6">
+              <Typography.Text size="lg" className="text-gray-800 mb-6">
                 As Nigeria's premier certified Access Point Provider (APP), we handle the complete e-invoice lifecycle—from secure cryptographic stamping to validated FIRS submission—with enterprise-grade security and real-time tracking.
               </Typography.Text>
             </div>
@@ -277,7 +277,7 @@ const Home: React.FC = () => {
                   description: 'Advanced QR code stamping with tamper-evident digital signatures that ensure invoice authenticity and compliance with Nigerian tax regulations.' 
                 },
               ].map((feature, index) => (
-                <Card key={index} className="shadow-sm hover:shadow-md transition-shadow h-full border-l-4 border-cyan-500 bg-cyan-50/50">                   
+                <Card key={index} className="shadow-sm hover:shadow-md transition-shadow h-full border-l-4 border-cyan-500 bg-gray-50">                   
                   <CardContent className="pt-6">
                     <div className="absolute top-3 right-3">
                       <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
@@ -353,7 +353,7 @@ const Home: React.FC = () => {
         />
 
         {/* Success Stories Section - Enhanced with Day 5 Component */}
-        <div className="py-16 bg-gradient-to-r from-cyan-50 to-white">
+        <div className="py-16 bg-gradient-to-r from-gray-50 to-gray-100">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <div className="inline-block bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full mb-4">
@@ -362,7 +362,7 @@ const Home: React.FC = () => {
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-800">
                 Real Results from Real Businesses
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-700">
+              <Typography.Text size="lg" className="text-gray-800">
                 See how organizations across Nigeria are transforming their e-invoicing operations with TaxPoynt
               </Typography.Text>
             </div>
@@ -427,7 +427,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* APP Educational Resources Section */}
-        <div className="py-16 bg-gradient-to-b from-white to-cyan-50">
+        <div className="py-16 bg-gradient-to-b from-gray-50 to-gray-100">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <div className="inline-block bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full mb-4">
@@ -436,7 +436,7 @@ const Home: React.FC = () => {
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
                 Access Point Provider Knowledge Center
               </Typography.Heading>
-              <Typography.Text size="lg" className="text-gray-700">
+              <Typography.Text size="lg" className="text-gray-800">
                 Learn more about our APP capabilities and how our certified e-invoice transmission solutions can transform your business
               </Typography.Text>
             </div>
@@ -538,7 +538,7 @@ const Home: React.FC = () => {
                       Expert APP Implementation Support
                     </Typography.Heading>
                   </div>
-                  <Typography.Text className="text-gray-700">
+                  <Typography.Text className="text-gray-800">
                     Need help leveraging our APP capabilities for your e-invoicing compliance needs? Our certified experts are ready to guide you through every step of the implementation and certification process.
                   </Typography.Text>
                 </div>

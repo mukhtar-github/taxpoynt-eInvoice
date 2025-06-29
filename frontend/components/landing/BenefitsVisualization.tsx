@@ -255,7 +255,7 @@ export const BenefitsVisualization: React.FC<BenefitsVisualizationProps> = ({
   };
 
   return (
-    <div className={`py-20 bg-white ${className}`}>
+    <div className={`py-20 bg-gray-50 ${className}`}>
       <div className="container mx-auto px-4">
         
         {/* Section Header */}
@@ -276,7 +276,7 @@ export const BenefitsVisualization: React.FC<BenefitsVisualizationProps> = ({
 
         {/* Overall Stats Bar */}
         {showMetrics && (
-          <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-8 mb-16 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 mb-16 text-white relative overflow-hidden">
             
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10">

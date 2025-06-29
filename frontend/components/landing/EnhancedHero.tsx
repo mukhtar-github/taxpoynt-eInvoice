@@ -67,13 +67,13 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
       id="enhanced-hero"
       className={`relative overflow-hidden ${className}`}
     >
-      {/* Enhanced Gradient Background with Animated Patterns */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900">
-        {/* Animated Background Patterns */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 -left-4 w-72 h-72 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-          <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+      {/* Enhanced Gradient Background with Animated Patterns - Darker for better contrast */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-gray-900">
+        {/* Animated Background Patterns - Reduced opacity for better text readability */}
+        <div className="absolute inset-0 opacity-15">
+          <div className="absolute top-0 -left-4 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+          <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
         </div>
         
         {/* Geometric Pattern Overlay */}
@@ -137,7 +137,7 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
 
                 <Typography.Text 
                   size="lg" 
-                  className="text-white/90 leading-relaxed max-w-xl"
+                  className="text-gray-200 leading-relaxed max-w-xl"
                 >
                   Streamline your entire e-invoicing workflow from ERP integration to secure FIRS submission. 
                   Our dual-certified platform ensures compliance while saving time and reducing errors.
@@ -178,7 +178,7 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
                 {trustIndicators.map((indicator, index) => (
                   <div 
                     key={index}
-                    className={`flex items-center space-x-2 text-white/80 transform transition-all duration-500 ${
+                    className={`flex items-center space-x-2 text-gray-300 transform transition-all duration-500 ${
                       isVisible ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'
                     }`}
                     style={{ transitionDelay: `${index * 100}ms` }}

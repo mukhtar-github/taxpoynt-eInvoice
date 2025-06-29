@@ -249,7 +249,7 @@ export const FeatureShowcase: React.FC<FeatureShowcaseProps> = ({
   };
 
   return (
-    <div className={`py-20 bg-gradient-to-b from-gray-50 to-white ${className}`}>
+    <div className={`py-20 bg-gradient-to-b from-gray-100 to-gray-50 ${className}`}>
       <div className="container mx-auto px-4">
         
         {/* Section Header */}
@@ -401,7 +401,7 @@ export const FeatureShowcase: React.FC<FeatureShowcaseProps> = ({
 
         {/* Bottom CTA */}
         <div className="mt-16 text-center">
-          <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden">
             
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-10">
