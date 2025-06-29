@@ -367,7 +367,7 @@ export const PlatformCapabilities: React.FC<PlatformCapabilitiesProps> = ({
   };
 
   return (
-    <div className={`py-20 bg-gradient-to-b from-white to-gray-50 ${className}`}>
+    <div className={`py-20 bg-gradient-to-b from-gray-100 to-gray-200 ${className}`}>
       <div className="container mx-auto px-4">
         
         {/* Section Header */}

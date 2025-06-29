@@ -124,7 +124,7 @@ export const ValuePropositions: React.FC = () => {
   };
 
   return (
-    <div className="py-20 bg-gradient-to-b from-white to-gray-50">
+    <div className="py-20 bg-gradient-to-b from-gray-100 to-gray-200">
       <div className="container mx-auto px-4">
         
         {/* Section Header */}
@@ -153,7 +153,7 @@ export const ValuePropositions: React.FC = () => {
               className={getColorClasses(prop.color, visibleCards.includes(index))}
               style={{ transitionDelay: `${index * 150}ms` }}
             >
-              <Card className="h-full border-2 border-gray-100 hover:shadow-xl bg-white/80 backdrop-blur-sm group">
+              <Card className="h-full border-2 border-gray-100 hover:shadow-xl bg-gray-100 backdrop-blur-sm group">
                 <CardContent className="p-8">
                   
                   {/* Icon */}

@@ -327,7 +327,7 @@ const SuccessStories: React.FC<SuccessStoriesProps> = ({
       transition={{ duration: 0.2 }}
       className={story.featured ? 'md:col-span-2' : ''}
     >
-      <Card className={`h-full bg-white shadow-lg hover:shadow-xl transition-all cursor-pointer ${
+      <Card className={`h-full bg-gray-100 shadow-lg hover:shadow-xl transition-all cursor-pointer ${
         story.featured ? 'border-l-4 border-l-blue-600' : ''
       }`}>
         <CardContent className="p-6">

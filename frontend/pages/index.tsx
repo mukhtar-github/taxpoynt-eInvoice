@@ -98,7 +98,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Security Status Banner */}
-        <div className="bg-white border-b border-gray-200 py-4">
+        <div className="bg-gray-100 border-b border-gray-300 py-4">
           <div className="container mx-auto px-4">
             <SecurityIndicators 
               layout="banner"
@@ -149,7 +149,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Systems Integration Section */}
-        <div className="py-16 bg-gray-50">
+        <div className="py-16 bg-gray-200">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
@@ -325,7 +325,7 @@ const Home: React.FC = () => {
         />
 
         {/* Customer Testimonials Section */}
-        <div className="py-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="py-16 bg-gradient-to-b from-gray-100 to-gray-200">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-900">
@@ -383,7 +383,7 @@ const Home: React.FC = () => {
         />
 
         {/* Security & Trust Section - Day 5 Enhancement */}
-        <div className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <div className="py-16 bg-gradient-to-b from-gray-200 to-gray-100">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-900">
@@ -405,7 +405,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Trust Badges & Certifications */}
-        <div className="py-16 bg-white border-t border-gray-200">
+        <div className="py-16 bg-gray-100 border-t border-gray-300">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <Typography.Heading level="h2" className="text-3xl font-bold mb-4 text-gray-900">
@@ -527,7 +527,7 @@ const Home: React.FC = () => {
               </Card>
             </div>
 
-            <div className="mt-10 bg-gradient-to-r from-cyan-50 to-cyan-100 rounded-lg p-6 border-2 border-cyan-200">
+            <div className="mt-10 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg p-6 border-2 border-gray-400">
               <div className="flex flex-col md:flex-row gap-6 items-center">
                 <div className="md:w-3/4">
                   <div className="flex items-center mb-2">

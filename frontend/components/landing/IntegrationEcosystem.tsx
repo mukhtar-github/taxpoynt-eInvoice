@@ -364,7 +364,7 @@ export const IntegrationEcosystem: React.FC<IntegrationEcosystemProps> = ({
   };
 
   return (
-    <div className={`py-20 bg-gradient-to-b from-gray-50 to-white ${className}`}>
+    <div className={`py-20 bg-gradient-to-b from-gray-200 to-gray-100 ${className}`}>
       <div className="container mx-auto px-4">
         
         {/* Section Header */}
@@ -493,7 +493,7 @@ export const IntegrationEcosystem: React.FC<IntegrationEcosystemProps> = ({
                 onMouseEnter={() => setHoveredIntegration(integration.id)}
                 onMouseLeave={() => setHoveredIntegration(null)}
               >
-                <Card className={`h-full border-2 hover:shadow-xl bg-white group cursor-pointer relative overflow-hidden transition-all duration-300 ${
+                <Card className={`h-full border-2 hover:shadow-xl bg-gray-100 group cursor-pointer relative overflow-hidden transition-all duration-300 ${
                   isHovered ? 'border-primary-300 shadow-xl ring-4 ring-primary-100' : 'border-gray-200 hover:border-gray-300'
                 }`}>
                   

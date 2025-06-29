@@ -277,7 +277,7 @@ const UsageStatistics: React.FC<UsageStatisticsProps> = ({
       whileHover={animated ? { scale: 1.02, y: -5 } : {}}
       transition={{ duration: 0.2 }}
     >
-      <Card className={`h-full ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'} shadow-lg hover:shadow-xl transition-shadow`}>
+      <Card className={`h-full ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-100'} shadow-lg hover:shadow-xl transition-shadow`}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className={`p-3 rounded-lg ${getColorClasses(stat.color, theme)}`}>

@@ -190,7 +190,7 @@ const TestimonialsCarousel: React.FC<TestimonialsCarouselProps> = ({
   };
 
   const TestimonialCard = ({ testimonial, index }: { testimonial: Testimonial; index: number }) => (
-    <Card className="h-full bg-white shadow-lg border-0">
+    <Card className="h-full bg-gray-100 shadow-lg border-0">
       <CardContent className="p-8">
         <div className="flex items-start space-x-4 mb-6">
           <Quote className="h-8 w-8 text-blue-600 flex-shrink-0 mt-1" />

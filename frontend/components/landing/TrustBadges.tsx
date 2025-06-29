@@ -122,7 +122,7 @@ const TrustBadges: React.FC<TrustBadgesProps> = ({
         whileHover={animated ? { scale: 1.02, y: -2 } : {}}
         transition={{ duration: 0.2 }}
       >
-        <Card className={`${sizeClasses[size]} bg-white border shadow-sm hover:shadow-md transition-shadow`}>
+        <Card className={`${sizeClasses[size]} bg-gray-100 border shadow-sm hover:shadow-md transition-shadow`}>
           <CardContent className="p-0">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">

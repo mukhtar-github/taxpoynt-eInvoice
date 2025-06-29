@@ -118,7 +118,7 @@ export const CallToAction: React.FC<CTAProps> = ({
 
   if (variant === 'secondary') {
     return (
-      <div className="py-16 bg-gray-50">
+      <div className="py-16 bg-gray-200">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <Typography.Heading level="h2" className="text-3xl font-bold mb-4">
@@ -154,7 +154,7 @@ export const CallToAction: React.FC<CTAProps> = ({
   return (
     <div 
       id={`cta-${trackingId}`}
-      className="py-20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white overflow-hidden relative"
+      className="py-20 bg-gradient-to-br from-slate-800 via-slate-900 to-gray-900 text-white overflow-hidden relative"
     >
       {/* Background Effects */}
       <div className="absolute inset-0">

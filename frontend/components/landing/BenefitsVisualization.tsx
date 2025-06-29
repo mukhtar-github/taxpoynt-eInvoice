@@ -329,7 +329,7 @@ export const BenefitsVisualization: React.FC<BenefitsVisualizationProps> = ({
               onMouseEnter={() => setHoveredBenefit(benefit.id)}
               onMouseLeave={() => setHoveredBenefit(null)}
             >
-              <Card className={`h-full border-2 hover:shadow-xl bg-white group cursor-pointer relative overflow-hidden ${getColorClasses(benefit.color, 'card')}`}>
+              <Card className={`h-full border-2 hover:shadow-xl bg-gray-100 group cursor-pointer relative overflow-hidden ${getColorClasses(benefit.color, 'card')}`}>
                 
                 {/* Hover Glow Effect */}
                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 bg-gradient-to-br ${

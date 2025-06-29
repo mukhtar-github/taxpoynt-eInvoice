@@ -307,7 +307,7 @@ export const FeatureShowcase: React.FC<FeatureShowcaseProps> = ({
               }`}
               style={{ transitionDelay: `${index * 150}ms` }}
             >
-              <Card className={`h-full border-2 hover:shadow-xl bg-white/90 backdrop-blur-sm group cursor-pointer relative overflow-hidden ${getCategoryColorClasses(feature.category)}`}>
+              <Card className={`h-full border-2 hover:shadow-xl bg-gray-100 group cursor-pointer relative overflow-hidden ${getCategoryColorClasses(feature.category)}`}>
                 
                 {/* Popular Badge */}
                 {feature.isPopular && (
@@ -370,7 +370,7 @@ export const FeatureShowcase: React.FC<FeatureShowcaseProps> = ({
                         {feature.benefits.map((benefit, benefitIndex) => (
                           <div 
                             key={benefitIndex}
-                            className="flex items-start space-x-3 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                            className="flex items-start space-x-3 p-2 rounded-lg bg-white hover:bg-gray-50 transition-colors"
                           >
                             <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                             <Typography.Text className="text-sm text-gray-700">

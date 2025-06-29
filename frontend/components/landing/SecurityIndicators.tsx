@@ -206,7 +206,7 @@ const SecurityIndicators: React.FC<SecurityIndicatorsProps> = ({
             variants={animated ? itemVariants : {}}
             whileHover={animated ? { scale: 1.02 } : {}}
           >
-            <Card className="p-4 text-center bg-white shadow-sm hover:shadow-md transition-shadow">
+            <Card className="p-4 text-center bg-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-0">
                 <div className="flex justify-center mb-2">
                   {metric.icon}
@@ -324,7 +324,7 @@ const SecurityIndicators: React.FC<SecurityIndicatorsProps> = ({
                 whileHover={animated ? { y: -5, scale: 1.02 } : {}}
                 transition={{ duration: 0.2 }}
               >
-                <Card className="p-6 text-center bg-white shadow-sm hover:shadow-md transition-all">
+                <Card className="p-6 text-center bg-gray-100 shadow-sm hover:shadow-md transition-all">
                   <CardContent className="p-0">
                     <div className="flex justify-center mb-3">
                       {metric.icon}
