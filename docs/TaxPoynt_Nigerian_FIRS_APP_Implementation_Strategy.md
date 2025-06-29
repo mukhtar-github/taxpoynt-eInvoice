@@ -265,7 +265,7 @@ class FlutterwaveConnector(BasePaymentConnector):
         # International transaction support
 ```
 
-**Tasks:**
+**Tasks:**✅
 - [ ] Implement Progressive Web App configuration
 - [ ] Add bandwidth detection and network adaptation
 - [ ] Create Paystack payment integration
