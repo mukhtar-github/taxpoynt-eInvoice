@@ -148,7 +148,7 @@ export const EnhancedHero: React.FC<EnhancedHeroProps> = ({ className = '' }) =>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   size="lg"
-                  className="bg-white text-primary-700 hover:bg-gray-50 font-bold shadow-xl border-2 border-white/20 backdrop-blur-sm transform hover:scale-105 transition-all duration-200"
+                  className="bg-gray-200 text-gray-900 hover:bg-gray-300 font-bold shadow-xl border-2 border-gray-400 transform hover:scale-105 transition-all duration-200"
                   onClick={() => router.push('/auth/signup')}
                 >
                   Start Free Trial

@@ -229,7 +229,7 @@ const Home: React.FC = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="bg-white text-primary-700 border-primary-600 hover:bg-primary-50 font-semibold"
+                className="bg-gray-200 text-gray-900 border-gray-400 hover:bg-gray-300 font-semibold"
                 onClick={() => router.push('/integrations')}
               >
                 Explore All Integrations

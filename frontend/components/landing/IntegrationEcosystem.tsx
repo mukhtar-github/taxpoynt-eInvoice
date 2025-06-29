@@ -438,7 +438,7 @@ export const IntegrationEcosystem: React.FC<IntegrationEcosystemProps> = ({
                   className={`inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     selectedCategory === category.id
                       ? 'bg-primary-600 text-white shadow-lg'
-                      : 'bg-white text-gray-600 border border-gray-200 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50'
+                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:border-primary-400 hover:text-primary-700 hover:bg-gray-200'
                   }`}
                 >
                   {category.icon}

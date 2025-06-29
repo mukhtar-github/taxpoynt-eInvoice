@@ -583,7 +583,7 @@ export const PlatformCapabilities: React.FC<PlatformCapabilitiesProps> = ({
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
                   size="lg"
-                  className="bg-white text-primary-700 hover:bg-gray-50 font-bold"
+                  className="bg-gray-200 text-gray-900 hover:bg-gray-300 font-bold"
                 >
                   Schedule Live Demo
                   <ArrowRight className="ml-2 h-5 w-5" />

@@ -196,7 +196,7 @@ export const CallToAction: React.FC<CTAProps> = ({
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   size="lg"
-                  className="bg-white text-primary-700 hover:bg-gray-50 font-bold shadow-xl transform hover:scale-105 transition-all duration-200"
+                  className="bg-gray-200 text-gray-900 hover:bg-gray-300 font-bold shadow-xl transform hover:scale-105 transition-all duration-200"
                   onClick={() => handleCTAClick('signup')}
                 >
                   Start Free Trial
