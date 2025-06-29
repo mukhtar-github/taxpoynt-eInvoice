@@ -29,5 +29,20 @@ from app.models.user_service_access import (
     ServiceType,
     AccessLevel
 )
+from app.models.nigerian_business import (
+    NigerianRelationshipManager,
+    NigerianClientAssignment,
+    NigerianCulturalPreferences,
+    NigerianApprovalLevel,
+    NigerianApprovalRequest,
+    NigerianConglomerate,
+    NigerianSubsidiary,
+    NigerianBusinessInteraction,
+    LanguagePreference,
+    GreetingStyle,
+    CommunicationPace,
+    ApprovalStatus,
+    TaxConsolidationType
+)
 
 # Add new models here when created
