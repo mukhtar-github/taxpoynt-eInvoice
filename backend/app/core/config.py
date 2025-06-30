@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     FIRS_PUBLIC_KEY_PATH: str = os.getenv("FIRS_PUBLIC_KEY_PATH", "")
     FIRS_CERTIFICATE_PATH: str = os.getenv("FIRS_CERTIFICATE_PATH", "")
     
+    # FIRS Webhook Configuration
+    FIRS_WEBHOOK_SECRET: str = os.getenv("FIRS_WEBHOOK_SECRET", "yRLXTUtWIU2OlMyKOBAWEVmjIop1xJe5ULPJLYoJpyA")
+    FIRS_SANDBOX_ENABLED: bool = os.getenv("FIRS_SANDBOX_ENABLED", "true").lower() in ("true", "1", "t")
+    FIRS_CERTIFICATION_MODE: bool = os.getenv("FIRS_CERTIFICATION_MODE", "true").lower() in ("true", "1", "t")
+    
     # TLS Configuration
     CLIENT_CERT_PATH: str = os.getenv("CLIENT_CERT_PATH", "")
     CLIENT_KEY_PATH: str = os.getenv("CLIENT_KEY_PATH", "")

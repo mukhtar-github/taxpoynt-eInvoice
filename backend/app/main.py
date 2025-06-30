@@ -399,6 +399,17 @@ try:
 except Exception as e:
     logger.warning(f"Could not include Nigerian compliance router: {str(e)}")
 
+# Include FIRS Certification Testing routers
+try:
+    from app.routes.firs_certification_testing import router as firs_cert_testing_router
+    from app.routes.firs_certification_webhooks import router as firs_cert_webhooks_router
+    
+    app.include_router(firs_cert_testing_router, prefix=settings.API_V1_STR, tags=["firs-certification"])
+    app.include_router(firs_cert_webhooks_router, prefix=settings.API_V1_STR, tags=["firs-certification-webhooks"])
+    logger.info("Successfully included FIRS certification routers")
+except Exception as e:
+    logger.warning(f"Could not include FIRS certification routers: {str(e)}")
+
 # Include Service Access Management router
 try:
     from app.routes.service_access_management import router as service_access_router

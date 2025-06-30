@@ -6,7 +6,7 @@ This module provides endpoints for:
 2. Handling internal status notification events
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, Depends, Body, HTTPException, status, Request, Header
 from sqlalchemy.orm import Session
 import hmac
