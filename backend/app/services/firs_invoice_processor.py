@@ -109,7 +109,7 @@ class FIRSInvoiceProcessor:
             invoice_signing = await self.firs_service.sign_invoice(invoice_data)
             results["steps"]["invoice_signing"] = invoice_signing
             
-            if invoice_signing.get("code") != 200:
+            if invoice_signing.get("code") not in [200, 201]:
                 logger.error(f"Invoice signing failed: {invoice_signing}")
                 results["errors"].append(f"Invoice signing: {invoice_signing.get('message', 'Unknown error')}")
                 results["status"] = "signing_failed"
@@ -122,7 +122,7 @@ class FIRSInvoiceProcessor:
             invoice_transmission = await self.firs_service.transmit_invoice(invoice_data["irn"])
             results["steps"]["invoice_transmission"] = invoice_transmission
             
-            if invoice_transmission.get("code") != 200:
+            if invoice_transmission.get("code") not in [200, 201]:
                 logger.error(f"Invoice transmission failed: {invoice_transmission}")
                 results["errors"].append(f"Invoice transmission: {invoice_transmission.get('message', 'Unknown error')}")
                 results["status"] = "transmission_failed"

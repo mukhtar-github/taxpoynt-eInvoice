@@ -324,21 +324,23 @@ class FIRSCertificationService(FIRSService):
                 "email": self.supplier_email
             },
             "accounting_customer_party": self._build_customer_party(customer_data),
-            "tax_total": {
-                "tax_amount": tax_amount,
-                "tax_subtotal": [
-                    {
-                        "taxable_amount": line_extension_amount,
-                        "tax_amount": tax_amount,
-                        "tax_category": {
-                            "id": "S",
-                            "tax_scheme": {
-                                "id": "VAT"
+            "tax_total": [
+                {
+                    "tax_amount": tax_amount,
+                    "tax_subtotal": [
+                        {
+                            "taxable_amount": line_extension_amount,
+                            "tax_amount": tax_amount,
+                            "tax_category": {
+                                "id": "STANDARD_VAT",
+                                "tax_scheme": {
+                                    "id": "VAT"
+                                }
                             }
                         }
-                    }
-                ]
-            },
+                    ]
+                }
+            ],
             "legal_monetary_total": {
                 "line_extension_amount": line_extension_amount,
                 "tax_exclusive_amount": line_extension_amount,
