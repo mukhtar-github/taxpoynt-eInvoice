@@ -38,6 +38,9 @@ class FIRSCertificationService(FIRSService):
         self.business_id = "800a1faf-4b81-4b6e-bbe0-cfeb6ca31d4a"
         self.test_supplier_party_id = "3543c01a-cdc5-40be-8648-e0d1dc029eac"
         self.test_supplier_address_id = "00ac7af7-247b-44ca-b1ae-c20567c4287b"
+        self.supplier_tin = "01234567-0001"  # Test supplier TIN
+        self.supplier_name = "TaxPoynt Certification Test Ltd"  # Test supplier name
+        self.supplier_email = "certification@taxpoynt.com"  # Test supplier email
         
     def _get_certification_headers(self) -> Dict[str, str]:
         """Get headers for FIRS certification API requests."""
@@ -315,9 +318,27 @@ class FIRSCertificationService(FIRSService):
             "tax_currency_code": "NGN",
             "accounting_supplier_party": {
                 "id": self.test_supplier_party_id,
-                "postal_address_id": self.test_supplier_address_id
+                "postal_address_id": self.test_supplier_address_id,
+                "tin": self.supplier_tin,
+                "party_name": self.supplier_name,
+                "email": self.supplier_email
             },
             "accounting_customer_party": self._build_customer_party(customer_data),
+            "tax_total": {
+                "tax_amount": tax_amount,
+                "tax_subtotal": [
+                    {
+                        "taxable_amount": line_extension_amount,
+                        "tax_amount": tax_amount,
+                        "tax_category": {
+                            "id": "S",
+                            "tax_scheme": {
+                                "id": "VAT"
+                            }
+                        }
+                    }
+                ]
+            },
             "legal_monetary_total": {
                 "line_extension_amount": line_extension_amount,
                 "tax_exclusive_amount": line_extension_amount,
