@@ -76,23 +76,23 @@ async def main():
         # ==============================================================
         print_section("1. INVOICE TRANSMISSION ENDPOINTS")
         
-        # Test transmission submission
-        print_test("/api/v1/firs-certification/transmission/submit", "POST")
+        # Test transmission submission (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/transmission/submit", "POST")
         transmission_payload = {
             "irn": TEST_IRN,
             "force_retransmit": False
         }
         success, result = await test_endpoint(
             client, "POST", 
-            "/api/v1/firs-certification/transmission/submit",
+            "/api/v1/firs-certification/demo/transmission/submit",
             json=transmission_payload
         )
         
-        # Test transmission status check
-        print_test(f"/api/v1/firs-certification/transmission/status/{TEST_IRN}", "GET")
+        # Test transmission status check (DEMO - No Auth Required)
+        print_test(f"/api/v1/firs-certification/demo/transmission/status/{TEST_IRN}", "GET")
         success, result = await test_endpoint(
             client, "GET", 
-            f"/api/v1/firs-certification/transmission/status/{TEST_IRN}"
+            f"/api/v1/firs-certification/demo/transmission/status/{TEST_IRN}"
         )
         
         # ==============================================================
@@ -100,8 +100,8 @@ async def main():
         # ==============================================================
         print_section("2. REPORTING ENDPOINTS")
         
-        # Test status report
-        print_test("/api/v1/firs-certification/reporting/generate", "POST")
+        # Test status report (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/reporting/generate", "POST")
         status_report_payload = {
             "report_type": "status",
             "date_from": "2025-06-01",
@@ -110,12 +110,12 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "POST",
-            "/api/v1/firs-certification/reporting/generate",
+            "/api/v1/firs-certification/demo/reporting/generate",
             json=status_report_payload
         )
         
-        # Test summary report
-        print_test("/api/v1/firs-certification/reporting/generate (Summary)", "POST")
+        # Test summary report (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/reporting/generate (Summary)", "POST")
         summary_report_payload = {
             "report_type": "summary",
             "date_from": "2025-06-01", 
@@ -123,12 +123,12 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "POST",
-            "/api/v1/firs-certification/reporting/generate",
+            "/api/v1/firs-certification/demo/reporting/generate",
             json=summary_report_payload
         )
         
-        # Test transmission log
-        print_test("/api/v1/firs-certification/reporting/generate (Transmission Log)", "POST")
+        # Test transmission log (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/reporting/generate (Transmission Log)", "POST")
         transmission_log_payload = {
             "report_type": "transmission_log",
             "date_from": "2025-06-01",
@@ -136,12 +136,12 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "POST",
-            "/api/v1/firs-certification/reporting/generate",
+            "/api/v1/firs-certification/demo/reporting/generate",
             json=transmission_log_payload
         )
         
-        # Test compliance report
-        print_test("/api/v1/firs-certification/reporting/generate (Compliance)", "POST")
+        # Test compliance report (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/reporting/generate (Compliance)", "POST")
         compliance_report_payload = {
             "report_type": "compliance",
             "date_from": "2025-06-01",
@@ -149,15 +149,15 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "POST",
-            "/api/v1/firs-certification/reporting/generate",
+            "/api/v1/firs-certification/demo/reporting/generate",
             json=compliance_report_payload
         )
         
-        # Test reporting dashboard
-        print_test("/api/v1/firs-certification/reporting/dashboard", "GET")
+        # Test reporting dashboard (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/reporting/dashboard", "GET")
         success, result = await test_endpoint(
             client, "GET",
-            "/api/v1/firs-certification/reporting/dashboard"
+            "/api/v1/firs-certification/demo/reporting/dashboard"
         )
         
         # ==============================================================
@@ -165,8 +165,8 @@ async def main():
         # ==============================================================
         print_section("3. INVOICE UPDATE ENDPOINTS")
         
-        # Test customer data update
-        print_test("/api/v1/firs-certification/update/invoice (Customer)", "PUT")
+        # Test customer data update (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/update/invoice (Customer)", "PUT")
         customer_update_payload = {
             "irn": TEST_IRN,
             "update_type": "customer",
@@ -177,12 +177,12 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "PUT",
-            "/api/v1/firs-certification/update/invoice",
+            "/api/v1/firs-certification/demo/update/invoice",
             json=customer_update_payload
         )
         
-        # Test invoice lines update
-        print_test("/api/v1/firs-certification/update/invoice (Lines)", "PUT")
+        # Test invoice lines update (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/update/invoice (Lines)", "PUT")
         lines_update_payload = {
             "irn": TEST_IRN,
             "update_type": "lines",
@@ -195,12 +195,12 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "PUT",
-            "/api/v1/firs-certification/update/invoice",
+            "/api/v1/firs-certification/demo/update/invoice",
             json=lines_update_payload
         )
         
-        # Test status update
-        print_test("/api/v1/firs-certification/update/invoice (Status)", "PUT")
+        # Test status update (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/update/invoice (Status)", "PUT")
         status_update_payload = {
             "irn": TEST_IRN,
             "update_type": "status",
@@ -211,12 +211,12 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "PUT",
-            "/api/v1/firs-certification/update/invoice",
+            "/api/v1/firs-certification/demo/update/invoice",
             json=status_update_payload
         )
         
-        # Test metadata update
-        print_test("/api/v1/firs-certification/update/invoice (Metadata)", "PUT")
+        # Test metadata update (DEMO - No Auth Required)
+        print_test("/api/v1/firs-certification/demo/update/invoice (Metadata)", "PUT")
         metadata_update_payload = {
             "irn": TEST_IRN,
             "update_type": "metadata",
@@ -227,7 +227,7 @@ async def main():
         }
         success, result = await test_endpoint(
             client, "PUT",
-            "/api/v1/firs-certification/update/invoice",
+            "/api/v1/firs-certification/demo/update/invoice",
             json=metadata_update_payload
         )
         
