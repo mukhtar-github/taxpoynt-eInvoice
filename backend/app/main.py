@@ -404,8 +404,8 @@ try:
     from app.routes.firs_certification_testing import router as firs_cert_testing_router
     from app.routes.firs_certification_webhooks import router as firs_cert_webhooks_router
     
-    app.include_router(firs_cert_testing_router, prefix=settings.API_V1_STR, tags=["firs-certification"])
-    app.include_router(firs_cert_webhooks_router, prefix=settings.API_V1_STR, tags=["firs-certification-webhooks"])
+    app.include_router(firs_cert_testing_router, tags=["firs-certification"])
+    app.include_router(firs_cert_webhooks_router, tags=["firs-certification-webhooks"])
     logger.info("Successfully included FIRS certification routers")
 except Exception as e:
     logger.warning(f"Could not include FIRS certification routers: {str(e)}")
