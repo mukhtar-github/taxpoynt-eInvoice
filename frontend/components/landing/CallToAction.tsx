@@ -138,6 +138,14 @@ export const CallToAction: React.FC<CTAProps> = ({
               <Button 
                 size="lg"
                 variant="outline"
+                onClick={() => router.push('/pricing')}
+              >
+                <span className="mr-2">₦</span>
+                View Pricing
+              </Button>
+              <Button 
+                size="lg"
+                variant="ghost"
                 onClick={() => handleCTAClick('contact')}
               >
                 <Phone className="mr-2 h-4 w-4" />
@@ -207,10 +215,10 @@ export const CallToAction: React.FC<CTAProps> = ({
                   size="lg"
                   variant="outline" 
                   className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
-                  onClick={() => handleCTAClick('demo')}
+                  onClick={() => router.push('/pricing')}
                 >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Schedule Demo
+                  <span className="mr-2">₦</span>
+                  View Pricing
                 </Button>
 
                 <Button 

@@ -164,6 +164,23 @@ except Exception as e:
     # Re-raise to ensure the error is visible
     raise
 
+# Railway proxy middleware (must be first in chain)
+@app.middleware("http")
+async def railway_proxy_middleware(request: Request, call_next):
+    """Handle Railway's specific proxy headers for HTTPS redirects."""
+    if os.getenv("RAILWAY_ENVIRONMENT"):
+        # Handle Railway's specific client IP header
+        if request.headers.get("x-envoy-external-address"):
+            request.scope["client"] = (
+                request.headers["x-envoy-external-address"], 0
+            )
+        
+        # Fix scheme for HTTPS redirects
+        if request.headers.get("x-forwarded-proto"):
+            request.scope["scheme"] = request.headers["x-forwarded-proto"]
+    
+    return await call_next(request)
+
 # Set up all middleware (CORS, Rate limiting, API Key Auth, Security)
 try:
     setup_middleware(app)

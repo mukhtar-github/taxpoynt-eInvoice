@@ -1,10 +1,33 @@
 """Middleware initialization module."""
+import os
 from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.api_key_auth import APIKeyMiddleware
 from app.middleware.security import SecurityMiddleware
 from app.core.config import settings
+
+
+class RailwayProxyMiddleware(BaseHTTPMiddleware):
+    """
+    Railway proxy middleware to handle Railway's specific proxy headers.
+    This fixes the 301 redirect authentication loops on Railway deployments.
+    """
+    async def dispatch(self, request: Request, call_next):
+        # Only apply Railway proxy handling in Railway environment
+        if os.getenv("RAILWAY_ENVIRONMENT"):
+            # Handle Railway's specific client IP header
+            if request.headers.get("x-envoy-external-address"):
+                request.scope["client"] = (
+                    request.headers["x-envoy-external-address"], 0
+                )
+            
+            # Fix scheme for HTTPS redirects
+            if request.headers.get("x-forwarded-proto"):
+                request.scope["scheme"] = request.headers["x-forwarded-proto"]
+        
+        return await call_next(request)
 
 
 def setup_middleware(app: FastAPI) -> None:
@@ -12,6 +35,8 @@ def setup_middleware(app: FastAPI) -> None:
     Setup all application middleware.
     Order matters - middleware are executed in reverse order of registration.
     """
+    # Railway proxy middleware (must be first to handle proxy headers)
+    app.add_middleware(RailwayProxyMiddleware)
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,

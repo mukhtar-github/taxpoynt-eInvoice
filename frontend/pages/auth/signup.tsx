@@ -24,9 +24,18 @@ const SignupPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  
+  // Get plan from URL params (coming from pricing page)
+  useEffect(() => {
+    const { plan } = router.query;
+    if (plan && typeof plan === 'string') {
+      setSelectedPlan(plan);
+    }
+  }, [router.query]);
   
   // If already authenticated, redirect to dashboard
   useEffect(() => {

@@ -213,7 +213,9 @@ except Exception as e:
         exec uvicorn app.simple_main:app \
             --host 0.0.0.0 \
             --port ${PORT:-8000} \
-            --access-log
+            --access-log \
+            --proxy-headers \
+            --forwarded-allow-ips '*'
         return
     fi
     
@@ -255,7 +257,9 @@ except Exception as e:
         --log-level info \
         --workers 1 \
         --loop uvloop \
-        --http httptools
+        --http httptools \
+        --proxy-headers \
+        --forwarded-allow-ips '*'
 }
 
 # Main deployment process

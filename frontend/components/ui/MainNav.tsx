@@ -61,6 +61,11 @@ const navItems: NavItem[] = [
     ]
   },
   {
+    name: 'Pricing',
+    href: '/pricing',
+    icon: TrendingUp
+  },
+  {
     name: 'IRN Management',
     href: '/odoo-irn-management',
     icon: FileText
