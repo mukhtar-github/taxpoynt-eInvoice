@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { MailIcon, PhoneIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { 
+  EnvelopeIcon as MailIcon, 
+  PhoneIcon, 
+  MapPinIcon, 
+  ClockIcon 
+} from '@heroicons/react/24/outline';
 import MainLayout from '../components/layouts/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';

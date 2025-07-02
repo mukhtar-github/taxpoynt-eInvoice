@@ -50,9 +50,23 @@ export { Card, CardContent, CardHeader, CardTitle } from './Card';
 export { Badge } from './Badge';
 export { Typography } from './Typography';
 
+// Additional UI Components
+export { Input } from './Input';
+export { Textarea } from './Textarea';
+export { Label } from './Label';
+export { Container } from './Container';
+export { Divider } from './Divider';
+export { Spinner } from './Spinner';
+export { useToast } from './Toast';
+
+// Text/Heading Components
+export { Heading } from './Heading';
+export { Text } from './Text';
+
 // Type exports for core components
 export type { FormFieldProps } from './FormField';
 export type { ButtonProps } from './Button';
+export type { InputProps } from './Input';
 
 /**
  * Recommended Usage:
