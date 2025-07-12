@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.models.certificate import Certificate, CertificateStatus
 from app.schemas.certificate import SignatureVerificationResponse, DocumentSignResponse
-from app.services.certificate_service import CertificateService
+from app.services.firs_si.digital_certificate_service import CertificateService
 from app.utils.certificate_signing import (
     sign_document_with_certificate, 
     verify_document_signature,

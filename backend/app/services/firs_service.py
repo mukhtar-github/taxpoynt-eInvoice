@@ -19,7 +19,7 @@ from app.core.config import settings
 from app.utils.encryption import encrypt_text, decrypt_text
 from app.utils.logger import get_logger
 from app.models.irn import IRNRecord, IRNValidationRecord, IRNStatus
-from app.services.irn_service import create_validation_record
+from app.services.firs_si.irn_generation_service import create_validation_record
 from app.cache.irn_cache import IRNCache
 
 logger = get_logger(__name__)

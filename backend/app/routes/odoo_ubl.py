@@ -21,12 +21,12 @@ from app.schemas.pagination import PaginatedResponse
 from app.services.integration_service import (
     get_integration, test_odoo_connection, test_integration
 )
-from app.services.odoo_service import (
+from app.services.firs_si.odoo_service import (
     fetch_odoo_invoices, search_odoo_invoices, fetch_odoo_partners
 )
-from app.services.odoo_invoice_service import odoo_invoice_service
+from app.services.firs_si.odoo_invoice_service import odoo_invoice_service
 from app.dependencies.auth import get_current_user
-from app.services.integration_credential_connector import get_credentials_for_integration
+from app.services.firs_si.integration_credential_connector import get_credentials_for_integration
 
 # Create a router with prefix and tags
 router = APIRouter(prefix="/odoo-ubl", tags=["odoo-ubl"])

@@ -15,7 +15,7 @@ from fastapi import BackgroundTasks
 
 from app.models.irn import IRNRecord, InvoiceData, IRNStatus, IRNValidationRecord
 from app.schemas.irn import IRNBatchGenerateRequest
-from app.services.irn_service import generate_irn, get_irn_expiration_date, create_validation_record
+from app.services.firs_si.irn_generation_service import generate_irn, get_irn_expiration_date, create_validation_record
 from app.cache.irn_cache import IRNCache
 from app.core.config import settings
 

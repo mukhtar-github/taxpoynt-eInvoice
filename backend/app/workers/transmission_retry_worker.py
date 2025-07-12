@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models.transmission import TransmissionRecord, TransmissionStatus
-from app.services.firs_transmission_service import FIRSTransmissionService
+from app.services.firs_app.transmission_service import FIRSTransmissionService
 
 logger = logging.getLogger(__name__)
 

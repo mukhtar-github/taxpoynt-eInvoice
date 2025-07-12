@@ -17,8 +17,8 @@ from app.schemas.certificate import (
     DocumentSignRequest, DocumentSignResponse,
     SignatureVerificationRequest, SignatureVerificationResponse
 )
-from app.services.document_signing_service import DocumentSigningService
-from app.services.deps import get_document_signing_service
+from app.services.firs_app.document_signing_service import DocumentSigningService
+from app.services.firs_hybrid.deps import get_document_signing_service
 from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/signing", tags=["document-signing"])

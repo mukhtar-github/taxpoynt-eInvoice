@@ -19,7 +19,7 @@ from uuid import UUID
 
 from app.models.submission import SubmissionRecord, SubmissionStatus
 from app.models.submission_retry import SubmissionRetry, RetryStatus, FailureSeverity
-from app.services.firs_service import firs_service, InvoiceSubmissionResponse
+from app.services.firs_core.firs_api_client import firs_service, InvoiceSubmissionResponse
 from app.core.config import settings
 from app.utils.logger import get_logger
 

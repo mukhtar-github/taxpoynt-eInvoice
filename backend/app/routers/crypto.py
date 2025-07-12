@@ -25,9 +25,9 @@ from app.utils.crypto_signing import sign_invoice, verify_csid, csid_generator
 from app.utils.certificate_manager import CertificateManager, get_certificate_manager
 from app.utils.key_management import KeyManager, get_key_manager
 from app.db.session import get_db # type: ignore
-from app.services.key_service import KeyManagementService, get_key_service
-from app.services.encryption_service import EncryptionService, get_encryption_service
-from app.services.cryptographic_stamping_service import CryptographicStampingService, get_cryptographic_stamping_service
+from app.services.firs_app.key_service import KeyManagementService, get_key_service
+from app.services.firs_app.secure_communication_service import EncryptionService, get_encryption_service
+from app.services.firs_app.cryptographic_stamping_service import CryptographicStampingService, get_cryptographic_stamping_service
 from app.api.dependencies import get_current_active_user # type: ignore
 from app.models.user import User # type: ignore # type: ignore # type: ignore
 from app.schemas.key import KeyMetadata, KeyRotateResponse # type: ignore # type: ignore # type: ignore

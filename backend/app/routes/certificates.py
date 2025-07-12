@@ -20,7 +20,7 @@ from app.schemas.certificate import (
     CertificateWithData, CertificateVerification, CertificateRevoke,
     CertificateExport, CertificateImport
 )
-from app.services.certificate_service import CertificateService
+from app.services.firs_si.digital_certificate_service import CertificateService
 from app.services.key_service import KeyManagementService, get_key_service
 from app.dependencies.auth import get_current_user
 from app.utils.certificate_signing import (

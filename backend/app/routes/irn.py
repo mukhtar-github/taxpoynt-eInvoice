@@ -25,7 +25,7 @@ from app.crud.irn import (
     update_irn_status
 )
 from app.dependencies.auth import get_current_user, get_current_organization
-from app.services.irn_service import generate_irn, verify_irn
+from app.services.firs_si.irn_generation_service import generate_irn, verify_irn
 
 router = APIRouter(prefix="/irn", tags=["irn"])
 

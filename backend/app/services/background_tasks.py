@@ -15,7 +15,7 @@ from typing import Dict, Any, List, Optional, Callable, Awaitable
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.services.retry_service import process_pending_retries
+from app.services.firs_hybrid.retry_service import process_pending_retries
 from app.utils.logger import get_logger
 from app.core.config import settings
 from app.core.config_retry import retry_settings

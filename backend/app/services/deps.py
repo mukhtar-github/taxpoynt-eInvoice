@@ -6,9 +6,9 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.services.certificate_service import CertificateService
-from app.services.document_signing_service import DocumentSigningService
-from app.services.key_service import KeyManagementService, get_key_service
+from app.services.firs_si.digital_certificate_service import CertificateService
+from app.services.firs_app.document_signing_service import DocumentSigningService
+from app.services.firs_app.key_service import KeyManagementService, get_key_service
 
 
 def get_certificate_service(

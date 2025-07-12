@@ -18,7 +18,7 @@ from app.models.invoice import Invoice, InvoiceStatus, InvoiceSource
 from app.models.crm_connection import CRMDeal
 from app.models.pos_connection import POSTransaction
 from app.models.user import User
-from app.services.irn_service import IRNService
+from app.services.firs_si.irn_generation_service import IRNService
 
 logger = logging.getLogger(__name__)
 

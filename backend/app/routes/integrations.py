@@ -18,15 +18,15 @@ from app.services.integration_service import (
     create_odoo_integration, test_odoo_connection, test_odoo_firs_connection,
     export_integration_config, import_integration_config
 )
-from app.services.odoo_service import fetch_odoo_invoices
-from app.services.integration_monitor import (
+from app.services.firs_si.odoo_service import fetch_odoo_invoices
+from app.services.firs_si.integration_monitor import (
     get_integration_monitoring_status, get_all_monitored_integrations,
     start_integration_monitoring, stop_integration_monitoring, run_integration_health_check
 )
 from app.dependencies.auth import get_current_user
-from app.services.api_credential_service import record_credential_usage
+from app.services.firs_si.api_credential_service import record_credential_usage
 from app.templates.odoo_integration import get_odoo_templates, get_odoo_template, validate_odoo_config
-from app.services.integration_credential_connector import create_credentials_from_integration_config, get_credentials_for_integration, migrate_integration_credentials_to_secure_storage
+from app.services.firs_si.integration_credential_connector import create_credentials_from_integration_config, get_credentials_for_integration, migrate_integration_credentials_to_secure_storage
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 

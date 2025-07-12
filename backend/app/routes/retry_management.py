@@ -19,7 +19,7 @@ from app.dependencies.auth import get_current_active_user, get_current_active_su
 from app.models.user import User
 from app.models.submission import SubmissionRecord, SubmissionStatus
 from app.models.submission_retry import SubmissionRetry, RetryStatus, FailureSeverity
-from app.services.retry_service import process_submission_retry, schedule_submission_retry, RetryableError
+from app.services.firs_hybrid.retry_service import process_submission_retry, schedule_submission_retry, RetryableError
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)

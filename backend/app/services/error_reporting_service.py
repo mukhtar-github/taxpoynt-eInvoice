@@ -128,7 +128,7 @@ class ErrorReportingService:
                 
             # Add audit log if available
             try:
-                from app.services.audit_service import AuditService
+                from app.services.firs_core.audit_service import AuditService
                 from app.models.transmission_audit_log import AuditActionType
                 
                 audit_service = AuditService(self.db)

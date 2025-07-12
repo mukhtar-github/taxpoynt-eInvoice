@@ -46,6 +46,7 @@ flower>=2.0.1
 # Integration & Validation
 jsonschema>=4.19.1
 requests>=2.31.0
+aiohttp>=3.12.0  # Added for SAP connector async HTTP requests
 odoorpc>=0.9.0  # Added for Odoo integration
 squareup>=21.0.0.20231030  # Square Python SDK for POS integration
 

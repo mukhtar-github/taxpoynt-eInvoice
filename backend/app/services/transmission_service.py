@@ -25,9 +25,9 @@ from app.models.certificate import Certificate, CertificateStatus
 from app.models.csid import CSIDRegistry, CSIDStatus
 from app.models.submission import SubmissionRecord
 from app.schemas.transmission import TransmissionCreate, TransmissionUpdate
-from app.services.key_service import KeyManagementService
-from app.services.transmission_key_service import TransmissionKeyService
-from app.services.csid_service import CSIDService
+from app.services.firs_app.key_service import KeyManagementService
+from app.services.firs_app.transmission_key_service import TransmissionKeyService
+from app.services.firs_si.csid_service import CSIDService
 from app.utils.crypto_signing import verify_signature
 
 logger = logging.getLogger(__name__)
@@ -40,8 +40,8 @@ class TransmissionService:
         self.db = db
         
         # Initialize required services
-        from app.services.transmission_key_service import TransmissionKeyService
-        from app.services.csid_service import CSIDService
+        from app.services.firs_app.transmission_key_service import TransmissionKeyService
+        from app.services.firs_si.csid_service import CSIDService
         
         self.transmission_key_service = TransmissionKeyService(db)
         self.csid_service = CSIDService(db)
@@ -889,7 +889,7 @@ class TransmissionService:
                     
                     # Create audit log for failed signature verification
                     try:
-                        from app.services.audit_service import AuditService
+                        from app.services.firs_core.audit_service import AuditService
                         from app.models.transmission_audit_log import AuditActionType
                         
                         audit_service = AuditService(self.db)
@@ -919,7 +919,7 @@ class TransmissionService:
                 
                 # Log the missing transmission_id error
                 try:
-                    from app.services.audit_service import AuditService
+                    from app.services.firs_core.audit_service import AuditService
                     from app.models.transmission_audit_log import AuditActionType
                     
                     audit_service = AuditService(self.db)
@@ -948,7 +948,7 @@ class TransmissionService:
                 
                 # Log the missing status error
                 try:
-                    from app.services.audit_service import AuditService
+                    from app.services.firs_core.audit_service import AuditService
                     from app.models.transmission_audit_log import AuditActionType
                     
                     audit_service = AuditService(self.db)
@@ -994,7 +994,7 @@ class TransmissionService:
             if not transmission:
                 # Audit log for missing transmission
                 try:
-                    from app.services.audit_service import AuditService
+                    from app.services.firs_core.audit_service import AuditService
                     from app.models.transmission_audit_log import AuditActionType
                         
                     audit_service = AuditService(self.db)
@@ -1019,7 +1019,7 @@ class TransmissionService:
             
             # 5. Create audit log entry for webhook receipt
             try:
-                from app.services.audit_service import AuditService
+                from app.services.firs_core.audit_service import AuditService
                 from app.models.transmission_audit_log import AuditActionType
                     
                 audit_service = AuditService(self.db)
@@ -1134,7 +1134,7 @@ class TransmissionService:
                 
             # 8. Update audit log with processing success
             try:
-                from app.services.audit_service import AuditService
+                from app.services.firs_core.audit_service import AuditService
                 from app.models.transmission_audit_log import AuditActionType
                     
                 audit_service = AuditService(self.db)
@@ -1176,7 +1176,7 @@ class TransmissionService:
             
             # Record error in audit log
             try:
-                from app.services.audit_service import AuditService
+                from app.services.firs_core.audit_service import AuditService
                 from app.models.transmission_audit_log import AuditActionType
                 
                 transmission_id = webhook_data.get("transmission_id") if webhook_data else None

@@ -20,8 +20,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
 from app.models.transmission import TransmissionStatus
-from app.services.transmission_service import TransmissionService
-from app.services.batch_transmission_service import BatchTransmissionService, BatchConfiguration
+from app.services.firs_app.transmission_service import TransmissionService
+from app.services.firs_app.batch_transmission_service import BatchTransmissionService, BatchConfiguration
 from app.utils.rate_limiter import check_rate_limit, rate_limit_dependency
 
 router = APIRouter()

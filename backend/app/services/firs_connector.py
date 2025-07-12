@@ -10,8 +10,8 @@ from typing import Dict, Any, List, Optional, Tuple, Union
 import json
 from datetime import datetime
 
-from app.services.firs_service import firs_service, InvoiceSubmissionResponse, SubmissionStatus
-from app.services.odoo_ubl_transformer import odoo_ubl_transformer
+from app.services.firs_core.firs_api_client import firs_service, InvoiceSubmissionResponse, SubmissionStatus
+from app.services.firs_si.odoo_ubl_transformer import odoo_ubl_transformer
 from app.schemas.invoice_validation import InvoiceValidationRequest
 from app.core.config import settings
 

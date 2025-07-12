@@ -16,7 +16,7 @@ from app.schemas.irn import (
     IRNValidationBatchRequest,
     IRNValidationBatchResponse
 )
-from app.services.bulk_irn_service import (
+from app.services.firs_si.bulk_irn_service import (
     start_bulk_irn_generation,
     get_bulk_generation_status,
     validate_multiple_irns
@@ -139,7 +139,7 @@ async def validate_irns_with_firs(
         )
     
     # Import here to avoid circular import
-    from app.services.firs_service import validate_irns_with_firs_sandbox
+    from app.services.firs_core.firs_api_client import validate_irns_with_firs_sandbox
     
     # Send to FIRS sandbox for validation
     firs_results = await validate_irns_with_firs_sandbox(

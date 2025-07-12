@@ -21,8 +21,8 @@ from app.schemas.transmission import (
     TransmissionHistory, TransmissionHistoryEvent, TransmissionDebugInfo,
     TransmissionBatchUpdate, TransmissionBatchUpdateResponse
 )
-from app.services.transmission_service import TransmissionService
-from app.services.key_service import KeyManagementService, get_key_service
+from app.services.firs_app.transmission_service import TransmissionService
+from app.services.firs_app.key_service import KeyManagementService, get_key_service
 from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/transmissions", tags=["transmissions"])
