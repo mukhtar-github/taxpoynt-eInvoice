@@ -1,0 +1,19 @@
+{
+  "_note": "Hausa translations - Implementation pending",
+  "_status": "PLACEHOLDER",
+  
+  "app": {
+    "name": "TaxPoynt", 
+    "tagline": "[Nigerian e-invoice compliance made simple - To be translated to Hausa]"
+  },
+  "actions": {
+    "submit": "[Submit - To be translated to Hausa]",
+    "cancel": "[Cancel - To be translated to Hausa]",
+    "save": "[Save - To be translated to Hausa]"
+  },
+  "status": {
+    "loading": "[Loading - To be translated to Hausa]",
+    "success": "[Success - To be translated to Hausa]",
+    "error": "[Error - To be translated to Hausa]"
+  }
+}

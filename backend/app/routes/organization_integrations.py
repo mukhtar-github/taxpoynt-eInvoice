@@ -25,9 +25,9 @@ from app.services.integration_service import (
     create_odoo_integration, test_odoo_connection
 )
 from app.services.organization_service import OrganizationService
-from app.services.odoo_connector import OdooConnector
-from app.services.api_credential_service import record_credential_usage
-from app.services.integration_credential_connector import create_credentials_from_integration_config, get_credentials_for_integration
+from app.services.firs_si.odoo_connector import OdooConnector
+from app.services.firs_si.api_credential_service import record_credential_usage
+from app.services.firs_si.integration_credential_connector import create_credentials_from_integration_config, get_credentials_for_integration
 
 router = APIRouter()
 

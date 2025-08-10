@@ -1,0 +1,19 @@
+{
+  "_note": "Nigerian Pidgin translations - Implementation pending",
+  "_status": "PLACEHOLDER",
+  
+  "app": {
+    "name": "TaxPoynt",
+    "tagline": "[Nigerian e-invoice compliance wey simple - To be translated]"
+  },
+  "actions": {
+    "submit": "[Submit - To be translated]",
+    "cancel": "[Cancel - To be translated]",
+    "save": "[Save - To be translated]"
+  },
+  "status": {
+    "loading": "[Loading - To be translated]",
+    "success": "[Success - To be translated]",
+    "error": "[Error - To be translated]"
+  }
+}

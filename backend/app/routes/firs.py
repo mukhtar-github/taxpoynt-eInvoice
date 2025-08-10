@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.db.session import get_db
-from app.services.firs_service import firs_service
+from app.services.firs_core.firs_api_client import firs_service
 from app.dependencies.auth import get_current_user # Import from the correct module
 
 router = APIRouter(prefix="/firs", tags=["firs"])

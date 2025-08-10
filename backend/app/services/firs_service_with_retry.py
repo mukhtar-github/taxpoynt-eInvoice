@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, Union
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.services.firs_service import firs_service, InvoiceSubmissionResponse
+from app.services.firs_core.firs_api_client import firs_service, InvoiceSubmissionResponse
 from app.services.retry_service import (
     schedule_submission_retry, 
     RetryableError, 

@@ -28,7 +28,7 @@ from app.models.user import User
 from app.models.organization import Organization
 from app.schemas.irn import IRNCreate, IRNBatchGenerateRequest
 from app.cache.irn_cache import IRNCache
-from app.services.odoo_service import fetch_odoo_invoices
+from app.services.firs_si.odoo_service import fetch_odoo_invoices
 
 logger = logging.getLogger(__name__)
 

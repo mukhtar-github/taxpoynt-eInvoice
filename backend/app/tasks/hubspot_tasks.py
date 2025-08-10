@@ -26,7 +26,7 @@ from app.integrations.base.errors import IntegrationError, AuthenticationError
 from app.models.crm_connection import CRMConnection, CRMDeal, CRMType
 from app.models.user import User
 from app.services.invoice_service import get_invoice_service
-from app.services.encryption_service import get_encryption_service
+from app.services.firs_app.secure_communication_service import get_encryption_service
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)

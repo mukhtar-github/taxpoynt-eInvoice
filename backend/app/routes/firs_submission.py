@@ -17,7 +17,7 @@ from uuid import UUID
 from app.db.session import get_db
 from app.dependencies.auth import get_current_active_user
 from app.models.user import User
-from app.services.firs_service import firs_service, InvoiceSubmissionResponse, SubmissionStatus
+from app.services.firs_core.firs_api_client import firs_service, InvoiceSubmissionResponse, SubmissionStatus
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)

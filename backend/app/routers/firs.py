@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 import logging
 import json
 
-from app.services.firs_service import firs_service, InvoiceSubmissionResponse, SubmissionStatus
-from app.services.odoo_ubl_transformer import odoo_ubl_transformer
+from app.services.firs_core.firs_api_client import firs_service, InvoiceSubmissionResponse, SubmissionStatus
+from app.services.firs_si.odoo_ubl_transformer import odoo_ubl_transformer
 from app.schemas.invoice_validation import InvoiceValidationRequest
 from app.dependencies.auth import get_current_user
 from app.models.user import User

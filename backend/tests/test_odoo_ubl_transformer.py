@@ -7,12 +7,12 @@ from decimal import Decimal
 from datetime import date, datetime
 
 from app.schemas.invoice_validation import (
-    InvoiceValidationRequest, AccountingParty, PostalAddress,
-    PartyTaxScheme, PartyLegalEntity, Contact, InvoiceLine,
+    InvoiceValidationRequest, Party, Address,
+    PartyLegalEntity, InvoiceLine,
     TaxTotal, TaxSubtotal, TaxCategory, LegalMonetaryTotal,
-    PaymentTerms, InvoiceTypeCode, CurrencyCode, UnitCode
+    PaymentTerms, InvoiceType, CurrencyCode, UnitCode
 )
-from app.services.odoo_ubl_transformer import OdooUBLTransformer, odoo_ubl_transformer
+from app.services.firs_si.odoo_ubl_transformer import OdooUBLTransformer, odoo_ubl_transformer
 
 
 class TestOdooUBLTransformer(unittest.TestCase):
@@ -34,7 +34,7 @@ class TestOdooUBLTransformer(unittest.TestCase):
     def _create_valid_invoice(self) -> InvoiceValidationRequest:
         """Create a valid invoice for testing."""
         # Create supplier party
-        supplier_address = PostalAddress(
+        supplier_address = Address(
             street_name="123 Supplier St",
             city_name="Supplier City",
             country_code="NG",
@@ -42,7 +42,7 @@ class TestOdooUBLTransformer(unittest.TestCase):
             country_subdivision="Lagos"
         )
         
-        supplier_party = AccountingParty(
+        supplier_party = Party(
             party_name="Supplier Company Ltd",
             postal_address=supplier_address,
             party_tax_scheme={"company_id": "NG1234567890", "tax_scheme_id": "VAT"},
@@ -55,7 +55,7 @@ class TestOdooUBLTransformer(unittest.TestCase):
         )
         
         # Create customer party
-        customer_address = PostalAddress(
+        customer_address = Address(
             street_name="456 Customer St",
             city_name="Customer City",
             country_code="NG",
@@ -63,7 +63,7 @@ class TestOdooUBLTransformer(unittest.TestCase):
             country_subdivision="Abuja"
         )
         
-        customer_party = AccountingParty(
+        customer_party = Party(
             party_name="Customer Company Ltd",
             postal_address=customer_address,
             party_tax_scheme={"company_id": "NG0987654321", "tax_scheme_id": "VAT"},
@@ -127,7 +127,7 @@ class TestOdooUBLTransformer(unittest.TestCase):
         # Create the invoice
         return InvoiceValidationRequest(
             invoice_number="INV-2023-001",
-            invoice_type_code=InvoiceTypeCode.COMMERCIAL_INVOICE,
+            invoice_type_code=InvoiceType.COMMERCIAL_INVOICE,
             invoice_date=date(2023, 5, 31),
             due_date=date(2023, 6, 30),
             currency_code=CurrencyCode.NGN,
@@ -247,7 +247,15 @@ class TestOdooUBLTransformer(unittest.TestCase):
         """Assert that an XPath expression finds at least one element."""
         # Note: This is a simplified XPath check - in real tests, you would
         # register namespaces properly to use standard XPath
-        elements = root.findall(xpath.replace('cbc:', './/{*}').replace('cac:', './/{*}'))
+        
+        # Convert XPath to use {*} namespace wildcards
+        modified_xpath = xpath.replace('cbc:', './/{*}').replace('cac:', './/{*}')
+        
+        # If it starts with './/cbc:' or './/cac:', we need to fix it
+        if modified_xpath.startswith('.//.//{*}'):
+            modified_xpath = modified_xpath.replace('.//.//{*}', './/{*}')
+        
+        elements = root.findall(modified_xpath)
         self.assertGreaterEqual(len(elements), 1, f"XPath '{xpath}' should find at least one element")
     
     def test_odoo_to_ubl_object(self):
@@ -271,7 +279,8 @@ class TestOdooUBLTransformer(unittest.TestCase):
         """Test error handling in XML transformation."""
         # Create an invoice with an invalid value that will cause XML generation issues
         broken_invoice = self._create_valid_invoice()
-        broken_invoice.invoice_number = None  # This will cause issues in XML generation
+        # Set an invalid object that will cause serialization issues
+        broken_invoice.accounting_supplier_party = None  # This will cause issues in XML generation
         
         # Transform to XML
         xml_string, issues = self.transformer.ubl_object_to_xml(broken_invoice)

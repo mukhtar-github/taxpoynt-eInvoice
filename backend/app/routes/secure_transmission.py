@@ -20,7 +20,7 @@ from app.schemas.transmission import (
     TransmissionStatusResponse,
     TransmissionReceiptResponse
 )
-from app.services.firs_transmission_service import FIRSTransmissionService
+from app.services.firs_app.transmission_service import FIRSTransmissionService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

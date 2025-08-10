@@ -17,7 +17,7 @@ from app import crud
 from app.schemas.integration import IntegrationCreate, IntegrationUpdate, Integration, IntegrationTestResult, OdooIntegrationCreate, OdooConnectionTestRequest, IntegrationExport, IntegrationImport, FIRSEnvironment # type: ignore
 from app.utils.encryption import encrypt_sensitive_value, decrypt_sensitive_value, get_app_encryption_key # type: ignore
 from app.models.integration import IntegrationType  # type: ignore
-from app.services.odoo_service import test_odoo_connection as test_odoo, fetch_odoo_invoices
+from app.services.firs_si.odoo_service import test_odoo_connection as test_odoo, fetch_odoo_invoices
 
 # List of config fields that should be encrypted
 SENSITIVE_CONFIG_FIELDS = [

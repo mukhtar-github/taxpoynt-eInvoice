@@ -24,7 +24,7 @@ from app.schemas.validation_management import (
     ValidatorPresetCreate,
     ValidatorPresetResponse
 )
-from app.services.validation_rule_service import get_validation_rule_service
+from app.services.firs_app.data_validation_service import get_validation_rule_service
 from app.dependencies.auth import get_current_user, get_current_organization
 
 router = APIRouter(prefix="/validation-rules", tags=["validation-rules"])

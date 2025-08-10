@@ -26,7 +26,7 @@ from app.schemas.user import (
     OrganizationUserCreate,
     OrganizationUserUpdate
 )
-from app.services.user_service import (
+from app.services.firs_core.user_service import (
     authenticate_user,
     create_user,
     get_user_by_email,

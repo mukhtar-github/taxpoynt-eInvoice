@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 import logging
 import uuid
 
-from app.services.firs_service import firs_service
+from app.services.firs_core.firs_api_client import firs_service
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 

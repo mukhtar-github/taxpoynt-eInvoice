@@ -1,0 +1,19 @@
+{
+  "_note": "Igbo translations - Implementation pending", 
+  "_status": "PLACEHOLDER",
+  
+  "app": {
+    "name": "TaxPoynt",
+    "tagline": "[Nigerian e-invoice compliance made simple - To be translated to Igbo]"
+  },
+  "actions": {
+    "submit": "[Submit - To be translated to Igbo]",
+    "cancel": "[Cancel - To be translated to Igbo]",
+    "save": "[Save - To be translated to Igbo]"
+  },
+  "status": {
+    "loading": "[Loading - To be translated to Igbo]",
+    "success": "[Success - To be translated to Igbo]",
+    "error": "[Error - To be translated to Igbo]"
+  }
+}
