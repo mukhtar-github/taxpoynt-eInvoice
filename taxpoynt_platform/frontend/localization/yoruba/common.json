@@ -1,0 +1,19 @@
+{
+  "_note": "Yoruba translations - Implementation pending",
+  "_status": "PLACEHOLDER",
+  
+  "app": {
+    "name": "TaxPoynt",
+    "tagline": "[Nigerian e-invoice compliance made simple - To be translated to Yoruba]"
+  },
+  "actions": {
+    "submit": "[Submit - To be translated to Yoruba]",
+    "cancel": "[Cancel - To be translated to Yoruba]",
+    "save": "[Save - To be translated to Yoruba]"
+  },
+  "status": {
+    "loading": "[Loading - To be translated to Yoruba]",
+    "success": "[Success - To be translated to Yoruba]",
+    "error": "[Error - To be translated to Yoruba]"
+  }
+}

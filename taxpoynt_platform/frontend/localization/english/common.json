@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "TaxPoynt",
+    "tagline": "Nigerian E-Invoice Compliance Made Simple"
+  },
+  "actions": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "download": "Download",
+    "upload": "Upload",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "clear": "Clear",
+    "reset": "Reset",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "confirm": "Confirm",
+    "close": "Close"
+  },
+  "status": {
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error", 
+    "warning": "Warning",
+    "info": "Information",
+    "pending": "Pending",
+    "completed": "Completed",
+    "active": "Active",
+    "inactive": "Inactive",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "placeholders": {
+    "search": "Search...",
+    "selectOption": "Select an option...",
+    "enterText": "Enter text...",
+    "noData": "No data available",
+    "emptyState": "Nothing to display"
+  }
+}

@@ -4,128 +4,57 @@
 
 TaxPoynt eInvoice is a comprehensive middleware service that facilitates integration between financial software (ERP, CRM, POS) and FIRS (Federal Inland Revenue Service) for electronic invoicing. The platform serves as an Access Point Provider (APP) for Nigerian e-invoicing compliance.
 
-## Architecture
+## Company Identity
 
-### High-Level Architecture
-- **Backend**: FastAPI-based Python application with PostgreSQL database
-- **Frontend**: Next.js React application with TypeScript
-- **Integration Layer**: Pluggable connector system for ERP/CRM/POS systems
-- **Authentication**: JWT-based with role-based access control (RBAC)
-- **Deployment**: Railway (backend) + Vercel (frontend)
+- TaxPoynt is NOT a payment processor - we are a data collector and invoice generator for compliance purposes.
+- **APP Roles and Responsibilities**:
+  1. TaxPoynt is the APP (Access Point Provider) - the certified company
+  2. APP users are businesses using TaxPoynt's APP service for secure invoice transmission
+  3. FIRS Compliance is TaxPoynt's responsibility, not the user's responsibility
+  4. Revenue is TaxPoynt's business data, only for admin consumption
 
-### Core Components
-- **Authentication & Authorization**: Multi-tenant RBAC system
-- **Integration Framework**: Base connector classes for ERP/CRM/POS
-- **Invoice Processing**: IRN generation, validation, and FIRS submission
-- **Cryptographic Services**: Digital signing and certificate management
-- **Transmission System**: Secure transmission with retry mechanisms
-- **Monitoring & Analytics**: Real-time dashboard and metrics
+## Fundamental Compliance Principle
 
-## Performance Optimization Considerations
+**TaxPoynt Platform Compliance Focus**: TaxPoynt compliance monitoring focuses on our platform obligations as an Access Point Provider (APP), NOT on customer business compliance tracking.
 
-### What needs attention:
-- Image optimization (Next.js Image component usage)
-- Bundle size analysis for Framer Motion
-- Core Web Vitals measurement and monitoring
-- Code splitting for landing components
+### FIRS-Mandated Standards for Service Providers
+As an APP, TaxPoynt must implement compliance with these 7 regulatory standards:
 
-## Development Best Practices
+1. **UBL (Universal Business Language)** - Document format standards
+2. **WCO Harmonized System (HS) Code** - World Customs Organization classification
+3. **NITDA GDPR & NDPA** - Nigerian data protection requirements  
+4. **ISO 20022** - Financial messaging standards
+5. **ISO 27001** - Information security management
+6. **LEI (Legal Entity Identifier)** - Global entity identification
+7. **PEPPOL** - Pan-European Public Procurement Online standards
 
-### Python and Environment Management
-- Always use python3: "Let me try with python3 instead,"
-- Always use the virtual environment to run the commands: "I can see there's a virtual environment with alembic. Let me use the virtual environment to run the commands"
+### Compliance Responsibility Separation
 
-## Execution Principles
-- Always think and analyze before execution.
+**TaxPoynt's Platform Compliance (Our Responsibility)**:
+- APP certification and maintenance
+- Secure transmission protocols
+- Data integrity and security
+- E-invoice format compliance
+- Platform infrastructure security
+- Audit trails and logging
 
-## Service Restructuring Plan
+**Customer's Pre-existing Obligations (Independent of TaxPoynt)**:
+- Tax payments and VAT returns (they already know this)
+- Company registration and annual filings
+- Banking and financial obligations
+- Industry-specific business regulations
 
-### firs_si (System Integrator Services)
-- irn_service.py - IRN & QR Code generation
-- certificate_service.py - Digital certificate management
-- odoo_service.py & ERP integration services - ERP system integration
-- invoice_validation_service.py - Schema conformity validation
-- Authentication services for invoice origin verification
+### Implementation Guidelines
 
-### firs_app (Access Point Provider Services)
-- firs_transmission_service.py - Secure transmission protocols
-- validation_rule_service.py - Data validation before submission
-- cryptographic_stamping_service.py - Authentication Seal management
-- encryption_service.py - Cryptographic stamp validation
-- TLS/OAuth 2.0 secure communication services
+- **Admin-Only Visibility**: Compliance dashboards are visible only to TaxPoynt administrators
+- **Customer-Facing Focus**: Customer interfaces focus on service functionality, not compliance monitoring
+- **Platform Operations**: Compliance status affects platform operations, not customer operations
+- **System-Wide Principle**: Apply this understanding across SI, APP, and Hybrid interfaces
 
-### firs_core (Shared FIRS Services)
-- firs_service.py - Core FIRS API client
-- audit_service.py - Audit logging
-- Common models and utilities
-- Configuration management
+## Development Instructions
 
-### firs_hybrid (SI+APP Hybrid Services)
-- Cross-role validation services
-- Unified compliance monitoring
-- Shared workflow orchestration
-
-### Key Corrections Made
-
-#### SI Focus Areas (Backend processing):
-- ERP integration and data extraction
-- Certificate lifecycle management
-- IRN generation and QR code creation
-- Schema validation and conformity checks
-
-#### APP Focus Areas (Secure transmission):
-- Transmission security protocols
-- Pre-submission data validation
-- Authentication seal management
-- Cryptographic operations for secure communication
-
-## Import Guidelines (CRITICAL)
-
-### **FIRS Service Migration Status**: ✅ COMPLETED
-- **Total Services Migrated**: 22 services across 4 packages
-- **Import Structure**: All core services now use firs_* package structure
-- **Migration Document**: See `backend/IMPORT_MIGRATION_STRATEGY.md` for detailed plan
-
-### **Mandatory Import Rules for All Development**
-```python
-# ✅ CORRECT - Use new structure
-from app.services.firs_si.odoo_service import OdooService
-from app.services.firs_app.transmission_service import TransmissionService
-from app.services.firs_core.audit_service import AuditService
-from app.services.firs_hybrid.certificate_manager import CertificateManager
-
-# ❌ AVOID - Old structure (will be deprecated)
-from app.services.odoo_service import OdooService
-from app.services.transmission_service import TransmissionService
-```
-
-### **Package Structure Rules**
-- **firs_si**: Backend processing, ERP integration, IRN generation, certificate management
-- **firs_app**: Secure transmission, validation, crypto operations, document signing
-- **firs_core**: Shared services, audit, configuration, core FIRS API client
-- **firs_hybrid**: Cross-role validation, unified monitoring, shared workflows
-
-### **Development Process Requirements**
-- All new code MUST use firs_* package structure
-- When modifying existing files, update imports to new structure
-- Before adding new services, check if similar exists in packages
-- Run import validation before committing (when available)
-
-### **Import Migration Priority**
-1. ✅ **Priority 1 (COMPLETED)**: Core services, API routes, main routers
-2. 🔄 **Priority 2 (IN PROGRESS)**: Test files, workers, authentication modules
-3. ⏳ **Priority 3 (PENDING)**: Utility scripts, development tools, legacy files
-
-### **Ongoing Maintenance**
-- Fix 5-10 import issues per development session
-- Weekly import health checks
-- Archive redundant files after migration
-- Update documentation with any structural changes
-
-## Import Migration Memory (CRITICAL)
-- **Status**: Major import migration completed - 22 services restructured
-- **Critical Rule**: Always use firs_* package structure for imports
-- **Remaining Work**: ~80 files with minor import issues (tests, utilities)
-- **Strategy**: Incremental cleanup, fix 5-10 issues per session
-- **Tools Needed**: import_health_check.py script for validation
-- **Migration Document**: `backend/IMPORT_MIGRATION_STRATEGY.md` contains full strategy
+When building any compliance-related features:
+1. Focus on TaxPoynt's service provider obligations
+2. Make compliance monitoring admin-facing
+3. Help customers fulfill their existing obligations efficiently
+4. Never position TaxPoynt as tracking customer compliance

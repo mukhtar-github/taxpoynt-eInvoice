@@ -1,0 +1,46 @@
+{
+  "si": {
+    "name": "System Integrator",
+    "description": "Businesses integrating with TaxPoynt platform",
+    "dashboard": "Integration Dashboard",
+    "workflows": {
+      "dataMapping": "Data Mapping",
+      "schemaValidation": "Schema Validation", 
+      "documentProcessing": "Document Processing",
+      "erpIntegration": "ERP Integration"
+    }
+  },
+  "app": {
+    "name": "Access Point Provider",
+    "description": "FIRS-certified e-invoice transmission service",
+    "dashboard": "APP Dashboard", 
+    "workflows": {
+      "firsTransmission": "FIRS Transmission",
+      "complianceReporting": "Compliance Reporting",
+      "securityAudit": "Security Audit",
+      "statusTracking": "Status Tracking"
+    }
+  },
+  "hybrid": {
+    "name": "Hybrid User",
+    "description": "Advanced users with multiple role access",
+    "dashboard": "Unified Dashboard",
+    "workflows": {
+      "roleSwitching": "Role Switching",
+      "crossRoleAnalytics": "Cross-Role Analytics",
+      "workflowOrchestration": "Workflow Orchestration",
+      "complianceOverview": "Compliance Overview"
+    }
+  },
+  "admin": {
+    "name": "Administrator",
+    "description": "TaxPoynt platform administrators",
+    "dashboard": "Admin Dashboard",
+    "workflows": {
+      "userManagement": "User Management",
+      "systemConfig": "System Configuration",
+      "platformMonitoring": "Platform Monitoring",
+      "auditLogs": "Audit Logs"
+    }
+  }
+}
